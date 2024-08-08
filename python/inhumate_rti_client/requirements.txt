@@ -1,0 +1,3 @@
+protobuf
+emitter.py
+websocket-client >= 1.4.0

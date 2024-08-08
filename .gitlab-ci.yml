@@ -16,6 +16,9 @@ default:
     - "[ -z \"$VERSION\" ] && VERSION=0.0.${CI_PIPELINE_IID}"
     - export VERSION
 
+
+# BUILD
+
 build js client:
   stage: build
   image: node:20-slim
@@ -69,6 +72,32 @@ build vue client:
       - node_modules
       - vue/node_modules
 
+build python client:
+  stage: build
+  image: python:3.10-slim
+  script:
+    - apt-get -qq update && apt-get install -qq curl unzip
+    - scripts/get_protobuf.sh
+    - cd python
+    - bash inhumate_rti_client/generate.sh
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" setup.py inhumate_rti_client/__init__.py
+    - pip install build
+    - python -m build
+  artifacts:
+    paths:
+      - python/setup.py
+      - python/inhumate_rti_client/__init__.py
+      - python/inhumate_rti_client/generated
+      - python/dist
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+
+
+# TEST
+
 test js client:
   stage: test
   image: node:20-slim
@@ -90,3 +119,30 @@ test js client:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
       - js/node_modules
+
+test python client:
+  stage: test
+  image: python:3.10-slim
+  needs:
+    - build broker
+    - build python client
+  script:
+    - apt-get update -qq
+    - apt-get install -qq curl unzip python3-pip
+    # Install node and broker
+    - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+    - apt-get install -y nodejs
+    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
+    # Start broker
+    - node broker/dist/broker.js &
+    - sleep 10
+    # Run tests
+    - pip install -r clients/python/inhumate_rti_client/requirements.txt
+    - pip install -r clients/python/test/requirements.txt
+    - cd clients/python/test
+    - python -mpytest -v --junitxml=./test-result.xml
+  artifacts:
+    reports:
+      junit:
+        - clients/python/test/test-result.xml
+
