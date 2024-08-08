@@ -15,6 +15,7 @@ default:
     - VERSION=${CI_COMMIT_TAG}
     - "[ -z \"$VERSION\" ] && VERSION=0.0.${CI_PIPELINE_IID}"
     - export VERSION
+    - export DEBIAN_FRONTEND=noninteractive
 
 
 # BUILD
@@ -173,6 +174,100 @@ build dotnet client:
     paths:
       - protobuf
 
+build c++ static client linux:
+  stage: build
+  # staying on ubuntu 18.04 image and system libs here because new libs in node 16 image (and modern ubuntu)
+  # break the c++ client for some applications like X-Plane 11.55 and 12
+  image: ubuntu:18.04
+  script:
+    - apt-get update -qq && apt-get install -qq git gcc g++ make cmake libasio-dev libssl-dev libwebsocketpp-dev
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" cpp/inhumaterti.hpp
+    - cpp/scripts/linux_static_build.sh
+  artifacts:
+    paths:
+      - cpp/inhumaterti.hpp
+      - cpp/build
+      - cpp/protobuf/src
+      - cpp/protobuf/cmake-build
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - cpp/protobuf
+      - cpp/asio
+      - cpp/websocketpp
+  
+build c++ static client windows:
+  stage: build
+  tags:
+    - win64
+  before_script:
+    - if ( "${CI_COMMIT_TAG}" ) { $VERSION = "${CI_COMMIT_TAG}" }
+    - if ( ! "$VERSION" ) { $VERSION = "0.0.${CI_PIPELINE_IID}" }
+  script:
+    - ((get-content -path clients\cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path clients\cpp\inhumaterti.hpp
+    - powershell -file clients\cpp\scripts\windows_static_build.ps1
+  artifacts:
+    paths:
+      - cpp/inhumaterti.hpp
+      - cpp/build
+      - cpp/protobuf/cmake-build
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - cpp/protobuf
+      - cpp/asio
+      - cpp/websocketpp
+    
+build c++ ue5 client linux:
+  stage: build-2
+  tags:
+    - linux
+    - nm8
+  only:
+    - tags
+    - /^(ue).*/
+  script:
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" cpp/inhumaterti.hpp
+    - cpp/scripts/linux_ue5_build.sh
+  artifacts:
+    paths:
+      - cpp/build-ue5/Include
+      - cpp/build-ue5/Linux
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - cpp/protobuf
+      - cpp/asio
+      - cpp/websocketpp
+
+build c++ ue5 client windows:
+  stage: build-2
+  tags:
+    - win64
+    - nm8
+  only:
+    - tags
+    - /^(ue).*/
+  before_script:
+    - if ( "${CI_COMMIT_TAG}" ) { $VERSION = "${CI_COMMIT_TAG}" }
+    - if ( ! "$VERSION" ) { $VERSION = "0.0.${CI_PIPELINE_IID}" }
+  script:
+    - ((get-content -path clients\cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path clients\cpp\inhumaterti.hpp
+    - powershell -file clients\cpp\scripts\windows_ue5_build.ps1
+  artifacts:
+    paths:
+      - cpp/build-ue5/Include
+      - cpp/build-ue5/Win64
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - cpp/protobuf
+      - cpp/asio
+      - cpp/websocketpp
+        
 
 # TEST
 
@@ -265,4 +360,63 @@ test dotnet client:
     reports:
       junit:
         - dotnet/test/test-result.xml
+
+test c++ client:
+  stage: test
+  image: ubuntu:18.04
+  needs:
+    - build broker
+    - build c++ static client linux
+  script:
+    - apt-get -qq update
+    - apt-get install -qq curl libssl1.1
+    # Install node
+    - curl -sL https://deb.nodesource.com/setup_16.x | bash -
+    - apt-get install -y nodejs
+    # Start broker
+    - node broker/dist/broker.js &
+    - sleep 20
+    # Run tests
+    - cd cpp/build
+    - ./inhumaterti_test --reporter junit >test-result.xml || ./inhumaterti_test --reporter junit >test-result.xml
+  artifacts:
+    reports:
+      junit:
+        - cpp/build/test-result.xml
+
+
+# PACKAGE
+
+package c++ static client:
+  stage: package
+  image: node:16-slim
+  needs:
+    - build c++ static client linux
+    - build c++ static client windows
+  script:
+    - apt-get update -qq
+    - apt-get install -qq zip
+    - cpp/scripts/package_static.sh
+  artifacts:
+    paths:
+      - cpp/build/inhumate*.zip
+    expire_in: 1 week
+
+package c++ ue5 client:
+  stage: package
+  image: node:16-slim
+  dependencies:
+    - build c++ ue5 client linux
+    - build c++ ue5 client windows
+    # - build c++ ue4 client macos
+  script:
+    - apt-get update -qq
+    - apt-get install -qq zip
+    - cpp/scripts/package_ue5.sh
+  artifacts:
+    paths:
+      - cpp/build-ue5/inhumate*.zip
+  only:
+    - tags
+    - /^(ue).*/
 
