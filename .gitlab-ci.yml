@@ -49,11 +49,9 @@ test typescript client:
   stage: test
   image: node:16-slim
   needs:
-    - build broker
     - build typescript client
   script:
-    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\""
-    - unzip artifacts.zip
+    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
     - cd broker
     - node dist/broker.js &
     - sleep 10
