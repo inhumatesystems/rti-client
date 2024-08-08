@@ -48,6 +48,34 @@ build js client:
       - node_modules
       - js/node_modules
 
+build js legacy client:
+  stage: build
+  image: node:20-slim
+  script:
+    - apt-get update -qq
+    - apt-get install -qq curl unzip
+    - scripts/get_protobuf.sh
+    - cd js-legacy
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json src/constants.ts
+    - npm install
+    - ./generate.sh
+    - npm run build
+    - npm pack
+  artifacts:
+    paths:
+      - js-legacy/src/constants.ts
+      - js-legacy/lib
+      - js-legacy/src/generated
+      - js-legacy/package.json
+      - js-legacy/inhumate*.tgz
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+      - node_modules
+      - js-legacy/node_modules
+
 build vue client:
   stage: build
   needs:
@@ -71,6 +99,33 @@ build vue client:
       - protobuf
       - node_modules
       - vue/node_modules
+
+build vue legacy client:
+  stage: build
+  needs:
+    - build js legacy client
+  image: node:20-slim
+  script:
+    - cd js-legacy
+    - npm install
+    - cd ../vue-legacy
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json src/constants.ts
+    - npm install
+    - npm run build:lib
+    - npm pack
+  artifacts:
+    paths:
+      - vue-legacy/lib
+      - vue-legacy/types
+      - vue-legacy/package.json
+      - vue-legacy/inhumate*.tgz
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+      - node_modules
+      - vue-legacy/node_modules
 
 build python client:
   stage: build
@@ -143,6 +198,28 @@ test js client:
     paths:
       - js/node_modules
 
+test js legacy client:
+  stage: test
+  image: node:20-slim
+  needs:
+    - build js legacy client
+  script:
+    - apt-get update -qq && apt-get install -qq curl unzip
+    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
+    - node broker/dist/broker.js &
+    - sleep 10
+    - cd js-legacy
+    - npm install
+    - npm run test-ci
+  artifacts:
+    reports:
+      junit:
+        - js-legacy/junit.xml
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - js-legacy/node_modules
+ 
 test python client:
   stage: test
   image: python:3.10-slim
