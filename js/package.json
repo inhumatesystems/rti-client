@@ -2,6 +2,7 @@
   "name": "@inhumate/rti",
   "version": "0.0.1-dev-version",
   "description": "Inhumate RTI javascript client",
+  "private": false,
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

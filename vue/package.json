@@ -1,0 +1,52 @@
+{
+  "name": "@inhumate/rti-vue",
+  "version": "0.0.1-dev-version",
+  "description": "Inhumate RTI Vue integration",
+  "private": false,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/inhumate-rti-vue.umd.js",
+  "module": "./dist/inhumate-rti-vue.es.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "run-p type-check build-only",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@inhumate/rti": ">=0.0.1-dev-version",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.14"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.22.5",
+    "@rushstack/eslint-patch": "^1.2.0",
+    "@tsconfig/node18": "^2.0.1",
+    "@types/jsdom": "^21.1.1",
+    "@types/node": "^18.16.17",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "@vue/eslint-config-prettier": "^7.1.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "@vue/test-utils": "^2.3.2",
+    "@vue/tsconfig": "^0.5.1",
+    "eslint": "^8.39.0",
+    "eslint-plugin-vue": "^9.11.0",
+    "jsdom": "^22.1.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.8.8",
+    "rollup-plugin-typescript2": "^0.35.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.0",
+    "vite-plugin-dts": "^4.0.1",
+    "vitest": "^2.0.5",
+    "vue-tsc": "^2.0.29"
+  }
+}

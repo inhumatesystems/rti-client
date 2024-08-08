@@ -1,0 +1,9 @@
+{
+    "name": "@inhumate/rti-clients",
+    "private": true,
+    "scripts": {},
+    "workspaces": [
+        "js",
+        "vue"
+    ]
+}

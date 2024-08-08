@@ -18,7 +18,7 @@ default:
 
 build js client:
   stage: build
-  image: node:16-slim
+  image: node:20-slim
   script:
     - apt-get update -qq
     - apt-get install -qq curl unzip
@@ -42,11 +42,36 @@ build js client:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
       - protobuf
+      - node_modules
       - js/node_modules
+
+build vue client:
+  stage: build
+  needs:
+    - build js client
+  image: node:20-slim
+  script:
+    - cd vue
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json
+    - npm install
+    - npm run build
+    - npm pack
+  artifacts:
+    paths:
+      - vue/dist
+      - vue/package.json
+      - vue/inhumate*.tgz
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+      - node_modules
+      - vue/node_modules
 
 test js client:
   stage: test
-  image: node:16-slim
+  image: node:20-slim
   needs:
     - build js client
   script:
