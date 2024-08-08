@@ -124,7 +124,6 @@ test python client:
   stage: test
   image: python:3.10-slim
   needs:
-    - build broker
     - build python client
   script:
     - apt-get update -qq
