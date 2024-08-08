@@ -171,7 +171,6 @@ test dotnet client:
   stage: test
   image: mcr.microsoft.com/dotnet/sdk:7.0
   needs:
-    - build broker
     - build dotnet client
   script:
     - apt-get update -qq && apt-get install -qq curl unzip
