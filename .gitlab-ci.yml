@@ -79,15 +79,15 @@ build python client:
     - apt-get -qq update && apt-get install -qq curl unzip
     - scripts/get_protobuf.sh
     - cd python
-    - bash inhumate_rti_client/generate.sh
-    - sed -i "s/0.0.1-dev-version/${VERSION}/g" setup.py inhumate_rti_client/__init__.py
+    - bash inhumate_rti/generate.sh
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" setup.py inhumate_rti/__init__.py
     - pip install build
     - python -m build
   artifacts:
     paths:
       - python/setup.py
-      - python/inhumate_rti_client/__init__.py
-      - python/inhumate_rti_client/generated
+      - python/inhumate_rti/__init__.py
+      - python/inhumate_rti/generated
       - python/dist
     expire_in: 1 week
   cache:
@@ -135,7 +135,7 @@ test python client:
     - node broker/dist/broker.js &
     - sleep 10
     # Run tests
-    - pip install -r python/inhumate_rti_client/requirements.txt
+    - pip install -r python/inhumate_rti/requirements.txt
     - pip install -r python/test/requirements.txt
     - cd python/test
     - python -mpytest -v --junitxml=./test-result.xml

@@ -5,11 +5,11 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 setup(
-    name='inhumate-rti-client',
+    name='inhumate-rti',
     packages=[
-        'inhumate_rti_client',
-        'inhumate_rti_client.proto',
-        'inhumate_rti_client.generated'
+        'inhumate_rti',
+        'inhumate_rti.proto',
+        'inhumate_rti.generated'
     ],
     version='0.0.1-dev-version',
     license='Proprietary',
