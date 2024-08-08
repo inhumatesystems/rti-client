@@ -126,8 +126,7 @@ test python client:
   needs:
     - build python client
   script:
-    - apt-get update -qq
-    - apt-get install -qq curl unzip python3-pip
+    - apt-get update -qq && apt-get install -qq curl unzip python3-pip
     # Install node and broker
     - curl -sL https://deb.nodesource.com/setup_20.x | bash -
     - apt-get install -y nodejs
@@ -136,12 +135,12 @@ test python client:
     - node broker/dist/broker.js &
     - sleep 10
     # Run tests
-    - pip install -r clients/python/inhumate_rti_client/requirements.txt
-    - pip install -r clients/python/test/requirements.txt
-    - cd clients/python/test
+    - pip install -r python/inhumate_rti_client/requirements.txt
+    - pip install -r python/test/requirements.txt
+    - cd python/test
     - python -mpytest -v --junitxml=./test-result.xml
   artifacts:
     reports:
       junit:
-        - clients/python/test/test-result.xml
+        - python/test/test-result.xml
 
