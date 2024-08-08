@@ -26,7 +26,7 @@ setup(
         'websocket-client',
     ],
     entry_points = {
-        "console_scripts": [ "protoscribe=inhumate_rti_client.protoscribe:main" ]
+        "console_scripts": [ "protoscribe=inhumate_rti.protoscribe:main" ]
     },
     classifiers=[
         # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package

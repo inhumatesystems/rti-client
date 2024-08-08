@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__) + "/..")
 
-import inhumate_rti_client as RTI
+import inhumate_rti as RTI
 
 def main_loop():
     print("." if rti.connected else "x", end="", flush=True)

@@ -11,7 +11,7 @@ import argparse
 
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(__file__) + "/..")
-from inhumate_rti_client import RTIClient
+from inhumate_rti import RTIClient
 
 def main():
 

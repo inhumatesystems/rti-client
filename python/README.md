@@ -5,7 +5,7 @@ Please refer to the [Inhumate RTI documentation](https://gitlab.com/inhumate/rti
 Example usage:
 
 ```python
-import inhumate_rti_client as RTI
+import inhumate_rti as RTI
 
 rti = RTI.Client(application="python_test")
 

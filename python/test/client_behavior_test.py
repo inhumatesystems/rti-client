@@ -2,7 +2,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__) + "/..")
 
 import unittest
-import inhumate_rti_client as RTI
+import inhumate_rti as RTI
 import time
 
 class ClientBehaviorTest(unittest.TestCase):
