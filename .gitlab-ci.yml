@@ -95,6 +95,29 @@ build python client:
     paths:
       - protobuf
 
+build dotnet client:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:7.0
+  script:
+    - apt-get update -qq && apt-get install -qq curl unzip
+    - scripts/get_protobuf.sh
+    - cd dotnet/src
+    - ./generate.sh
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" *.csproj RTIConstants.cs
+    - dotnet build -c Release
+    - dotnet publish -c Release
+  artifacts:
+    paths:
+      - dotnet/src/RTIConstants.cs
+      - dotnet/src/generated
+      - dotnet/src/bin/Release/net*/publish
+      - dotnet/src/bin/Release/*.nupkg
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+
 
 # TEST
 
@@ -143,4 +166,27 @@ test python client:
     reports:
       junit:
         - python/test/test-result.xml
+
+test dotnet client:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:7.0
+  needs:
+    - build broker
+    - build dotnet client
+  script:
+    - apt-get update -qq && apt-get install -qq curl unzip
+    # Install node and broker
+    - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+    - apt-get install -y nodejs
+    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
+    # Start broker
+    - node broker/dist/broker.js &
+    - sleep 20
+    # Run tests
+    - cd dotnet/test
+    - dotnet test -v n --test-adapter-path:. --logger:"junit;LogFilePath=./test-result.xml;MethodFormat=Class;FailureBodyFormat=Verbose"
+  artifacts:
+    reports:
+      junit:
+        - dotnet/test/test-result.xml
 
