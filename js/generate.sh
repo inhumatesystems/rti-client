@@ -4,9 +4,9 @@ rm -rf src/generated/*
 mkdir -p src/generated
 
 # We need the Typescript plugin for protoc
-TS_PROTO_PATH="node_modules/.bin/protoc-gen-ts_proto"
+TS_PROTO_PATH="../node_modules/.bin/protoc-gen-ts_proto"
 [ -e "$TS_PROTO_PATH" ] || npm install
-[ -e "$TS_PROTO_PATH.cmd" ] && TS_PROTO_PATH='node_modules\.bin\protoc-gen-ts_proto.cmd'
+[ -e "$TS_PROTO_PATH.cmd" ] && TS_PROTO_PATH='../node_modules\.bin\protoc-gen-ts_proto.cmd'
 
 # Directory to write generated code to (.js and .d.ts files) 
 OUT_DIR="./src/generated"
