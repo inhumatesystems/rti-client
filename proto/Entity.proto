@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "EntityPosition.proto";
+import "EntityCategory.proto";
+import "EntityDomain.proto";
+import "LVCCategory.proto";
+import "Color.proto";
+
+message Entity {
+    // IdMessage
+    string id = 1;
+    string owner_client_id = 2;
+
+    EntityPosition position = 3;
+    string type = 4;
+    EntityCategory category = 5;
+    EntityDomain domain = 6;
+    LVCCategory lvc = 7;
+    Dimensions dimensions = 8;
+    Color color = 9;
+    string title = 10;
+    bool disabled = 11;
+    bool deleted = 12;
+
+    message Dimensions {
+        float length = 1;
+        float width = 2;
+        float height = 3;
+        // center is the offset from entity origin to center of length/width/height
+        // i.e. if length = 2 and center.z = 1, then the object origin is at the rear of the object
+        EntityPosition.LocalPosition center = 4;
+    }
+}
+
+

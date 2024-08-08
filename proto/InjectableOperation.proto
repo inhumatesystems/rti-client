@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/empty.proto";
+
+message InjectableOperation {
+
+    oneof which {
+        google.protobuf.Empty request_update = 1;
+    }
+
+}

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+
+message LaunchEvent {
+
+    oneof which {
+        google.protobuf.Empty request_state = 1;
+        LaunchItemState state = 2;
+    }
+
+    message LaunchItemState {
+        string launcher_client_id = 1;
+        string name = 2;
+        ProcessState process_state = 3;
+        string link_url = 4;
+        string link_title = 5;
+        string link_description = 6;
+        string error = 7;
+    }
+
+    enum ProcessState {
+        UNKNOWN = 0;
+        PENDING = 1;
+        STARTED = 2;
+        RUNNING = 3;
+        STOPPING = 4;
+        DONE = 5;
+        FAILED = 6;
+    }
+
+}

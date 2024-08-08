@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+// See https://en.wikipedia.org/wiki/Live,_virtual,_and_constructive
+// for a general intodruction to the concept of LVC (Live, Virtual, Constructive)
+
+enum LVCCategory {
+    UNKNOWN_LVC_CATEGORY = 0;
+
+    // As defined by US DoD M&S Glossary:
+
+    LIVE = 1; // A simulation involving real people operating real systems
+
+    VIRTUAL = 2; // A simulation involving real people operating simulated systems
+    
+    // Virtual simulations inject a Human-in-the-Loop into a central role by exercising motor control skills 
+    // (e.g., flying jet or tank simulator), decision making skills (e.g., committing fire control resources to action), 
+    // or communication skills (e.g., as members of a C4I team).
+
+    CONSTRUCTIVE = 3; // A simulation involving simulated people operating simulated systems
+
+    // Real people stimulate (make inputs to) such simulations, but are not involved in determining the outcomes. 
+    // A constructive simulation is a computer program. For example, a military user may input data instructing a unit 
+    // to move and to engage an enemy target. The constructive simulation determines the speed of movement, the effect 
+    // of the engagement with the enemy and any battle damage that may occur.
+}

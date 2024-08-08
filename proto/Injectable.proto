@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+// Injectable - something that can be injected at runtime into a scenario
+// e.g. a triggered event or a change of environmental conditions
+
+import "Parameter.proto";
+
+message Injectable {
+    string name = 1;
+    string description = 2;
+    bool concurrent = 3;    // can have multiple injections active at once
+
+    ControlMode start_mode = 10;
+    ControlMode end_mode = 11;
+
+    repeated Parameter parameters = 12;
+
+    enum ControlMode {
+        IMMEDIATE = 0;
+        AUTO = 1;
+        MANUAL = 2;
+        AUTO_OR_MANUAL = 3;
+    }
+}

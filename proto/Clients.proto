@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+import "RuntimeState.proto";
+
+message Clients {
+
+    oneof which {
+        google.protobuf.Empty request_clients = 1;
+        Client client = 2;  // a client is online
+        Client log_client = 3;  // a client was online when the current log was recorded
+        ParticipantRegistration register_participant = 4;
+        ParticipantState participant_state = 5;
+        ClientProgress progress = 6;
+        ClientValue value = 7;
+        ClientHeartbeat heartbeat = 8;
+    }
+
+}
+
+message Client {
+    string id = 1;
+    string application = 2;
+    RuntimeState state = 3;
+
+    string host = 5;
+    string station = 6;
+    string user = 7;
+    string participant = 8;
+    string role = 9;
+
+    string application_version = 10;
+    string engine_version = 11;
+    string client_library_version = 12;
+
+    string full_name = 13;
+    string url = 14;
+
+    string user_agent = 15;
+    string integration_version = 16;
+
+    repeated string capabilities = 17;
+}
+
+message ParticipantRegistration {
+    string participant = 1;
+    string client_id = 2;
+    string host = 3;
+    string station = 4;
+    string role = 5;
+    string full_name = 6;
+}
+
+message ParticipantState {
+    string participant = 1;
+    bool ready = 3;
+}
+
+message ClientProgress {
+    string client_id = 1;
+    uint32 progress = 2;
+}
+
+message ClientValue {
+    string client_id = 1;
+    string value = 2;
+    bool highlight = 3;
+    bool error = 4;
+}
+
+message ClientHeartbeat {
+    string client_id = 1;
+}
+

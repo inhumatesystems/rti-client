@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/empty.proto";
+
+message InjectionOperation {
+
+    oneof which {
+        google.protobuf.Empty request_update = 1;
+        Inject inject = 3;
+        string disable = 4; // injection id
+        string enable = 5;  // injection id
+        string start = 6;   // injection id
+        string end = 7;     // injection id
+        string stop = 8;    // injection id
+        string cancel = 9;  // injection id
+        string clear = 10;  // injectable name
+        Schedule schedule = 11;
+        UpdateTitle update_title = 12;
+    }
+
+    message Inject {
+        string injectable = 1;
+        double enable_time = 2;
+        bool disabled = 3;
+        map<string, string> parameter_values = 4;
+    }
+
+    message Schedule {
+        string injection_id = 1;
+        double enable_time = 2;
+    }
+
+    message UpdateTitle {
+        string injection_id = 1;
+        string title = 2;
+    }
+
+}

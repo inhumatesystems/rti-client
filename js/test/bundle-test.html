@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <title>Inhumate RTI Bundle Test</title>
+    </head>
+    <body style="font-family: sans-serif; background-color: #14181b; color: rgb(158, 158, 158)">
+        <h1>Hello</h1>
+        <p>How's it going?</p>
+        <div id="clients" style="white-space: pre-wrap"></div>
+        <script src="../dist/inhumate-rti-bundle-0.0.1-dev-version.js"></script>
+        <script>
+            const rti = new RTI.Client({ application: "bundle-test.html" })
+            rti.on("connect", () => {
+                console.log("RTI connected")
+            })
+            rti.on("disconnect", () => {
+                console.log("RTI disconnected")
+            })
+            rti.on("error", (channel, error) => {
+                console.error("RTI error", channel, error)
+            })
+            setTimeout(() => {
+                console.log("request clients")
+                rti.subscribe(RTI.channel.clients, RTI.proto.Clients, (message) => {
+                    if (message.client) {
+                        const text = `${message.client.application} - ${RTI.proto.RuntimeState[message.client.state]}`
+                        console.log(`client ${text}`)
+                        document.getElementById("clients").innerHTML += `${text}<br/>`
+                    } else if (message.requestClients) {
+                        document.getElementById("clients").innerHTML = ""
+                    }
+                })
+                rti.publish(RTI.channel.clients, RTI.proto.Clients, { requestClients: {} })
+            }, 500)
+        </script>
+    </body>
+</html>

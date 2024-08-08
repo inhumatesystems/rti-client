@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+
+message Measures {
+
+    oneof which {
+        google.protobuf.Empty request_measures = 1;
+        Measure measure = 2;  // a measure is used in a client currently online
+        Measure log_measure = 3;  // a measure was used while recording the current log
+    }
+
+}
+
+message Measure {
+    string id = 1;
+    string title = 2;
+    string application = 3;
+    string unit = 4;
+    string channel = 5; // channel name if non-standard
+    float interval = 6;
+}

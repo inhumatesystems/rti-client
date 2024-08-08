@@ -1,0 +1,64 @@
+stages:
+  - build
+  - test
+  - build-2
+  - package
+  - publish
+  - release
+
+default:
+  before_script:
+    - VERSION=${CI_COMMIT_TAG}
+    - "[ -z \"$VERSION\" ] && VERSION=0.0.${CI_PIPELINE_IID}"
+    - export VERSION
+
+build js client:
+  stage: build
+  image: node:16-slim
+  script:
+    - apt-get update -qq
+    - apt-get install -qq curl unzip
+    - scripts/get_protobuf.sh
+    - cd js
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json src/constants.ts webpack.config.cjs
+    - npm install
+    - ./generate.sh
+    - npm run build
+    - npm pack
+  artifacts:
+    paths:
+      - js/src/constants.ts
+      - js/src/generated
+      - js/package.json
+      - js/lib
+      - js/dist
+      - js/inhumate*.tgz
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - protobuf
+      - node_modules
+      - js/node_modules
+
+# test typescript client:
+#   stage: test
+#   image: node:16-slim
+#   needs:
+#     - build broker
+#     - build typescript client
+#   script:
+#     - cd broker
+#     - node dist/broker.js &
+#     - sleep 10
+#     - cd ../clients/typescript
+#     - npm install
+#     - npm run test-ci
+#   artifacts:
+#     reports:
+#       junit:
+#         - clients/typescript/junit.xml
+#   cache:
+#     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - clients/typescript/node_modules

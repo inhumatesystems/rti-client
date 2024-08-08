@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/empty.proto";
+
+message GeometryOperation {
+    oneof which {
+        google.protobuf.Empty request_update = 1;
+        ApplicationClient request_persistent_ownership = 2;
+        ApplicationClient claim_persistent_ownership = 3;
+    }
+
+    message ApplicationClient {
+        string application = 1;
+        string client_id = 2;
+    }
+
+}

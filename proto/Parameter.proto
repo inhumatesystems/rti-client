@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message Parameter {
+    string name = 1;
+    string label = 2;
+    string description = 3;
+    string default_value = 4;
+    string type = 5;
+    bool required = 6;
+}

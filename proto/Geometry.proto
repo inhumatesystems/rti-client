@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "Color.proto";
+
+message Geometry {
+    // IdMessage
+    string id = 1;
+    string owner_client_id = 2;
+
+    oneof shape {
+        Point2D point = 3;
+        Point3D point3d = 4;
+        Line2D line = 5;
+        Line3D line3d = 6;
+        Polygon polygon = 7;
+        Mesh mesh = 8;
+        Spline2D spline = 9;
+        Spline3D spline3d = 10;
+    }
+    Color color = 20;
+    float transparency = 21;
+    string title = 22;
+    Color label_color = 23;
+    float label_transparency = 24;
+    bool scalable = 25;
+    bool wireframe = 26;
+    float line_width = 27;
+
+    Usage usage = 30;
+    string type = 31;
+    Category category = 32;
+
+    bool disabled = 34;
+    bool deleted = 35;
+
+    message Point2D {
+        LocalPoint2D local = 1;
+        GeodeticPoint2D geodetic = 2;
+    }
+
+    message LocalPoint2D {
+        float x = 1;
+        float y = 2;
+    }
+
+    message GeodeticPoint2D {
+        double longitude = 1; // degrees, positive east
+        double latitude = 2;  // degrees, positive north
+    }
+
+    message Point3D {
+        LocalPoint3D local = 1;
+        GeodeticPoint3D geodetic = 2;
+    }
+
+    message LocalPoint3D {
+        float x = 1;
+        float y = 2;
+        float z = 3;
+    }
+
+    message GeodeticPoint3D {
+        double longitude = 1; // degrees, positive east
+        double latitude = 2;  // degrees, positive north
+        double altitude = 3;  // meters, above mean sea level
+    }
+
+    message Line2D {
+        repeated Point2D points = 1;
+    }
+
+    message Line3D {
+        repeated Point3D points = 1;
+    }
+
+    message Polygon {
+        repeated Point2D points = 1;
+        float base = 2;
+        float height = 3;
+    }
+
+    message Mesh {
+        repeated LocalPoint3D vertices = 1;
+        repeated int32 indices = 2;
+        repeated LocalPoint3D normals = 3;
+    }
+
+    message Spline2D {
+        // type = 1; for now assuming cubic bezier
+        repeated Point2D points = 2;
+        repeated Point2D control_points = 3;
+        // points and control points for each segment: Pn, CPn -> Pn+1, Pn+1 - (CPn+1 - Pn+1)
+    }
+
+    message Spline3D {
+        // type = 1;
+        repeated Point3D points = 2;
+        repeated Point3D control_points = 3;
+    }
+
+    enum Usage {
+        SCENARIO = 0; // geometry is part of the scenario, should be rendered in viewer
+        ENTITY = 1;   // geometry is used to represent an entity, id = entity type
+    }
+
+    enum Category {
+        UNKNOWN_GEOMETRY = 0;
+        
+        // Physical
+
+        PHYSICAL_GEOMETRY = 10;
+        GROUND = 11;
+        VEGETATION = 12;
+        STRUCTURE = 13;
+        ROAD = 14;
+        
+        // Abstract
+
+        ABSTRACT_GEOMETRY = 100;
+        ZONE = 101;
+        TRIGGER = 102;
+        EDGE = 103;
+        PATH = 104;
+        PLANNED_PATH = 105;
+        HISTORIC_PATH = 106;
+
+        SENSOR_COVERAGE = 151;
+        SENSOR_HIT = 152;
+
+        // Debug
+
+        DEBUG_GEOMETRY = 200;
+    }
+}
+

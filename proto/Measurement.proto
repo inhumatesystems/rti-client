@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message Measurement {
+    string measure_id = 1;
+    string client_id = 2;
+    oneof which {
+        float value = 3;
+        Window window = 4;
+    }
+
+    message Window {
+        float mean = 1;
+        float max = 2;
+        float min = 3;
+        float duration = 4;
+        int32 count = 5;
+    }
+}

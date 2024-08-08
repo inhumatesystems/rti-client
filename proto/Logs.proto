@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message Logs {
+    oneof which {
+        ListRequest list = 1;
+        SearchRequest search = 2;
+        Log log = 3;
+        google.protobuf.Empty no_logs = 4;
+        string delete_log = 5;
+    }
+
+    message ListRequest {
+        int32 limit = 1;
+        int32 offset = 2;
+    }
+
+    message SearchRequest {
+        string text = 1;
+        google.protobuf.Timestamp from = 2;
+        google.protobuf.Timestamp to = 3;
+    }
+}
+
+message Log {
+    string id = 1;
+    double length = 2;
+    string scenario_name = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    string title = 6;
+    int64 message_count = 7;
+    int64 message_bytes = 8;
+    bool recording_disabled = 9;
+    int32 measure_count = 10;
+    int64 measurement_count = 11;
+    int64 measurement_bytes = 12;
+
+    string launch_configuration = 13;
+    repeated string applications = 14;
+    repeated string users = 15;
+    repeated string participants = 16;
+    map<string, string> launch_parameter_values = 17;
+    map<string, string> scenario_parameter_values = 18;
+
+    int32 avmedia_count = 19;
+    int64 avmedia_bytes = 20;
+
+    repeated LogMark marks = 21;
+    repeated LogPause pauses = 22;
+    repeated LogTimeScale time_scales = 23;
+}
+
+message LogMark {
+    string id = 1;
+    double time = 2;
+    string title = 3;   
+}
+
+message LogPause {
+    double time = 1; // sim time
+    double duration = 2; // real time
+}
+
+message LogTimeScale {
+    double time = 1;
+    double time_scale = 2;
+}

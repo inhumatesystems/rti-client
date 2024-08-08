@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+// Common format for all messages that begin with an ID
+
+message IdMessage {
+    string id = 1;
+}

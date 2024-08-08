@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/empty.proto";
+import "RuntimeState.proto";
+import "Logs.proto";
+
+message RuntimeControl {
+
+    oneof control {
+        LoadScenario load_scenario = 1;
+        google.protobuf.Empty start = 2;
+        google.protobuf.Empty play = 3;
+        google.protobuf.Empty pause = 4;
+        google.protobuf.Empty end = 5;
+        google.protobuf.Empty stop = 6;
+        google.protobuf.Empty reset = 7;
+
+        SetTimeScale set_time_scale = 10;
+        Seek seek = 11;
+        TimeSync time_sync = 12;
+
+        Error error = 17;
+
+        google.protobuf.Empty new_log = 21;
+        google.protobuf.Empty request_current_log = 22;
+        Log current_log = 23;
+        string load_log = 24;   // log id
+        LogMark mark_log = 25;
+        string unmark_log = 26; // mark id
+
+        Launch launch = 31;
+        google.protobuf.Empty shutdown = 32;
+        string launch_item = 33;
+        string shutdown_item = 34;
+        string run_remote_action = 35;
+
+        google.protobuf.Empty request_current_scenario = 36;
+        LoadScenario current_scenario = 37;
+    }
+
+    message LoadScenario {
+        string name = 1;
+        map<string, string> parameter_values = 2;
+    }
+
+    message SetTimeScale {
+        double time_scale = 1;
+    }
+
+    message Seek {
+        double time = 1;
+    }
+
+    message Error {
+        string client_id = 1;
+        RuntimeState state = 2;
+        string message = 3;
+    }
+
+    message TimeSync {
+        double time = 1;
+        double time_scale = 2;
+        string master_client_id = 3;
+    }
+
+    message Launch {
+        string configuration = 1;
+        map<string, string> parameter_values = 2;
+    }
+
+}
+ 

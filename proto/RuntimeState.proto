@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+enum RuntimeState {
+    UNKNOWN = 0;
+    INACTIVE = 1;
+    
+    LAUNCHING = 5;
+    LAUNCHED = 6;
+    INITIAL = 10;
+    LOADING = 11;
+    READY = 12;
+    
+    RUNNING = 20;
+    PLAYBACK = 21;
+    
+    PAUSED = 30;
+    PLAYBACK_PAUSED = 31;
+
+    END = 34;
+    PLAYBACK_END = 35;
+
+    STOPPING = 40;
+    STOPPED = 41;
+    PLAYBACK_STOPPED = 42;
+
+    SHUTTING_DOWN = 50;
+    SHUT_DOWN = 51;
+}
+

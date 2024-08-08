@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message EntityPosition {
+    // IdMessage
+    string id = 1;
+
+    // For local positions and rotations, any cartesian coordinate system can theoretically be used.
+    // However, Inhumate products assume a Unity style coordinate system:
+    // - x is right / east
+    // - y is up
+    // - z is forward / north
+    // - 1 unit is 1 meter
+    // (consequently it's a left handed coordinate system)
+
+    message LocalPosition {
+        float x = 1;
+        float y = 2;
+        float z = 3;
+    }
+    LocalPosition local = 2;
+
+    message LocalRotation {
+        float x = 1;
+        float y = 2;
+        float z = 3;
+        float w = 4;
+    }
+    LocalRotation local_rotation = 3;
+
+    message EulerRotation {
+        float roll = 1;  // degrees, positive right
+        float pitch = 2; // degrees, positive up
+        float yaw = 3;   // degrees, positive right
+    }
+    EulerRotation euler_rotation = 4;
+
+    message GeodeticPosition {
+        double longitude = 1; // degrees, positive east
+        double latitude = 2;  // degrees, positive north
+        double altitude = 3;  // meters, above mean sea level
+    }
+    GeodeticPosition geodetic = 5;
+
+    message VelocityVector {
+        float forward = 1;
+        float right = 2;
+        float up = 3;
+    }
+    VelocityVector velocity = 6;             // local reference frame, m/s
+    VelocityVector acceleration = 7;         // local reference frame, m/s2
+    EulerRotation angular_velocity = 8; // local reference frame, degrees/second
+}

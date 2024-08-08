@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+// Answers the question: On a generic level, what kind of entity is this?
+
+enum EntityCategory {
+    UNKNOWN_CATEGORY = 0;
+    OTHER_CATEGORY = 1;
+    PERSON = 2;
+    ANIMAL = 3;
+    VEHICLE = 4;
+}

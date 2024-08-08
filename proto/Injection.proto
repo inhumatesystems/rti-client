@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+// Injection - instantiation of Injectable, something that has been injected into the scenario
+// e.g. a triggered event or a change of environmental conditions
+
+message Injection {
+    string id = 1;
+    string injectable = 2;
+    State state = 3;
+    string title = 4;
+    map<string, string> parameter_values = 5;
+
+    double enable_time = 10;
+    double start_time = 11;
+    double end_time = 12;
+
+    enum State {
+        UNKNOWN = 0;
+        DISABLED = 10;
+        ENABLED = 20;
+        RUNNING = 30;
+        END = 40;
+        STOPPED = 41;
+        CANCELED = 42;
+    }
+}

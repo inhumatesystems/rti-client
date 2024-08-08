@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message MessageBundle {
+    
+    oneof which {
+        Request request = 1;
+        Response response = 2;
+    }
+
+    message Request {
+        string response_channel = 1;
+        repeated string channels = 2;
+        double from_time = 3;
+        double to_time = 4;
+        int32 limit = 5;
+        int32 offset = 6;
+        bool reverse = 7;
+        bool per_channel = 8; // if true, we want $limit messages per channel, e.g. used to get "latest" message in a state channel
+        bool per_id = 9; // if true, we want $limit messages per id (for channels where first_field_id=true), e.g. used to get "latest" message in a state-per-id channel
+        repeated string ids = 10;
+    }
+
+    message Response {
+        repeated Channel channels = 1;
+        int64 total_count = 2;
+    }
+
+    message Channel {
+        string name = 1;
+        repeated Message messages = 2;
+    }
+
+    message Message {
+        double time = 1;
+        string content = 3;
+    }
+}

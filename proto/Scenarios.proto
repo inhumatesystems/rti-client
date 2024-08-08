@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+import "Parameter.proto";
+
+message Scenarios {
+
+    oneof which {
+        google.protobuf.Empty request_scenarios = 1;
+        Scenario scenario = 2;
+    }
+
+}
+
+message Scenario {
+    string name = 1;
+    string description = 2;
+    repeated Parameter parameters = 3;
+}

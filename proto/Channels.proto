@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+
+message Channels {
+
+    oneof which {
+        google.protobuf.Empty request_channel_usage = 1;
+        ChannelUsage channel_usage = 2;
+        Channel channel = 3;
+        Channel log_channel = 4;
+    }
+
+}
+
+message ChannelUsage {
+    string client_id = 1;
+    repeated ChannelUse usage = 2;
+}
+
+message ChannelUse {
+    Channel channel = 1;
+    bool publish = 3;
+    bool subscribe = 4;
+}
+
+message Channel {
+    string name = 1;
+    string data_type = 2;
+    bool ephemeral = 3;         // not to be persisted/recorder
+    bool state = 4;             // hints that latest message should be all we need to get the entire state
+    bool first_field_id = 5;    // if true and state is true, latest message *per id* should represent entire state
+}
+

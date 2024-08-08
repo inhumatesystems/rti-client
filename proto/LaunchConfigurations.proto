@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "google/protobuf/empty.proto";
+import "Parameter.proto";
+
+message LaunchConfigurations {
+
+    oneof which {
+        google.protobuf.Empty request_configurations = 1;
+        LaunchConfiguration configuration = 2;
+        LaunchConfiguration active_configuration = 3;
+        google.protobuf.Empty request_remote_actions = 4;
+        RemoteAction remote_action = 5;
+    }
+
+}
+
+message LaunchConfiguration {
+    string name = 1;
+    string description = 2;
+    repeated Parameter parameters = 3;
+}
+
+message RemoteAction {
+    string name = 1;
+    string title = 2;
+    string description = 3;
+    bool disabled_when_launched = 4;
+    bool offset = 5;
+    string icon = 6;
+    int32 sort_weight = 7;
+}
+

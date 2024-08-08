@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+import "Measures.proto";
+import "Measurement.proto";
+
+message MeasurementBundle {
+
+    oneof which {
+        Request request = 1;
+        Response response = 2;
+    }
+
+    message Request {
+        string response_channel = 1;
+        repeated string measures = 2;
+        repeated string clients = 3;
+        repeated string applications = 4;
+
+        double from_time = 8;
+        double to_time = 9;
+        double resolution = 10; // window size, 0 = raw, -1 or >= to_time - from_time = single window
+        int32 limit = 11;
+        int32 offset = 12;
+        bool reverse = 13;
+        bool per_measure = 14; // if true, we want $limit measurements per measure, e.g. used to get "latest" measurement
+    }
+
+    message Response {
+        repeated MeasureResponse measures = 1;
+        int64 total_count = 2;
+    }
+
+    message MeasureResponse {
+        Measure measure = 1;
+        string client_id = 2;
+        repeated HistoricMeasurement measurements = 3;
+    }
+
+    message HistoricMeasurement {
+        double time = 1;
+        oneof which {
+            float value = 3;
+            Measurement.Window window = 4;
+        }
+    }
+
+}
