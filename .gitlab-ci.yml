@@ -51,7 +51,7 @@ test js client:
     - build js client
   script:
     - apt-get update -qq && apt-get install -qq curl unzip
-    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${CI_JOB_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
+    - "curl --location --output artifacts.zip --header \"JOB-TOKEN: ${CI_JOB_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
     - node broker/dist/broker.js &
     - sleep 10
     - cd js
