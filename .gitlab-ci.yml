@@ -205,8 +205,8 @@ build c++ static client windows:
     - if ( "${CI_COMMIT_TAG}" ) { $VERSION = "${CI_COMMIT_TAG}" }
     - if ( ! "$VERSION" ) { $VERSION = "0.0.${CI_PIPELINE_IID}" }
   script:
-    - ((get-content -path clients\cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path clients\cpp\inhumaterti.hpp
-    - powershell -file clients\cpp\scripts\windows_static_build.ps1
+    - ((get-content -path cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path cpp\inhumaterti.hpp
+    - powershell -file cpp\scripts\windows_static_build.ps1
   artifacts:
     paths:
       - cpp/inhumaterti.hpp
@@ -254,8 +254,8 @@ build c++ ue5 client windows:
     - if ( "${CI_COMMIT_TAG}" ) { $VERSION = "${CI_COMMIT_TAG}" }
     - if ( ! "$VERSION" ) { $VERSION = "0.0.${CI_PIPELINE_IID}" }
   script:
-    - ((get-content -path clients\cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path clients\cpp\inhumaterti.hpp
-    - powershell -file clients\cpp\scripts\windows_ue5_build.ps1
+    - ((get-content -path cpp\inhumaterti.hpp -raw) -replace "0.0.1-dev-version","$VERSION") | set-content -path cpp\inhumaterti.hpp
+    - powershell -file cpp\scripts\windows_ue5_build.ps1
   artifacts:
     paths:
       - cpp/build-ue5/Include
@@ -352,7 +352,7 @@ test dotnet client:
     - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
     # Start broker
     - node broker/dist/broker.js &
-    - sleep 10
+    - sleep 20
     # Run tests
     - cd dotnet/test
     - dotnet test -v n --test-adapter-path:. --logger:"junit;LogFilePath=./test-result.xml;MethodFormat=Class;FailureBodyFormat=Verbose"
