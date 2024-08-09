@@ -72,7 +72,7 @@
 import { Component, Vue, Watch } from "vue-property-decorator"
 import SubscribingComponent from "./components/subscribingcomponent"
 import RuntimeState from "./components/RuntimeState.vue"
-import * as RTI from "@inhumate/rti-legacy"
+import * as RTI from "inhumate-rti-legacy"
 import { mapGetters, mapState } from "vuex"
 
 @Component({

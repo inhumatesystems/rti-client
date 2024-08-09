@@ -10,7 +10,7 @@
 <script lang="ts">
 import { Component, Prop, Watch } from "vue-property-decorator"
 import SubscribingComponent from "./subscribingcomponent"
-import * as RTI from "@inhumate/rti-legacy"
+import * as RTI from "inhumate-rti-legacy"
 
 @Component({})
 export default class ImageSubscription extends SubscribingComponent {

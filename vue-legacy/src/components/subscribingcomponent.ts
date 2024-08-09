@@ -1,5 +1,5 @@
 import { Component, Vue } from "vue-property-decorator"
-import * as RTI from "@inhumate/rti-legacy"
+import * as RTI from "inhumate-rti-legacy"
 
 @Component({})
 export default class SubscribingComponent extends Vue {

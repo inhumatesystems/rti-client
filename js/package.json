@@ -1,8 +1,15 @@
 {
-  "name": "@inhumate/rti",
+  "name": "inhumate-rti",
   "version": "0.0.1-dev-version",
   "description": "Inhumate RTI javascript client",
   "private": false,
+  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inhumatesystems/rti-client.git",
+    "directory": "js"
+  },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -15,13 +22,6 @@
   "files": [
     "lib"
   ],
-  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://gitlab.com/inhumate/rti-client.git",
-    "directory": "clients/typescript"
-  },
   "devDependencies": {
     "@types/jest": "^29.5.2",
     "@types/uuid": "^9.0.2",

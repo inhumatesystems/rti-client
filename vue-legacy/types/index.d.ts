@@ -29,7 +29,7 @@
 // };
 
 
-import { RTIClient, RTIOptions } from "@inhumate/rti-legacy"
+import { RTIClient, RTIOptions } from "inhumate-rti-legacy"
 import Vue, { VueConstructor, PluginFunction } from "vue"
 
 declare module "vue/types/vue" {

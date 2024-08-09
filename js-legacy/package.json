@@ -1,7 +1,15 @@
 {
-  "name": "@inhumate/rti-legacy",
+  "name": "inhumate-rti-legacy",
   "version": "0.0.1-dev-version",
   "description": "Inhumate RTI legacy javascript client",
+  "private": false,
+  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inhumatesystems/rti-client.git",
+    "directory": "js-legacy"
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -13,13 +21,6 @@
   "files": [
     "lib"
   ],
-  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://gitlab.com/inhumate/rti.git",
-    "directory": "clients/typescript-legacy"
-  },
   "devDependencies": {
     "@types/jest": "^29.5.2",
     "@types/uuid": "^9.0.2",

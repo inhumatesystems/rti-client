@@ -1,6 +1,6 @@
 import Vue from "vue"
 import { Module, VuexModule, Mutation, Action } from "vuex-module-decorators"
-import * as RTI from "@inhumate/rti-legacy"
+import * as RTI from "inhumate-rti-legacy"
 import constants from "@/constants"
 
 @Module({ namespaced: true })

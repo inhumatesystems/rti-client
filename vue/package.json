@@ -1,8 +1,15 @@
 {
-  "name": "@inhumate/rti-vue",
+  "name": "inhumate-rti-vue",
   "version": "0.0.1-dev-version",
   "description": "Inhumate RTI Vue integration",
   "private": false,
+  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inhumatesystems/rti-client.git",
+    "directory": "vue"
+  },
   "type": "module",
   "files": [
     "dist"
@@ -22,7 +29,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@inhumate/rti": ">=0.0.1-dev-version",
+    "inhumate-rti": ">=0.0.1-dev-version",
     "pinia": "^2.1.7",
     "vue": "^3.4.14"
   },

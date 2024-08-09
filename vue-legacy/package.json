@@ -1,7 +1,15 @@
 {
-  "name": "@inhumate/rti-vue-legacy",
+  "name": "inhumate-rti-vue-legacy",
   "version": "0.0.1-dev-version",
   "description": "Inhumate RTI legacy vue 2 integration",
+  "private": false,
+  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inhumatesystems/rti-client.git",
+    "directory": "vue-legacy"
+  },
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
@@ -10,13 +18,6 @@
     "lint:fix": "vue-cli-service lint",
     "start": "npm run serve"
   },
-  "author": "Inhumate <packages@inhumatesystems.com> (https://inhumatesystems.com/)",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://gitlab.com/inhumate/rti.git",
-    "directory": "clients/typescript-legacy"
-  },
   "main": "./lib/inhumate-rti-vue-legacy.common.js",
   "typings": "./types/index.d.ts",
   "files": [
@@ -24,7 +25,7 @@
     "types/*"
   ],
   "dependencies": {
-    "@inhumate/rti-legacy": "file:../js-legacy",
+    "inhumate-rti-legacy": "file:../js-legacy",
     "google-protobuf": "^3.12.2",
     "moment": "^2.29.4",
     "vue": "^2.7.14",

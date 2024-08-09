@@ -1,4 +1,4 @@
-import RTIClient, { Options as RTIOptions } from "@inhumate/rti-legacy"
+import RTIClient, { Options as RTIOptions } from "inhumate-rti-legacy"
 
 import Vue, { VueConstructor } from "vue"
 declare module "vue/types/vue" {

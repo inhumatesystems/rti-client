@@ -1,5 +1,5 @@
 {
-    "name": "@inhumate/rti-clients",
+    "name": "inhumate-rti-clients",
     "private": true,
     "scripts": {},
     "workspaces": [

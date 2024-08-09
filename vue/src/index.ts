@@ -1,5 +1,5 @@
 import type { App } from "vue"
-import * as RTI from "@inhumate/rti"
+import * as RTI from "inhumate-rti"
 export { RTI }
 import { useRtiStore } from "@/rti"
 export { useRtiStore }

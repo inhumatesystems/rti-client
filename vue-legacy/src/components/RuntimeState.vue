@@ -32,7 +32,7 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from "vue-property-decorator"
-import * as RTI from "@inhumate/rti-legacy"
+import * as RTI from "inhumate-rti-legacy"
 import { runtimeStateAsText, formatDuration } from "@/formatting"
 import { mapState } from "vuex"
 

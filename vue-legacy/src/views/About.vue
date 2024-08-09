@@ -12,7 +12,7 @@
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator"
 import constants from "@/constants"
-import { constants as rtiConstants } from "@inhumate/rti-legacy"
+import { constants as rtiConstants } from "inhumate-rti-legacy"
 
 @Component({})
 export default class About extends Vue {

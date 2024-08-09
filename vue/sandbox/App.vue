@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import * as RTI from "@inhumate/rti"
+import * as RTI from "inhumate-rti"
 import { useRtiStore } from "@/rti"
 import ImageSubscription from "../src/components/ImageSubscription.vue"
 

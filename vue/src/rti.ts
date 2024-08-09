@@ -1,7 +1,7 @@
 import { defineStore } from "pinia"
 import { computed, inject, reactive, ref } from "vue"
-import * as RTI from "@inhumate/rti"
-import { runtimeStateToJSON } from "@inhumate/rti/lib/generated/RuntimeState"
+import * as RTI from "inhumate-rti"
+import { runtimeStateToJSON } from "inhumate-rti/lib/generated/RuntimeState"
 
 export const useRtiStore = defineStore("rti", () => {
     const rti = inject("rti-client") as RTI.Client

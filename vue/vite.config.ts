@@ -31,7 +31,7 @@ export default defineConfig({
         lib: {
             // Could also be a dictionary or array of multiple entry points
             entry: "src/index.ts",
-            name: "@inhumate/rti-vue",
+            name: "inhumate-rti-vue",
             formats: ["es", "cjs", "umd"],
             fileName: (format) => `inhumate-rti-vue.${format}.js`,
         },

@@ -1,4 +1,4 @@
-import { proto } from "@inhumate/rti-legacy"
+import { proto } from "inhumate-rti-legacy"
 const RuntimeState = proto.RuntimeState
 
 export function runtimeStateAsText(state: number) {
