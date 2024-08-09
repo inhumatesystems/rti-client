@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../src/Inhumate.RTI.Client.csproj" />
+    <ProjectReference Include="../src/Inhumate.RTI.csproj" />
   </ItemGroup>
 
 </Project>

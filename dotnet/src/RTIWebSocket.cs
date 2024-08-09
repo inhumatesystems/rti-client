@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Inhumate.RTI.Client {
+namespace Inhumate.RTI {
     internal class RTIWebSocket : IDisposable {
 
         public bool Polling { get; set; }

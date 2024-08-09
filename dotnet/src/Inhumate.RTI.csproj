@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>Inhumate.RTI.Client</PackageId>
+    <PackageId>Inhumate.RTI</PackageId>
     <Version>0.0.1-dev-version</Version>
     <Authors>Martin Insulander</Authors>
     <Company>Inhumate</Company>

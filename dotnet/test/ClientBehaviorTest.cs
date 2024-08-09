@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Inhumate.RTI.Proto;
 
-namespace Inhumate.RTI.Client {
+namespace Inhumate.RTI {
     public class ClientBehaviorTest {
 
         protected static RTIClient rti;

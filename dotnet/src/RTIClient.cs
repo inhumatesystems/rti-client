@@ -8,7 +8,7 @@ using Utf8Json;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 
-namespace Inhumate.RTI.Client {
+namespace Inhumate.RTI {
 
     public class RTIClient {
 
