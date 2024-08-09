@@ -1,7 +1,5 @@
 # Inhumate RTI Client for Python
 
-Please refer to the [Inhumate RTI documentation](https://gitlab.com/inhumate/rti/-/wikis/home) for more information.
-
 Example usage:
 
 ```python
@@ -28,3 +26,5 @@ rti.wait_until_connected()
 
 rti.publish_text("test", "foo")
 ```
+
+Please refer to the Inhumate RTI documentation for more information.

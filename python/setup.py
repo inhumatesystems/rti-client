@@ -15,7 +15,7 @@ setup(
     license='Proprietary',
     author='Inhumate AB',
     author_email='packages@inhumatesystems.com',
-    url='https://gitlab.com/inhumate/rti',
+    url='https://github.com/inhumatesystems/rti-client',
     description='Inhumate RTI Client',
     long_description=README,
     long_description_content_type="text/markdown",
