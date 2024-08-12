@@ -517,8 +517,8 @@ release:
         --assets-link "{\"name\":\"Inhumate.RTI.${VERSION}.nupkg\",\"url\":\"${packages_url}/Inhumate.RTI.${VERSION}.nupkg\"}" \
         --assets-link "{\"name\":\"inhumate_rti-${VERSION}-py3-none-any.whl\",\"url\":\"${packages_url}/inhumate_rti-${VERSION}-py3-none-any.whl\"}" \
         --assets-link "{\"name\":\"inhumate-rti-vue-legacy-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-vue-legacy-${VERSION}.tgz\"}" \
-        --assets-link "{\"name\":\"inhumate-rti-vue-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-vue-${VERSION}.tgz\"}" \
         --assets-link "{\"name\":\"inhumate-rti-legacy-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-legacy-${VERSION}.tgz\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-vue-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-vue-${VERSION}.tgz\"}" \
         --assets-link "{\"name\":\"inhumate-rti-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-${VERSION}.tgz\"}" \
         --assets-link "{\"name\":\"inhumate-rti-bundle-${VERSION}.js\",\"url\":\"${packages_url}/inhumate-rti-bundle-${VERSION}.js\"}" \
         ;
