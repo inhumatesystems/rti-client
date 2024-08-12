@@ -227,6 +227,7 @@ build c++ ue5 client linux:
     - nm8
   only:
     - tags
+    - /.*publish$/
     - /^(ue).*/
   script:
     - sed -i "s/0.0.1-dev-version/${VERSION}/g" cpp/inhumaterti.hpp
@@ -249,6 +250,7 @@ build c++ ue5 client windows:
     - nm8
   only:
     - tags
+    - /.*publish$/
     - /^(ue).*/
   before_script:
     - if ( "${CI_COMMIT_TAG}" ) { $VERSION = "${CI_COMMIT_TAG}" }
@@ -388,13 +390,12 @@ test c++ client:
 
 package c++ static client:
   stage: package
-  image: node:16-slim
+  image: node:20-slim
   needs:
     - build c++ static client linux
     - build c++ static client windows
   script:
-    - apt-get update -qq
-    - apt-get install -qq zip
+    - apt-get update -qq && apt-get install -qq zip
     - cpp/scripts/package_static.sh
   artifacts:
     paths:
@@ -403,19 +404,121 @@ package c++ static client:
 
 package c++ ue5 client:
   stage: package
-  image: node:16-slim
-  dependencies:
+  image: node:20-slim
+  needs:
     - build c++ ue5 client linux
     - build c++ ue5 client windows
     # - build c++ ue4 client macos
   script:
-    - apt-get update -qq
-    - apt-get install -qq zip
+    - apt-get update -qq && apt-get install -qq zip
     - cpp/scripts/package_ue5.sh
   artifacts:
     paths:
       - cpp/build-ue5/inhumate*.zip
   only:
     - tags
+    - /.*publish$/
     - /^(ue).*/
 
+
+# PUBLISH
+
+publish npm:
+  stage: publish
+  image: node:20-slim
+  only:
+    - tags
+    - /.*publish$/
+  needs:
+    - build js client
+    - build vue client
+    - build js legacy client
+    - build vue legacy client
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >$HOME/.npmrc
+    - cd js
+    - npm publish
+    - cd ../vue
+    - npm publish
+    - cd ../js-legacy
+    - npm publish
+    - cd ../vue-legacy
+    - npm publish
+
+publish pypi:
+  stage: publish
+  image: python:3.10-slim
+  only:
+    - tags
+    - /.*publish$/
+  variables:
+    GIT_STRATEGY: none
+  needs:
+    - build python client
+  script:
+    - apt-get update -qq && apt-get install -qq curl python3-pip
+    - pip3 install twine
+    - echo -e "[pypi]\n  username = __token__\n  password = ${PYPI_TOKEN}\n" > $HOME/.pypirc
+    - cd python
+    - python3 -m twine check dist/*
+    - python3 -m twine upload dist/*
+
+publish nuget:
+  stage: publish
+  image: mcr.microsoft.com/dotnet/sdk:7.0
+  only:
+    - tags
+    - /.*publish$/
+  variables:
+    GIT_STRATEGY: none
+  needs:
+    - build dotnet client
+  script:
+    - cd dotnet/src
+    - dotnet nuget push bin/Release/*.nupkg -k ${NUGET_API_KEY} -s https://api.nuget.org/v3/index.json
+
+publish generic:
+  stage: publish
+  needs:
+    - build js client
+    - build vue client
+    - build js legacy client
+    - build vue legacy client
+    - build python client
+    - build dotnet client
+    - package c++ static client
+    - package c++ ue5 client
+  image: curlimages/curl:latest
+  only:
+    - tags
+    - /.*publish$/
+  script:
+    - |
+      packages_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rti/${VERSION}"
+      for file in */inhumate*.tgz js/dist/inhumate*.js python/dist/inhumate_*.whl dotnet/src/bin/Release/Inhumate*.nupkg cpp/build/inhumate*.zip cpp/build-ue5/inhumate*.zip ; do
+        filename=$(basename "$file")
+        curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "$packages_url/$filename"
+      done
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  only:
+    - tags
+  script:
+    # NOTE: This fails if you first manually created a release in the Gitlab web app (sigh)
+    # see https://gitlab.com/gitlab-org/release-cli/-/issues/94
+    # On another NOTE: the links end up in the reverse order on the releases page.
+    - |
+      packages_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rti/${VERSION}"
+      release-cli create --name "Version $VERSION" --tag-name $VERSION \
+        --assets-link "{\"name\":\"inhumate-rti-ue5-cpp-client-${VERSION}.zip\",\"url\":\"${packages_url}/inhumate-rti-ue5-cpp-client-${VERSION}.zip\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-cpp-client-${VERSION}.zip\",\"url\":\"${packages_url}/inhumate-rti-cpp-client-${VERSION}.zip\"}" \
+        --assets-link "{\"name\":\"Inhumate.RTI.${VERSION}.nupkg\",\"url\":\"${packages_url}/Inhumate.RTI.${VERSION}.nupkg\"}" \
+        --assets-link "{\"name\":\"inhumate_rti-${VERSION}-py3-none-any.whl\",\"url\":\"${packages_url}/inhumate_rti-${VERSION}-py3-none-any.whl\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-vue-legacy-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-vue-legacy-${VERSION}.tgz\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-vue-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-vue-${VERSION}.tgz\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-legacy-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-legacy-${VERSION}.tgz\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-${VERSION}.tgz\",\"url\":\"${packages_url}/inhumate-rti-${VERSION}.tgz\"}" \
+        --assets-link "{\"name\":\"inhumate-rti-bundle-${VERSION}.js\",\"url\":\"${packages_url}/inhumate-rti-bundle-${VERSION}.js\"}" \
+        ;
