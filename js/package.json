@@ -14,7 +14,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "start": "ts-node --esm test/usage_example.ts",
+    "start": "tsx test/usage_example.ts",
     "build": "tsc && webpack --mode production",
     "test": "jest --openHandlesTimeout 0",
     "test-ci": "jest --openHandlesTimeout 0 --ci --reporters=default --reporters=jest-junit"
@@ -29,8 +29,8 @@
     "jest-junit": "^16.0.0",
     "ts-jest": "^29.1.4",
     "ts-loader": "^9.4.4",
-    "ts-node": "^10.9.1",
     "ts-proto": "^1.176.1",
+    "tsx": "^4.17.0",
     "typescript": "^5.3.3",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"

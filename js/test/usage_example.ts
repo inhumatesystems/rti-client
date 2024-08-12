@@ -28,24 +28,6 @@ rti.on("connect", () => {
         rti.publishText("text", "should not receive this at all")
     }, 2000)
 
-    /*
-    setTimeout(() => {
-        rti.verifyToken(rti.authToken!, (blah: any) => {
-            console.log(blah)
-        })
-    }, 100)
-
-    setTimeout(() => {
-        rti.verifyToken("foobar", (blah: any) => {
-            console.log(blah)
-        })
-    }, 500)
-
-    rti.changePassword("foobar123", (success, message) => {
-        console.log("CHPASS", success, message)
-    })
-    */
-
     rti.subscribe(RTI.channel.control, RTI.proto.RuntimeControl, (message: RTI.proto.RuntimeControl) => {
         console.log("received control message", JSON.stringify(RTI.proto.RuntimeControl.toJSON(message)))
     })
