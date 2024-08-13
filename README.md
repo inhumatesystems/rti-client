@@ -19,9 +19,9 @@ platform implementation linked below:
 
 All client libraries share the same [protobuf definitions](proto/).
 
-## Contributing
+## Feedback & Contributing
 
-Contributions of any kind are welcome.
+Feedback and contributions of any kind are welcome.
 
 - Please file bug reports and/or feature requests as [GitHub issues](https://github.com/inhumatesystems/rti-client/issues)
 - Suggest code changes by creating a [pull request](https://github.com/inhumatesystems/rti-client/pulls)

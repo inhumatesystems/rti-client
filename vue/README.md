@@ -38,9 +38,18 @@ rti.whenConnected(() => rti.publishText("hello", "Hello World!"))
 - Vue 3
 - The [Javascript client](../js/) built
 
+Clone the project from [GitHub](https://github.com/inhumatesystems/rti-client), and in the `vue` folder:
+
 ```sh
 npm install
 npm run build # to build the library
 npm start # to run the sandbox app
 ```
 
+## Feedback & Contributing
+
+Feedback and contributions of any kind are welcome.
+
+- Please file bug reports and/or feature requests as [GitHub issues](https://github.com/inhumatesystems/rti-client/issues)
+- Suggest code changes by creating a [pull request](https://github.com/inhumatesystems/rti-client/pulls)
+- For any other questions, comments or inquiries, [get in touch](https://inhumatesystems.com/#contact)

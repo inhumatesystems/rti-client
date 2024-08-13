@@ -37,8 +37,18 @@ while (!done) Thread.Sleep(10);
 
 ## Building and running tests
 
+Clone the project from [GitHub](https://github.com/inhumatesystems/rti-client), and in the `dotnet` folder:
+
 ```sh
 dotnet restore
 dotnet build
 dotnet test
 ```
+
+## Feedback & Contributing
+
+Feedback and contributions of any kind are welcome.
+
+- Please file bug reports and/or feature requests as [GitHub issues](https://github.com/inhumatesystems/rti-client/issues)
+- Suggest code changes by creating a [pull request](https://github.com/inhumatesystems/rti-client/pulls)
+- For any other questions, comments or inquiries, [get in touch](https://inhumatesystems.com/#contact)
