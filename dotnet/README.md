@@ -16,7 +16,7 @@ dotnet add package Inhumate.RTI
 
 1. Select *Project* > *Manage NuGet Packages* in the main menu.
 2. In the *NuGet Package Manager* page, choose *nuget.org* as the *Package source*.
-3. From the *Browse tab*, search for `Inhumate.RTI`, select `Inhumate.RTI` in the list, and then select *Install*.
+3. From the *Browse tab*, search for *Inhumate.RTI*, select *Inhumate.RTI* in the list, and then select *Install*.
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ while (!done) Thread.Sleep(10);
 
 ## Building and running tests
 
-Clone the project from [GitHub](https://github.com/inhumatesystems/rti-client), and in the `dotnet` folder:
+Clone the project from [GitHub](https://github.com/inhumatesystems/rti-client), and in the *dotnet* folder:
 
 ```sh
 dotnet restore
