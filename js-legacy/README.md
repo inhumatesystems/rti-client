@@ -1,12 +1,12 @@
-# Inhumate RTI legacy javascript client
+# Inhumate RTI Legacy Javascript Client
 
-This is the **legacy** javascript client - not to be used for new development.
-
-## Dependencies
-
-Node (version 20 tested)
+This is the **legacy** javascript client for the Inhumate RTI
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
+for simulation-based operations - **not to be used for new development**.
 
 ## Building and running tests
+
+Using Node (version 20 tested)
 
 ```sh
 npm install

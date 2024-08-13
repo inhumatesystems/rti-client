@@ -1,6 +1,8 @@
 # Inhumate RTI Legacy Vue Integration
 
-This is the **legacy** Vue (v2) integration - not to be used for new development.
+This is the **legacy** Vue (v2) integration for the Inhumate RTI
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
+for simulation-based operations - **not to be used for new development**.
 
 ## Dependencies
 

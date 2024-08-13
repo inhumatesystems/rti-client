@@ -1,9 +1,13 @@
 # Inhumate RTI Client
 
-This repository contains client libraries for the [Inhumate RTI](https://inhumatesystems.com/products/sboss/)
-(Runtime Infrastructure).
+This repository contains client libraries for the Inhumate RTI
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
+for simulation-based operations.
 
 ## Platforms
+
+For information on how to get, install, use, build and test the client libraries, please refer to the respective
+platform implementation linked below:
 
 * [C++](cpp/)
 * [C#/.NET](dotnet/)

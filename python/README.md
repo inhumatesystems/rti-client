@@ -1,30 +1,38 @@
 # Inhumate RTI Client for Python
 
-Example usage:
+## Installing
+
+```sh
+pip install inhumate-rti
+```
+
+## Quick Start
 
 ```python
 import inhumate_rti as RTI
 
-rti = RTI.Client(application="python_test")
+rti = RTI.Client(application="Python RTI App")
+rti.wait_until_connected()
 
 def on_connect():
     print("Connected")
-
 rti.on("connect", on_connect)
 
-def on_error(channel, message, exception):
-    print(f"Error: {channel}: {message}", file=sys.stderr)
+def on_hello(content): 
+    print(f"Received: {content}")
+rti.subscribe_text("hello", on_hello)
 
-rti.on("error", on_error)
-
-def on_message(content): 
-    print(f"received: {content}")
-
-rti.subscribe_text("test", on_message)
-
-rti.wait_until_connected()
-
-rti.publish_text("test", "foo")
+rti.publish_text("hello", "Hello World!")
 ```
 
-Please refer to the Inhumate RTI documentation for more information.
+For a more complete usage example, see [usage_example.py](test/usage_example.py) and [usage_example_main_loop.py](test/usage_example_main_loop.py).
+
+## Running tests
+
+```sh
+python -m virtualenv .venv
+. .venv/bin/activate
+pip install -r inhumate_rti/requirements.txt 
+pip install -r test/requirements.txt
+pytest
+```

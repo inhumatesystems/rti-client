@@ -1,20 +1,52 @@
 # Inhumate RTI C++ Client
 
-## Dependencies
+This is the C++ client for the Inhumate RTI
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
+for simulation-based operations.
 
-The C++ client depends on:
-- Protobuf
-- asio (header-only)
-- websocketpp (header-only)
-- OpenSSL
+## Installing
 
-## Building
+Pre-compiled binaries are available in two flavors:
+- Statically linked library for Linux and Windows 64-bit
+- UE5-compatible library for Linux and Win64
+
+These can be downloaded from the [latest release](https://gitlab.com/inhumate/rti-client/-/releases/permalink/latest) page.
+
+For other cases, build the library from source (see below).
+
+## Quick Start
+
+```c++
+#include "inhumaterti.hpp"
+
+int main() {
+    inhumate::rti::RTIClient rti("C++ RTI App", false);
+    // ...
+    while (!done) {
+        rti.Poll();
+        // ...
+    }
+}
+```
+
+For a more complete usage example, see [usage_example.cpp](usage_example.cpp).
+
+## Building from Source
 
 The project uses CMake, but also has a bunch of [shell scripts](scripts/) mainly for dependency management.
 
 There are essentially six platforms to build for:
 - Windows, Mac, Linux - using native stuff on the platform
 - Unreal Engine variant for each of the above - using clang and the third-party libraries that come with the engine
+
+### Dependencies
+
+The C++ client depends on:
+- Protobuf
+- asio (header-only)
+- websocketpp (header-only)
+- OpenSSL
+- CMake (as build system)
 
 ### Building on Linux
 
