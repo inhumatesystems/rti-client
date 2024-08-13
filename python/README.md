@@ -25,7 +25,9 @@ rti.subscribe_text("hello", on_hello)
 rti.publish_text("hello", "Hello World!")
 ```
 
-For a more complete usage example, see [usage_example.py](test/usage_example.py) and [usage_example_main_loop.py](test/usage_example_main_loop.py).
+For a more complete usage example, see 
+[usage_example.py](https://github.com/inhumatesystems/rti-client/blob/main/python/test/usage_example.py) and 
+[usage_example_main_loop.py](https://github.com/inhumatesystems/rti-client/blob/main/python/test/usage_example_main_loop.py).
 
 ## Running tests
 

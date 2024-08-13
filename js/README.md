@@ -33,7 +33,7 @@ rti.subscribeText("hello", (channel, message) => console.log(`Received: ${messag
 rti.whenConnected(() => rti.publishText("hello", "Hello World!"))
 ```
 
-For a more complete usage example, see [usage_example.ts](test/usage_example.ts).
+For a more complete usage example, see [usage_example.ts](https://github.com/inhumatesystems/rti-client/blob/main/js/test/usage_example.ts).
 
 ## Building and running tests
 

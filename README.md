@@ -18,3 +18,11 @@ platform implementation linked below:
 * [Vue legacy](vue-legacy/) client (for Vue2 - not for use in new development)
 
 All client libraries share the same [protobuf definitions](proto/).
+
+## Contributing
+
+Contributions of any kind are welcome.
+
+- Please file bug reports and/or feature requests as [GitHub issues](https://github.com/inhumatesystems/rti-client/issues)
+- Suggest code changes by creating a [pull request](https://github.com/inhumatesystems/rti-client/pulls)
+- For any other questions, comments or inquiries, [get in touch](https://inhumatesystems.com/#contact)

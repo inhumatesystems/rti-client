@@ -17,4 +17,4 @@ npm start # for a usage example
 
 ## Using it
 
-See the [usage example](test/usage_example.ts).
+See the [usage example](https://github.com/inhumatesystems/rti-client/blob/main/js-legacy/test/usage_example.ts).
