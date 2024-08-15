@@ -443,6 +443,7 @@ publish npm:
     - cd ../js-legacy
     - npm publish
     - cd ../vue-legacy
+    - sed -i "s/file:...js-legacy/${VERSION}/g" package.json
     - npm publish
 
 publish pypi:
