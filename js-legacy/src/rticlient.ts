@@ -616,7 +616,7 @@ export class RTIClient extends EventEmitter {
         if (channel.getName().startsWith("@")) return
         let use = this._usedChannels[channel.getName()]
         if (!use) use = new ChannelUse()
-        use.setChannel(channel)
+        use.setChannel(channel.clone())
         this._usedChannels[channel.getName()] = use
         if (usePublish) use.setPublish(true)
         else use.setSubscribe(true)
@@ -628,10 +628,10 @@ export class RTIClient extends EventEmitter {
         this._knownChannels[channel.getName()] = channel
         if (!(channel.getName() in this._usedChannels)) this._usedChannels[channel.getName()] = new ChannelUse()
         const use = this._usedChannels[channel.getName()]
-        use.setChannel(channel)
+        use.setChannel(channel.clone())
         if (!this.incognito) {
             const message = new Channels()
-            message.setChannel(channel)
+            message.setChannel(channel.clone())
             this.publish(RTIchannel.channels, message, false)
         }
     }
@@ -672,7 +672,7 @@ export class RTIClient extends EventEmitter {
             this._knownMeasures[measure.getId()] = measure
             if (this.connected && !this.incognito) {
                 const message = new Measures()
-                message.setMeasure(measure)
+                message.setMeasure(measure.clone())
                 this.publish(RTIchannel.measures, message, false)
             }
         }
