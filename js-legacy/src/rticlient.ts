@@ -170,7 +170,9 @@ export class RTIClient extends EventEmitter {
     }
 
     private _compatibilityMode = false
-    get compatibilityMode() { return this._compatibilityMode }
+    get compatibilityMode() {
+        return this._compatibilityMode
+    }
 
     public measurementIntervalTimeScale = 1
     private collectMeasurementsInterval: any = undefined
@@ -267,7 +269,11 @@ export class RTIClient extends EventEmitter {
         })
         this.forAwait(this.socket.listener("connect"), (event) => {
             const token = this.socket.authToken as any
-            if ((!token && !this.socket.signedAuthToken) || (this._clientId && token && this._clientId != token.clientId) || (this._user && token && this._user != token.user)) {
+            if (
+                (!token && !this.socket.signedAuthToken) ||
+                (this._clientId && token && this._clientId != token.clientId) ||
+                (this._user && token && this._user != token.user)
+            ) {
                 // Don't consider RTI client connected (even though socket is connected) until authenticated
                 this.socket.transmit("auth", tokenData())
             }
@@ -601,26 +607,40 @@ export class RTIClient extends EventEmitter {
     }
 
     registerChannelUsage(channelName: string | Channel, usePublish: boolean, type?: string) {
-        let channel: Channel
-        if (typeof channelName === "string") {
-            if (channelName in this._knownChannels) {
-                channel = this._knownChannels[channelName]
+        try {
+            let channel: Channel
+            if (typeof channelName === "string") {
+                if (channelName in this._knownChannels) {
+                    channel = this._knownChannels[channelName]
+                } else {
+                    channel = new Channel()
+                    channel.setName(channelName)
+                }
             } else {
-                channel = new Channel()
-                channel.setName(channelName)
+                channel = channelName
             }
-        } else {
-            channel = channelName
+            if (type) channel.setDataType(type)
+            if (channel.getName().startsWith("@")) return
+            let use = this._usedChannels[channel.getName()]
+            if (!use) use = new ChannelUse()
+            
+            // Complicated version due to weird error in legacy vue client... c.g is not a function
+            // use.setChannel(channel)
+            const useChannel = new Channel()
+            useChannel.setName(channel.getName())
+            useChannel.setDataType(channel.getDataType())
+            useChannel.setEphemeral(channel.getEphemeral())
+            useChannel.setState(channel.getState())
+            useChannel.setFirstFieldId(channel.getFirstFieldId())
+            use.setChannel(useChannel)
+
+            this._usedChannels[channel.getName()] = use
+            if (usePublish) use.setPublish(true)
+            else use.setSubscribe(true)
+            if (!(channel.getName() in this._knownChannels)) this.registerChannel(channel)
+        } catch (e) {
+            console.error("RTI error registering channel usage", e)
         }
-        if (type) channel.setDataType(type)
-        if (channel.getName().startsWith("@")) return
-        let use = this._usedChannels[channel.getName()]
-        if (!use) use = new ChannelUse()
-        use.setChannel(channel.clone())
-        this._usedChannels[channel.getName()] = use
-        if (usePublish) use.setPublish(true)
-        else use.setSubscribe(true)
-        if (!(channel.getName() in this._knownChannels)) this.registerChannel(channel)
     }
 
     registerChannel(channel: Channel) {
@@ -628,10 +648,10 @@ export class RTIClient extends EventEmitter {
         this._knownChannels[channel.getName()] = channel
         if (!(channel.getName() in this._usedChannels)) this._usedChannels[channel.getName()] = new ChannelUse()
         const use = this._usedChannels[channel.getName()]
-        use.setChannel(channel.clone())
+        use.setChannel(channel)
         if (!this.incognito) {
             const message = new Channels()
-            message.setChannel(channel.clone())
+            message.setChannel(channel)
             this.publish(RTIchannel.channels, message, false)
         }
     }
@@ -672,7 +692,7 @@ export class RTIClient extends EventEmitter {
             this._knownMeasures[measure.getId()] = measure
             if (this.connected && !this.incognito) {
                 const message = new Measures()
-                message.setMeasure(measure.clone())
+                message.setMeasure(measure)
                 this.publish(RTIchannel.measures, message, false)
             }
         }
