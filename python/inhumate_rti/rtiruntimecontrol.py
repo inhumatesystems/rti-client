@@ -207,6 +207,3 @@ class RTIRuntimeControl:
             self.current_log = message.current_log
         elif message.HasField("current_scenario"):
             self.scenario = message.current_scenario
-        elif message.HasField("state"):
-            if message.state.client_id in self.rti.known_clients:
-                self.rti.known_clients[message.state.client_id].state = message.state.state
