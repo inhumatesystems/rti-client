@@ -1,8 +1,7 @@
 # Inhumate RTI .NET Client
 
 This is the C#/.NET client for the Inhumate RTI
-(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
-for simulation-based operations.
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
 ## Installing
 

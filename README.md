@@ -1,8 +1,7 @@
 # Inhumate RTI Client
 
 This repository contains client libraries for the Inhumate RTI
-(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
-for simulation-based operations.
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
 ## Platforms
 

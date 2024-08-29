@@ -1,8 +1,7 @@
 # Inhumate RTI C++ Client
 
 This is the C++ client for the Inhumate RTI
-(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
-for simulation-based operations.
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
 ## Installing
 
@@ -10,9 +9,9 @@ Pre-compiled binaries are available in two flavors:
 - Statically linked library for Linux and Windows 64-bit
 - UE5-compatible library for Linux and Win64
 
-These can be downloaded from the [latest release](https://gitlab.com/inhumate/rti-client/-/releases/permalink/latest) page.
+These can be downloaded from the [Inhumate Downloads](https://get.inhumatesystems.com/) page.
 
-For other cases, build the library from source (see below).
+For other cases, build the library from source (see below) and include it in your project.
 
 ## Quick Start
 

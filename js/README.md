@@ -1,8 +1,7 @@
 # Inhumate RTI Javascript Client
 
 This is the Javascript/TypeScript/Web client for the Inhumate RTI
-(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/sboss/)
-for simulation-based operations.
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
 ## Installing
 
@@ -16,7 +15,7 @@ npm install --save inhumate-rti
 
 ### Using a bundled script file
 
-Download the `inhumate-rti-bundle-*.js` file from the [latest release](https://gitlab.com/inhumate/rti-client/-/releases/permalink/latest) page.
+Download the *RTI Client JS Bundle* from the [Inhumate Downloads](https://get.inhumatesystems.com/) site.
 
 Then include it in a `script` tag in your HTML file:
 
