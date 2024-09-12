@@ -106,10 +106,10 @@ namespace Inhumate.RTI {
             Subscribe<Measures>(RTIChannel.Measures, OnMeasures);
             Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnect, false);
             Subscribe(RTIChannel.Federations, OnFederations);
-            On("broker-version", (channel, content) => { BrokerVersion = content.ToString(); });
+            On("broker-version", (channel, content) => { BrokerVersion = content?.ToString(); });
             On("fail", (channel, content) => {
                 shouldBeConnected = false;
-                OnError?.Invoke("fail", new RTIConnectionFailure(content.ToString()));
+                OnError?.Invoke("fail", new RTIConnectionFailure(content?.ToString()));
             });
             On("ping", (channel, content) => {
                 Emit("pong", $"{content}");

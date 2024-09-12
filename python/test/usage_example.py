@@ -32,7 +32,7 @@ def on_error(type, message, exception):
 rti.on("error", on_error)
 
 try:
-    time.sleep(1)
+    rti.wait_until_connected()
     rti.state = RTI.proto.RuntimeState.RUNNING
     message = RTI.proto.RuntimeControl()
     message.load_scenario.name = "python_test"

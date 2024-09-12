@@ -59,6 +59,7 @@ class RTIClient(Emitter):
         self._state = Proto.UNKNOWN
         self.connected = False
         self.broker_version = None
+        self._connection_error = None
 
         self.create_rti_thread = main_loop is None
 
@@ -180,10 +181,7 @@ class RTIClient(Emitter):
         self.subscribe(Channel.channels, Proto.Channels, on_channels)
         self.subscribe(Channel.measures, Proto.Measures, on_measures)
         if self.federation:
-            self.publish_text(
-                Channel.federations, self.federation)
-            self.subscribe_text(
-                Channel.federations, on_federations)
+            self.subscribe_text(Channel.federations, on_federations)
 
         if connect:
             self.connect()
@@ -203,7 +201,9 @@ class RTIClient(Emitter):
 
     def __on_connect(self, socket):
         # self.connected and emit "connect" event is done in __on_set_auth (after client handshake)
-        pass
+        if self.federation:
+            self.publish_text(Channel.federations, self.federation)
+        self._connection_error = None
 
     def __on_disconnect(self, socket):
         if self.connected:
@@ -212,6 +212,7 @@ class RTIClient(Emitter):
 
     def __on_connection_error(self, socket, error):
         self.emit("error", "connection", error, None)
+        self._connection_error = error
 
     def __on_set_auth(self, socket, token):
         socket.set_auth_token(token)
@@ -229,6 +230,7 @@ class RTIClient(Emitter):
 
     def __on_fail(self, socket, error):
         self.emit("error", "fail", error, None)
+        self._connection_error = error
 
     def __on_broker_version(self, channel: str, content: str):
         self.broker_version = content
@@ -240,6 +242,7 @@ class RTIClient(Emitter):
         return list(filter(lambda c: c.application.lower() == application.lower(), self.known_clients.values()))
 
     def connect(self):
+        self._connection_error = None
         if self.create_rti_thread:
             self.thread = Thread(target=self.socket.connect)
             self.thread.daemon = True
@@ -255,10 +258,14 @@ class RTIClient(Emitter):
 
     def wait_until_connected(self):
         count = 0
-        while count < 500 and not self.connected:
+        while count < 500 and not self.connected and not self._connection_error:
             count += 1
             time.sleep(0.01)
-        return self.connected
+        if not self.connected:
+            if self._connection_error:
+                raise Exception(f"Connection failed: {self._connection_error}")
+            else:
+                raise Exception("Connection timeout")
 
     def verify_token(self, token: str, handler: Callable[[dict], None]):
         self.invoke("verifytoken", token, handler)
