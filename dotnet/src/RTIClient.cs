@@ -84,6 +84,7 @@ namespace Inhumate.RTI {
 
         private bool shouldBeConnected;
         private bool reconnecting;
+        private string connectionError;
 
         private Task collectMeasurementsTask;
         private Dictionary<Measure, Queue<float>> collectQueue = new Dictionary<Measure, Queue<float>>();
@@ -109,6 +110,7 @@ namespace Inhumate.RTI {
             On("broker-version", (channel, content) => { BrokerVersion = content?.ToString(); });
             On("fail", (channel, content) => {
                 shouldBeConnected = false;
+                connectionError = content != null ? content.ToString() : "unknown";
                 OnError?.Invoke("fail", new RTIConnectionFailure(content?.ToString()));
             });
             On("ping", (channel, content) => {
@@ -147,6 +149,7 @@ namespace Inhumate.RTI {
         }
 
         public void Connect(bool reconnectInitial = true) {
+            connectionError = null;
             cid = 0;
             socket = new RTIWebSocket(Url) {
                 Polling = Polling
@@ -306,16 +309,16 @@ namespace Inhumate.RTI {
             }).Start();
         }
 
-        public bool WaitUntilConnected() {
+        public void WaitUntilConnected() {
             bool connected = false;
             Action listener = () => {
                 connected = true;
             };
             OnConnected += listener;
             int count = 0;
-            while (count++ < 500 && !connected) { Thread.Sleep(10); }
+            while (count++ < 500 && !connected && connectionError == null) { Thread.Sleep(10); }
             OnConnected -= listener;
-            return connected;
+            if (!connected) throw new RTIConnectionFailure(connectionError?.ToString());
         }
 
         public UntypedListener Subscribe(string channelName, UntypedListener callback, bool register = true) {

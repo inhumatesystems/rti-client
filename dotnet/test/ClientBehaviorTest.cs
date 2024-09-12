@@ -16,25 +16,25 @@ namespace Inhumate.RTI {
         [OneTimeSetUp]
         public static void Setup() {
             // CI runs of these tests have a tendency to be quite fragile... this is an attempt to remedy that.
-            if (!Connect1() && !Connect1() && !Connect1()) throw new Exception($"Failed to connect to RTI {rti.Url}");
-            if (!Connect2() && !Connect2() && !Connect2()) throw new Exception($"Failed to connect to RTI {rti2.Url} (2nd client");
+            Connect1();
+            Connect2();
             Thread.Sleep(1000);
         }
 
-        private static bool Connect1() {
+        private static void Connect1() {
             rti = new RTIClient { Application = "C# IntegrationTest", Host = "Host1", Station = "Station1", Capabilities = { RTICapability.RuntimeControl } };
             rti.OnError += (channelName, exception) => {
                 if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
             };
-            return rti.WaitUntilConnected();
+            rti.WaitUntilConnected();
         }
 
-        private static bool Connect2() {
+        private static void Connect2() {
             rti2 = new RTIClient { Application = "C# IntegrationTest 2" };
             rti2.OnError += (channelName, exception) => {
                 if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
             };
-            return rti2.WaitUntilConnected();
+            rti2.WaitUntilConnected();
         }
 
         [OneTimeTearDown]

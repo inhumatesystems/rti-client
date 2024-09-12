@@ -15,15 +15,12 @@ class ClientBehaviorTest(unittest.TestCase):
             print(f"Error: {channel}: {message}", file=sys.stderr)
         rti.on("error", on_error)
 
-        if not rti.wait_until_connected():
-            raise Exception(f"Could not connect to RTI {rti.url}")
+        rti.wait_until_connected()
         cls.rti = rti
 
         rti2 = RTI.Client("python-test-2")
         rti2.on("error", on_error)
         rti2.wait_until_connected()
-        if not rti2.wait_until_connected():
-            raise Exception(f"Could not connect to RTI {rti2.url} (2nd client)")
         cls.rti2 = rti2
 
         time.sleep(0.1)
