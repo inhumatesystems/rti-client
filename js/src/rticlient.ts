@@ -448,7 +448,7 @@ export class RTIClient extends EventEmitter {
     }
 
     private publishMeasures() {
-        for (const measure of Object.values(this._knownMeasures)) {
+        for (const measure of Object.values(this._usedMeasures)) {
             this.publish(RTIchannel.measures, Measures, { measure }, false)
         }
     }

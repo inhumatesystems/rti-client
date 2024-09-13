@@ -287,12 +287,19 @@ export class RTIClient extends EventEmitter {
             if (token.user && this._user && this._user != token.user) {
                 this.socket.deauthenticate()
             } else {
+                if (token.clientId && this._clientId != token.clientId) {
+                    if (this._clientId) console.warn("RTI authenticated with unexpected client id", token.clientId)
+                    this._clientId = token.clientId
+                }
                 if (token.user) this._user = token.user
                 if ("secret" in token) this._secret = undefined
                 if ("password" in token) this._password = undefined
                 if (!this.connected) {
                     this.connected = true
-                    if (!this.incognito && this.clientId) this.publishClient()
+                    if (!this.incognito && this.clientId) {
+                        this.publishClient()
+                        this.publishMeasures()
+                    }
                     if (this.federation) this.publishText(RTIchannel.federations, this.federation, false)
                     this.emit("connect")
                 }
@@ -412,14 +419,15 @@ export class RTIClient extends EventEmitter {
     onMeasures(message: Measures) {
         if (message.hasRequestMeasures()) {
             if (!this.incognito) {
-                for (const measure of Object.values(this._knownMeasures)) {
-                    const message = new Measures()
-                    message.setMeasure(measure)
-                    this.publish(RTIchannel.measures, message, false)
-                }
+                this.publishMeasures()
             } else if (message.hasMeasure()) {
                 this._knownMeasures[message.getMeasure()!.getId()] = message.getMeasure()!
                 this.emit("measure", message.getMeasure())
+            } else if (message.getLogMeasure()) {
+                if (!(message.getLogMeasure()!.getId() in this._knownMeasures)) {
+                    this._knownMeasures[message.getLogMeasure()!.getId()] = message.getLogMeasure()!
+                    this.emit("logmeasure", message.getLogMeasure())
+                }
             }
         }
     }
@@ -428,6 +436,14 @@ export class RTIClient extends EventEmitter {
         const message = new Clients()
         message.setClient(this.myClient)
         this.publish(RTIchannel.clients, message, false)
+    }
+
+    private publishMeasures() {
+        for (const measure of Object.values(this._usedMeasures)) {
+            const message = new Measures()
+            message.setMeasure(measure)
+            this.publish(RTIchannel.measures, message, false)
+        }
     }
 
     get myClient(): Client {
