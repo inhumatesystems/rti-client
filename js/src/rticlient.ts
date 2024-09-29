@@ -117,6 +117,7 @@ export class RTIClient extends EventEmitter {
     readonly incognito: boolean = false
     readonly incognitoChannels: boolean = false
     private connected: boolean = false
+    private everConnected: boolean = false
     public get isConnected(): boolean {
         return this.connected
     }
@@ -139,8 +140,9 @@ export class RTIClient extends EventEmitter {
     set state(value: RuntimeState) {
         if (value != this._state) {
             this._state = value
-            this.publishClient()
+            this.emit("state", this._state)
             this.emit("client", this.myClient)
+            this.publishClient()
         }
     }
 
@@ -178,6 +180,7 @@ export class RTIClient extends EventEmitter {
     private lastCollect: { [key: string]: number } = {}
 
     get ownChannelPrefix(): string {
+        if (!this.clientId) throw new Error(this.everConnected ? "RTI can't use ownChannelPrefix until connected" : "RTI ownChannelPrefix but no clientId")
         return `@${this.clientId}:`
     }
 
@@ -295,7 +298,7 @@ export class RTIClient extends EventEmitter {
                 if ("password" in token) this._password = undefined
                 this.emit("authenticate")
                 if (!this.connected) {
-                    this.connected = true
+                    this.connected = this.everConnected = true
                     if (!this.incognito && this.clientId) {
                         this.publishClient()
                         this.publishMeasures()
@@ -614,6 +617,10 @@ export class RTIClient extends EventEmitter {
     }
 
     private doPublish(channelName: string, message: string) {
+        if (!this.everConnected) {
+            console.warn("RTI can't publish before connected - message dropped")
+            return
+        }
         if (this.federation && !channelName.startsWith("@") && channelName != RTIchannel.federations)
             channelName = "//" + this.federation + "/" + channelName
         this.socket.transmitPublish(channelName, message)

@@ -33,10 +33,18 @@ import ImageSubscription from "../src/components/ImageSubscription.vue"
 
 const rti = useRtiStore()
 ;(window as any).rti = rti
+;(window as any).RTI = RTI
 
 setTimeout(() => {
     rti.state = RTI.proto.RuntimeState.INITIAL
 }, 1000)
+
+// // this provokes a warning about publishing before first connect
+// rti.client.publishText("foo", "bar")
+// // publishing after disconnect automatically reconnects though...
+// rti.client.whenConnected(() => rti.client.publishText("foo", "baz"))
+// setTimeout(() => rti.client.disconnect(), 1000)
+// setTimeout(() => rti.client.publishText("foo", "bazinga"), 2000)
 
 function obj2str(obj: any) {
     let str = ""
