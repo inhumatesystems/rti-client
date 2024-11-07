@@ -13,5 +13,5 @@ cd "$(dirname $0)/../build-ue5"
 
 # Some "pre-packaging" has been done in *_ue5_build.sh
 
-zip -r $FILENAME Include Win64 Linux # Mac 
+zip -r $FILENAME Include Win64 # Linux # Mac 
 ls -lh $FILENAME
