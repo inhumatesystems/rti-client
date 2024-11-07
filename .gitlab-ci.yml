@@ -220,28 +220,28 @@ build c++ static client windows:
       - cpp/asio
       - cpp/websocketpp
     
-build c++ ue5 client linux:
-  stage: build-2
-  tags:
-    - linux
-    - nm8
-  only:
-    - tags
-    - /.*publish$/
-    - /^(ue).*/
-  script:
-    - sed -i "s/0.0.1-dev-version/${VERSION}/g" cpp/inhumaterti.hpp
-    - cpp/scripts/linux_ue5_build.sh
-  artifacts:
-    paths:
-      - cpp/build-ue5/Include
-      - cpp/build-ue5/Linux
-  cache:
-    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - cpp/protobuf
-      - cpp/asio
-      - cpp/websocketpp
+# build c++ ue5 client linux:
+#   stage: build-2
+#   tags:
+#     - linux
+#     - nm8
+#   only:
+#     - tags
+#     - /.*publish$/
+#     - /^(ue).*/
+#   script:
+#     - sed -i "s/0.0.1-dev-version/${VERSION}/g" cpp/inhumaterti.hpp
+#     - cpp/scripts/linux_ue5_build.sh
+#   artifacts:
+#     paths:
+#       - cpp/build-ue5/Include
+#       - cpp/build-ue5/Linux
+#   cache:
+#     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - cpp/protobuf
+#       - cpp/asio
+#       - cpp/websocketpp
 
 build c++ ue5 client windows:
   stage: build-2
@@ -406,8 +406,8 @@ package c++ ue5 client:
   stage: package
   image: node:20-slim
   needs:
-    - build c++ ue5 client linux
     - build c++ ue5 client windows
+    # - build c++ ue5 client linux
     # - build c++ ue4 client macos
   script:
     - apt-get update -qq && apt-get install -qq zip
@@ -418,7 +418,7 @@ package c++ ue5 client:
   only:
     - tags
     - /.*publish$/
-    - /^(ue).*/
+    - /^ue.*/
 
 
 # PUBLISH
