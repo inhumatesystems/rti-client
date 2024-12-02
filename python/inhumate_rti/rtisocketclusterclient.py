@@ -47,6 +47,8 @@ class MainLoopDispatcher:
                 self.idle = time.time() - self.called
                 if self.idle >= self.idle_time:
                     self._call_main_loop()
+                elif self.idle > 0.01 and self.idle_time > 0.005:
+                    time.sleep(0.01)
             except (KeyboardInterrupt, SystemExit) as e:
                 self.done = True
                 self.done_exception = e

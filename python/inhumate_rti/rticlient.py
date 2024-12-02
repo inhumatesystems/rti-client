@@ -45,7 +45,7 @@ class RTIClient(Emitter):
                  secret: Optional[str] = None, user: Optional[str] = None, participant: Optional[str] = None,
                  role: Optional[str] = None, full_name: Optional[str] = None, capabilities: Optional[List[str]] = [],
                  password: Optional[str] = None, incognito: bool = False, connect: bool = True,
-                 wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.0):
+                 wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.01):
         super().__init__()
         self.measurement_interval_time_scale = 1
 
