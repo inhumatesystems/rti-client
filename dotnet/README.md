@@ -3,6 +3,10 @@
 This is the C#/.NET client for the Inhumate RTI
 (RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
+See the Inhumate Suite [documentation](https://docs.inhumatesystems.com/) for more in-depth topics and an overview of the software suite.
+
+Note: If you're planning on integrating the Unity game engine with the RTI, there's [a package](https://docs.inhumatesystems.com/integrations/unity/) specifically for that.
+
 ## Installing
 
 ### Using the dotnet CLI

@@ -3,6 +3,8 @@
 This repository contains client libraries for the Inhumate RTI
 (RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
+See the Inhumate Suite [documentation](https://docs.inhumatesystems.com/) for more in-depth topics and an overview of the software suite.
+
 ## Platforms
 
 For information on how to get, install, use, build and test the client libraries, please refer to the respective

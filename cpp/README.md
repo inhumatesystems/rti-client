@@ -3,6 +3,11 @@
 This is the C++ client for the Inhumate RTI
 (RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
 
+See the Inhumate Suite [documentation](https://docs.inhumatesystems.com/) for more in-depth topics and an overview of the software suite.
+
+Note: If you're planning on integrating Unreal Engine,
+there's [a plugin](https://docs.inhumatesystems.com/integrations/unreal/) specifically for that.
+
 ## Installing
 
 Pre-compiled binaries are available in two flavors:
