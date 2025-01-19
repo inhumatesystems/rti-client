@@ -13,6 +13,8 @@ message Logs {
         Log log = 3;
         google.protobuf.Empty no_logs = 4;
         string delete_log = 5;
+        string lock_log = 6;
+        string unlock_log = 7;
     }
 
     message ListRequest {
@@ -54,6 +56,10 @@ message Log {
     repeated LogMark marks = 21;
     repeated LogPause pauses = 22;
     repeated LogTimeScale time_scales = 23;
+
+    bool persistent = 24;
+    bool deletable = 25;
+    bool locked = 26;
 }
 
 message LogMark {
