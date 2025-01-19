@@ -46,6 +46,9 @@ setTimeout(() => {
 // setTimeout(() => rti.client.disconnect(), 1000)
 // setTimeout(() => rti.client.publishText("foo", "bazinga"), 2000)
 
+rti.client.whenConnected(rti.requestClients)
+rti.client.whenConnected(rti.requestChannels)
+
 function obj2str(obj: any) {
     let str = ""
     for (const key in obj) if (obj[key]) str += `${key}: ${obj[key]}\n`

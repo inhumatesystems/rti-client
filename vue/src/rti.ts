@@ -11,7 +11,12 @@ export const useRtiStore = defineStore("rti", () => {
     rti.on("error", (err: string) => (connectionError.value = err))
     rti.on("fail", (err: string) => (connectionError.value = err))
 
-    const needAuthentication = computed(() => connectionError.value && typeof(connectionError.value) == "string" &&  connectionError.value.toLowerCase().includes("authentication"))
+    const needAuthentication = computed(
+        () =>
+            connectionError.value &&
+            typeof connectionError.value == "string" &&
+            connectionError.value.toLowerCase().includes("authentication")
+    )
     const canChangePassword = computed(() => authToken && authToken.password && authToken.password != "static")
 
     const authToken = reactive({} as any)
@@ -19,7 +24,6 @@ export const useRtiStore = defineStore("rti", () => {
     rti.on("connect", () => {
         connected.value = rti.isConnected
         connectionError.value = undefined
-        rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { requestCurrentLog: {} })
     })
     rti.on("disconnect", () => (connected.value = rti.isConnected))
     rti.on("authenticate", () => {
@@ -143,8 +147,17 @@ export const useRtiStore = defineStore("rti", () => {
         connectedClients.value = []
         errors.value = []
         channels.value = []
+    }
+
+    function requestCurrentLog() {
         rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { requestCurrentLog: {} })
+    }
+
+    function requestClients() {
         rti.publish(RTI.channel.clients, RTI.proto.Clients, { requestClients: {} })
+    }
+
+    function requestChannels() {
         rti.publish(RTI.channel.channels, RTI.proto.Channels, { requestChannels: {} })
     }
 
@@ -174,5 +187,8 @@ export const useRtiStore = defineStore("rti", () => {
         anyClientWithState,
         anyClientWithCapability,
         refresh,
+        requestCurrentLog,
+        requestClients,
+        requestChannels,
     }
 })
