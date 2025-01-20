@@ -30,3 +30,9 @@ else
     git pull
     cd -
 fi
+
+# openssl 1.1 on windows only - linux use system package, macos brew
+if [ "$(uname -o)" == "Msys" -a ! -d openssl-1.1 ]; then
+    curl -O https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-1.1.1w.zip
+    unzip openssl-1.1.1w.zip
+fi

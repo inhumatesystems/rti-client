@@ -78,8 +78,6 @@ Preqrequisites:
 
 Static build:
 
-OpenSSL can be installed from [here](https://slproweb.com/products/Win32OpenSSL.html) - select the _Win64 OpenSSL v1.1.1d_ (not _Light_) version
-
 ```sh
 scripts/windows_static_build.sh
 ```
