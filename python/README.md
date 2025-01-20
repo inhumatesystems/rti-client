@@ -1,5 +1,10 @@
 # Inhumate RTI Client for Python
 
+This is the Python client for the Inhumate RTI
+(RunTime Infrastructure), part of the [Inhumate Suite](https://inhumatesystems.com/products/suite/).
+
+See the Inhumate Suite [documentation](https://docs.inhumatesystems.com/) for more in-depth topics and an overview of the software suite.
+
 ## Installing
 
 ```sh

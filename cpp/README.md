@@ -5,8 +5,7 @@ This is the C++ client for the Inhumate RTI
 
 See the Inhumate Suite [documentation](https://docs.inhumatesystems.com/) for more in-depth topics and an overview of the software suite.
 
-Note: If you're planning on integrating Unreal Engine,
-there's [a plugin](https://docs.inhumatesystems.com/integrations/unreal/) specifically for that.
+Note: If you're planning on integrating Unreal Engine with the RTI, there's [a plugin](https://docs.inhumatesystems.com/integrations/unreal/) specifically for that.
 
 ## Installing
 
