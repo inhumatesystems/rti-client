@@ -276,11 +276,11 @@ class RTISocketClusterClient:
 
     def connect(self, sslopt=None, http_proxy_host=None, http_proxy_port=None, enable_trace=False):
         websocket.enableTrace(enable_trace)
+        if self.ws and self.ever_connected and self.main_loop:
+            # reconnect will be handled by dispatcher
+            return
         try:
-            self.ws = websocket.WebSocketApp(self.url,
-                                            on_message=self.on_message,
-                                            on_error=self.on_error,
-                                            on_close=self.on_close)
+            self.ws = websocket.WebSocketApp(self.url, on_message=self.on_message, on_error=self.on_error, on_close=self.on_close)
             self.ws.on_open = self.on_open
             if not self.ever_connected and self.main_loop:
                 dispatcher = MainLoopDispatcher(self.ws, self.main_loop, self.idle_time)

@@ -574,6 +574,13 @@ void RTIClient::Measure(const proto::Measure &measure, const float value) {
     }
 }
 
+void RTIClient::Invoke(const std::string &method, const std::string &data) {
+    nlohmann::json json;
+    json["event"] = method;
+    json["data"] = data;
+    Send(json.dump());
+}
+
 void RTIClient::Invoke(const std::string &method, const std::string &data, const stringcallback_t callback) {
     auto cid = ++this->cid;
     stringcallback_p ptr(new stringcallback_t(std::move(callback)));

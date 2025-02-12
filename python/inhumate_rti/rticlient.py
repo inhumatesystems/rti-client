@@ -270,16 +270,16 @@ class RTIClient(Emitter):
     def verify_token(self, token: str, handler: Callable[[dict], None]):
         self.invoke("verifytoken", token, handler)
 
-    def invoke(self, method: str, data, handler, error_handler = None):
+    def invoke(self, method: str, data = None, handler = None, error_handler = None):
         def invoke_handler(method, error, data):
             if error:
                 if error_handler:
                     error_handler(error)
                 else:
                     self.emit("error", f"rpc:{method}", error, None)
-            else:
+            elif handler:
                 handler(data)
-        self.socket.emit(method, data, invoke_handler)
+        self.socket.emit(method, data, invoke_handler if handler or error_handler else None)
 
     def subscribe(self, channel_name: str, message_class: Type[_message.Message], handler: Callable, register: bool = True):
         def handle_message(content):

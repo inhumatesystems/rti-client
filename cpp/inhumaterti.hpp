@@ -366,6 +366,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     void Measure(const std::string& measureId, const float value);
     void Measure(const proto::Measure &measure, const float value);
 
+    void Invoke(const std::string &method, const std::string &data = "");
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback);
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback, const stringcallback_t errorCallback);
 

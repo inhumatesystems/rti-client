@@ -366,7 +366,7 @@ export class RTIClient extends EventEmitter {
         this.connected = false
     }
 
-    invoke(event: string, data: any, options?: { ackTimeout?: number | undefined }) {
+    invoke(event: string, data?: any, options?: { ackTimeout?: number | undefined }) {
         return this.socket.invoke(event, data, options)
     }
 

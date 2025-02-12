@@ -455,15 +455,22 @@ namespace Inhumate.RTI {
             }));
         }
 
-        public void Invoke(string procedureName, object data, RPCListener listener, RPCListener errorListener = null) {
-            int cid = ++this.cid;
-            rpcListeners[cid] = listener;
-            if (errorListener != null) rpcErrorListeners[cid] = errorListener;
-            Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
-                { "event", procedureName },
-                { "data", data },
-                { "cid", cid }
-            }));
+        public void Invoke(string procedureName, object data = null, RPCListener listener = null, RPCListener errorListener = null) {
+            if (listener != null || errorListener != null) {
+                int cid = ++this.cid;
+                if (listener != null) rpcListeners[cid] = listener;
+                if (errorListener != null) rpcErrorListeners[cid] = errorListener;
+                Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
+                    { "event", procedureName },
+                    { "data", data },
+                    { "cid", cid }
+                }));
+            } else {
+                Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
+                    { "event", procedureName },
+                    { "data", data }
+                }));
+            }
         }
 
         public int Poll(int max = int.MaxValue) {
