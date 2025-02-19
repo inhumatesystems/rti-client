@@ -160,11 +160,6 @@ class RTIClient(Emitter):
             elif message.HasField("measure"):
                 self.known_measures[message.measure.id] = message.measure
 
-        def on_federations(message: str):
-            if message == "?":
-                self.publish_text(
-                    Channel.federations, self.federation)
-
         socket.set_basic_listener(self.__on_connect, self.__on_disconnect, self.__on_connection_error)
         socket.set_auth_listener(self.__on_set_auth, self.__on_auth)
         socket.on("fail", self.__on_fail)
@@ -180,8 +175,6 @@ class RTIClient(Emitter):
         self.subscribe(Channel.clients, Proto.Clients, on_clients)
         self.subscribe(Channel.channels, Proto.Channels, on_channels)
         self.subscribe(Channel.measures, Proto.Measures, on_measures)
-        if self.federation:
-            self.subscribe_text(Channel.federations, on_federations)
 
         if connect:
             self.connect()
@@ -201,8 +194,6 @@ class RTIClient(Emitter):
 
     def __on_connect(self, socket):
         # self.connected and emit "connect" event is done in __on_set_auth (after client handshake)
-        if self.federation:
-            self.publish_text(Channel.federations, self.federation)
         self._connection_error = None
 
     def __on_disconnect(self, socket):
@@ -306,7 +297,7 @@ class RTIClient(Emitter):
 
     def subscribe_text(self, channel_name: str, handler: Union[Callable[[str, str], None], Callable[[str], None]], register: bool = True, data_type: str = "text"):
         socket_channel_name = channel_name
-        if self.federation and channel_name != Channel.federations:
+        if self.federation:
             socket_channel_name = "//" + self.federation + "/" + channel_name
         if (socket_channel_name not in self.subscriptions):
             if self.connected:
@@ -332,7 +323,7 @@ class RTIClient(Emitter):
 
     def unsubscribe(self, channel_name_or_handler: Union[str, Callable[[str], None]]) -> None:
         if channel_name_or_handler is str:
-            if self.federation and channel_name_or_handler != Channel.federations:
+            if self.federation:
                 channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
             self.socket.unsubscribe(channel_name_or_handler)
             if channel_name_or_handler in self.subscriptions:
@@ -358,13 +349,13 @@ class RTIClient(Emitter):
 
     def publish_text(self, channel_name: str, content: str) -> None:
         self._register_channel_usage(channel_name, True, data_type="text")
-        if self.federation and not channel_name.startswith("@") and channel_name != Channel.federations:
+        if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, content)
 
     def publish_json(self, channel_name: str, message: object) -> None:
         self._register_channel_usage(channel_name, True, data_type="json")
-        if self.federation and not channel_name.startswith("@") and channel_name != Channel.federations:
+        if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, json.dumps(message))
 

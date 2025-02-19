@@ -14,7 +14,6 @@ export const channel = {
     entityOperation: internalPrefix + "entities",
     entity: internalPrefix + "entity",
     position: internalPrefix + "position",
-    federations: internalPrefix + "federations",
     launchConfigurations: internalPrefix + "launchconfigurations",
     launch: internalPrefix + "launch",
     logs: internalPrefix + "logs",

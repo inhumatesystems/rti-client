@@ -146,7 +146,6 @@ export class RTIClient extends EventEmitter {
         }
     }
 
-
     private _usedChannels: { [key: string]: ChannelUse } = {}
     private _knownChannels: { [key: string]: Channel } = {}
     private _knownClients: { [key: string]: Client } = {}
@@ -180,7 +179,8 @@ export class RTIClient extends EventEmitter {
     private lastCollect: { [key: string]: number } = {}
 
     get ownChannelPrefix(): string {
-        if (!this.clientId) throw new Error(this.everConnected ? "RTI can't use ownChannelPrefix until connected" : "RTI ownChannelPrefix but no clientId")
+        if (!this.clientId)
+            throw new Error(this.everConnected ? "RTI can't use ownChannelPrefix until connected" : "RTI ownChannelPrefix but no clientId")
         return `@${this.clientId}:`
     }
 
@@ -275,7 +275,11 @@ export class RTIClient extends EventEmitter {
         })
         this.forAwait(this.socket.listener("connect"), (event) => {
             const token = this.socket.authToken as any
-            if ((!token && !this.socket.signedAuthToken) || (this._clientId && token && this._clientId != token.clientId) || (this._user && token && this._user != token.user)) {
+            if (
+                (!token && !this.socket.signedAuthToken) ||
+                (this._clientId && token && this._clientId != token.clientId) ||
+                (this._user && token && this._user != token.user)
+            ) {
                 // Don't consider RTI client connected (even though socket is connected) until authenticated
                 this.socket.transmit("auth", tokenData())
             }
@@ -304,7 +308,6 @@ export class RTIClient extends EventEmitter {
                         this.publishClient()
                         this.publishMeasures()
                     }
-                    if (this.federation) this.publishText(RTIchannel.federations, this.federation, false)
                     this.emit("connect")
                 }
             }
@@ -339,13 +342,6 @@ export class RTIClient extends EventEmitter {
         this.subscribe(RTIchannel.clients, Clients, (m: Clients) => this.onClients(m), false)
         this.subscribe(RTIchannel.channels, Channels, (m: Channels) => this.onChannels(m), false)
         this.subscribe(RTIchannel.measures, Measures, (m: Measures) => this.onMeasures(m), false)
-        this.subscribeText(
-            RTIchannel.federations,
-            (message: string) => {
-                if (message == "?") this.publishText(RTIchannel.federations, this.federation, false)
-            },
-            false
-        )
     }
 
     private die = false
@@ -547,9 +543,7 @@ export class RTIClient extends EventEmitter {
     private _handlers: any = {}
 
     private doSubscribe(channelName: string, handler: Function): Subscription {
-        const channel = this.socket.subscribe(
-            (this.federation && channelName != RTIchannel.federations ? "//" + this.federation + "/" : "") + channelName
-        )
+        const channel = this.socket.subscribe((this.federation ? "//" + this.federation + "/" : "") + channelName)
         const wrappedHandler = (data: any) => {
             try {
                 if (handler.length == 2) {
@@ -626,8 +620,7 @@ export class RTIClient extends EventEmitter {
             console.warn("RTI can't publish before connected - message dropped")
             return
         }
-        if (this.federation && !channelName.startsWith("@") && channelName != RTIchannel.federations)
-            channelName = "//" + this.federation + "/" + channelName
+        if (this.federation && !channelName.startsWith("@")) channelName = "//" + this.federation + "/" + channelName
         this.socket.transmitPublish(channelName, message)
     }
 

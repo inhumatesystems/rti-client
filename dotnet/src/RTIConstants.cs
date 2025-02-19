@@ -12,7 +12,6 @@ namespace Inhumate.RTI {
         public const string Entity = InternalPrefix + "entity";
         public const string Position = InternalPrefix + "position";
         public const string Scenarios = InternalPrefix + "scenarios";
-        public const string Federations = InternalPrefix + "federations";
         public const string LaunchConfigurations = InternalPrefix + "launchconfigurations";
         public const string Launch = InternalPrefix + "launch";
         public const string Logs = InternalPrefix + "logs";

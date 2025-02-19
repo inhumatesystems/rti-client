@@ -106,7 +106,6 @@ namespace Inhumate.RTI {
             Subscribe<Channels>(RTIChannel.Channels, OnChannels);
             Subscribe<Measures>(RTIChannel.Measures, OnMeasures);
             Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnect, false);
-            Subscribe(RTIChannel.Federations, OnFederations);
             On("broker-version", (channel, content) => { BrokerVersion = content?.ToString(); });
             On("fail", (channel, content) => {
                 shouldBeConnected = false;
@@ -196,9 +195,6 @@ namespace Inhumate.RTI {
                     SendAuthToken();
                 } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#setAuthToken") {
                     AuthToken = ((Dictionary<string, object>)dict["data"])["token"].ToString();
-                    if (!string.IsNullOrWhiteSpace(Federation)) {
-                        Publish(RTIChannel.Federations, Federation);
-                    }
                     foreach (var channelName in subscriptions.Keys) Subscribe(channelName);
                     if (!IsConnected || reconnecting) {
                         if (!Incognito) {
@@ -377,7 +373,7 @@ namespace Inhumate.RTI {
         }
 
         private void Subscribe(string channelName) {
-            if (!string.IsNullOrWhiteSpace(Federation) && channelName != RTIChannel.Federations) channelName = $"//{Federation}/{channelName}";
+            if (!string.IsNullOrWhiteSpace(Federation)) channelName = $"//{Federation}/{channelName}";
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#subscribe" },
                 { "data", new Dictionary<string, object> {
@@ -388,7 +384,7 @@ namespace Inhumate.RTI {
         }
 
         public void Unsubscribe(string channelName) {
-            if (!string.IsNullOrWhiteSpace(Federation) && channelName != RTIChannel.Federations) channelName = $"//{Federation}/{channelName}";
+            if (!string.IsNullOrWhiteSpace(Federation)) channelName = $"//{Federation}/{channelName}";
             subscriptions.Remove(channelName);
             if (IsConnected) Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#unsubscribe" },
@@ -429,7 +425,7 @@ namespace Inhumate.RTI {
         }
 
         protected void DoPublish(string channelName, string data) {
-            if (!string.IsNullOrWhiteSpace(Federation) && !channelName.StartsWith("@") && channelName != RTIChannel.Federations) channelName = $"//{Federation}/{channelName}";
+            if (!string.IsNullOrWhiteSpace(Federation) && !channelName.StartsWith("@")) channelName = $"//{Federation}/{channelName}";
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#publish" },
                 { "data", new Dictionary<string, object> {
@@ -546,10 +542,6 @@ namespace Inhumate.RTI {
             if (message != null && knownClients.ContainsKey(message.ToString())) {
                 knownClients.Remove(message.ToString());
             }
-        }
-
-        public void OnFederations(string channelName, object message) {
-            if (!string.IsNullOrWhiteSpace(Federation) && message.ToString() == "?") Publish(RTIChannel.Federations, Federation);
         }
 
         public void PublishClient() {

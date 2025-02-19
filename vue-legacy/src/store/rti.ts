@@ -15,7 +15,6 @@ export default class RTIStore extends VuexModule {
     time: number | null = null
     timeScale: number | null = null
     stopTime: number | null = null
-    federations: string[] = []
     federation = ""
     clients: RTI.proto.Client[] = []
     logClients: RTI.proto.Client[] = []
@@ -775,9 +774,6 @@ export function initializeStore(store: any) {
         }, 500)
         if (Vue.$rti.federation) {
             store.state.rti.federation = Vue.$rti.federation
-            if (store.state.rti.federations.indexOf(Vue.$rti.federation) < 0) {
-                store.state.rti.federations.push(Vue.$rti.federation)
-            }
         }
         if (Vue.$rti.user) store.state.rti.user = Vue.$rti.user
         // Vue.$rti.socket.emit("brand")
@@ -798,16 +794,6 @@ export function initializeStore(store: any) {
     Vue.$rti.on("disconnect", () => {
         store.state.rti.connected = false
     })
-
-    Vue.$rti.subscribeText(
-        "federations",
-        (message: string) => {
-            if (message && message != "?" && store.state.rti.federations.indexOf(message) < 0) {
-                store.state.rti.federations.push(message)
-            }
-        },
-        false
-    )
 
     Vue.$rti.subscribe(
         RTI.channel.control,

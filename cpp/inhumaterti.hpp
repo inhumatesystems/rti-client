@@ -74,7 +74,6 @@ constexpr auto ENTITY_OPERATION_CHANNEL = "rti/entities";
 constexpr auto ENTITY_CHANNEL = "rti/entity";
 constexpr auto POSITION_CHANNEL = "rti/position";
 constexpr auto SCENARIOS_CHANNEL = "rti/scenarios";
-constexpr auto FEDERATIONS_CHANNEL = "rti/federations";
 constexpr auto LAUNCH_CONFIGURATIONS_CHANNEL = "rti/launchconfigurations";
 constexpr auto LAUNCH_CHANNEL = "rti/launch";
 constexpr auto LOGS_CHANNEL = "rti/logs";

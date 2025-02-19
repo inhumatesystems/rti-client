@@ -155,12 +155,6 @@ RTIClient::RTIClient(const std::string &inApplication,
     Subscribe<Clients>(CLIENTS_CHANNEL, bind(&RTIClient::OnClients, this, ::_1, ::_2));
     Subscribe<Channels>(CHANNELS_CHANNEL, bind(&RTIClient::OnChannels, this, ::_1, ::_2));
     Subscribe<Measures>(MEASURES_CHANNEL, bind(&RTIClient::OnMeasures, this, ::_1, ::_2));
-    if (!_federation.empty()) {
-        Publish(FEDERATIONS_CHANNEL, _federation);
-        Subscribe(FEDERATIONS_CHANNEL, [this](const std::string &channelName, const std::string &content) {
-            if (content == "?") Publish(FEDERATIONS_CHANNEL, _federation);
-        });
-    }
 
     if (autoConnect) Connect();
 }
@@ -266,7 +260,7 @@ void RTIClient::Publish(const std::string &channelName, const std::string &messa
     nlohmann::json json;
     json["event"] = "#publish";
     json["data"] = { 
-        { "channel", !_federation.empty() && channelName[0] != '@' && channelName != FEDERATIONS_CHANNEL ? "//" + _federation + "/" + channelName : channelName }, 
+        { "channel", !_federation.empty() && channelName[0] != '@' ? "//" + _federation + "/" + channelName : channelName }, 
         { "data", message } 
     };
     Send(json.dump());
@@ -638,9 +632,6 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
                 PublishClient();
                 PublishMeasures();
             }
-            if (!_federation.empty()) {
-                Publish(FEDERATIONS_CHANNEL, _federation);
-            }
             for (auto kv : subscriptions) if (kv.second.size() > 0) Subscribe(kv.first);
         } else if (json_in.contains("event") && json_in["event"] == "#removeAuthToken") {
             SendAuthToken();
@@ -783,7 +774,7 @@ void RTIClient::Subscribe(const std::string &channelName)
 {
     nlohmann::json json;
     json["event"] = "#subscribe";
-    json["data"] = { { "channel", !_federation.empty() && channelName != FEDERATIONS_CHANNEL ? "//" + _federation + "/" + channelName : channelName } };
+    json["data"] = { { "channel", !_federation.empty() ? "//" + _federation + "/" + channelName : channelName } };
     json["cid"] = ++cid;
     Send(json.dump());
 }

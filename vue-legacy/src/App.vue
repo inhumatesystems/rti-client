@@ -9,21 +9,6 @@
                     <div class="caption font-weight-thin" style="font-family: Inter var">{{ version }}</div>
                 </router-link>
             </v-toolbar-title>
-            <v-menu v-if="connected && federations.length > 0" offset-y>
-                <template v-slot:activator="{ on }">
-                    <v-btn text v-on="on" class="mx-3 font-weight-regular" style="text-transform: none">{{
-                        federation || "Default federation"
-                    }}</v-btn>
-                </template>
-                <v-list>
-                    <v-list-item @click="changeFederation('')">
-                        <v-list-item-title>Default federation</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-for="(item, index) in federations" :key="index" @click="changeFederation(item)">
-                        <v-list-item-title>{{ item }}</v-list-item-title>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
             <v-spacer></v-spacer>
             <v-chip v-if="brokerPing && brokerPing > 100" color="error" class="mx-3 font-weight-bold">PING {{ brokerPing }} ms</v-chip>
             <runtime-state v-if="connected" update-title empty-text="" />
@@ -85,7 +70,6 @@ import { mapGetters, mapState } from "vuex"
             needAuthentication: (state: any) => state.rti.needAuthentication,
             error: (state: any) => state.rti.error,
             federation: (state: any) => state.rti.federation,
-            federations: (state: any) => state.rti.federations.sort(),
             user: (state: any) => state.rti.user,
             brand: (state: any) => state.rti.brand,
         }),
@@ -99,7 +83,6 @@ export default class App extends SubscribingComponent {
     needAuthentication!: boolean
     error!: string
     federation!: string
-    federations!: string[]
     user!: string
     brand!: any
     brokerPing!: number | undefined
@@ -166,7 +149,6 @@ export default class App extends SubscribingComponent {
     }
 
     poll() {
-        if (Vue.$rti.isConnected) Vue.$rti.publishText("federations", "?", false)
         this.pollTimeout = setTimeout(() => {
             this.poll()
         }, this.pollInterval)
