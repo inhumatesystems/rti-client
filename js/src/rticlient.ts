@@ -618,6 +618,10 @@ export class RTIClient extends EventEmitter {
     }
 
     private doPublish(channelName: string, message: string) {
+        if (!channelName) {
+            console.warn("Can't publish with empty channel name - message dropped")
+            return
+        }
         if (!this.everConnected) {
             console.warn("RTI can't publish before connected - message dropped")
             return

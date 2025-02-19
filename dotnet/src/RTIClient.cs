@@ -474,6 +474,7 @@ namespace Inhumate.RTI {
         }
 
         public int Poll(int max = int.MaxValue) {
+            if (!Polling) throw new InvalidOperationException("Client is not configured for polling. Set RTIClient.Polling = true if you want to poll.");
             if (socket == null) return 0;
             return socket.Poll(max);
         }

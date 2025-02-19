@@ -153,7 +153,7 @@ build python client:
 
 build dotnet client:
   stage: build
-  image: mcr.microsoft.com/dotnet/sdk:7.0
+  image: mcr.microsoft.com/dotnet/sdk:8.0
   script:
     - apt-get update -qq && apt-get install -qq curl unzip
     - scripts/get_protobuf.sh
@@ -343,7 +343,7 @@ test python client:
 
 test dotnet client:
   stage: test
-  image: mcr.microsoft.com/dotnet/sdk:7.0
+  image: mcr.microsoft.com/dotnet/sdk:8.0
   needs:
     - build dotnet client
   script:
@@ -466,7 +466,7 @@ publish pypi:
 
 publish nuget:
   stage: publish
-  image: mcr.microsoft.com/dotnet/sdk:7.0
+  image: mcr.microsoft.com/dotnet/sdk:8.0
   only:
     - tags
     - /.*publish$/

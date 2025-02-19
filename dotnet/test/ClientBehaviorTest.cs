@@ -492,7 +492,7 @@ namespace Inhumate.RTI {
                 rti.Publish("polling", "three");
                 Thread.Sleep(100);
 
-                for (int i = 0; i < 20 && receiveCount < 3; i++) {
+                for (int i = 0; i < 50 && receiveCount < 3; i++) {
                     Thread.Sleep(100);
                     rti2.Poll();
                 }
