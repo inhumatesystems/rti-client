@@ -91,7 +91,7 @@ namespace Inhumate.RTI {
         private Dictionary<Measure, DateTime> lastCollect = new Dictionary<Measure, DateTime>();
         private Task pingTimeoutTask;
 
-        public RTIClient(string url = null, bool connect = true, string user = null, string password = null) {
+        public RTIClient(string url = null, bool connect = true, bool polling = false, string user = null, string password = null) {
             if (string.IsNullOrEmpty(url)) url = Environment.GetEnvironmentVariable("RTI_URL");
             if (string.IsNullOrEmpty(url)) url = RTIConstants.DefaultUrl;
             if (!url.StartsWith("ws://") && !url.StartsWith("wss://")) url = $"ws://{url}";
@@ -115,6 +115,7 @@ namespace Inhumate.RTI {
             On("ping", (channel, content) => {
                 Emit("pong", $"{content}");
             });
+            Polling = polling;
             User = user;
             this.password = password;
             if (connect) Connect();
