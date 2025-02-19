@@ -204,7 +204,10 @@ export class RTIClient extends EventEmitter {
             }
         }
         if (!url) url = `ws://${constants.defaultHost}:${constants.defaultPort}`
-        if (!url.startsWith("ws://") && !url.startsWith("wss://")) url = `ws://${url}`
+        if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
+            if (url.startsWith("localhost") || url.startsWith("127.")) url = `ws://${url}`
+            else url = `wss://${url}`
+        }
         this._url = url
 
         if (options && options.application) this.application = options.application

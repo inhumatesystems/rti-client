@@ -63,7 +63,10 @@ RTIClient::RTIClient(const std::string &inApplication,
         if (envUrl) _url = envUrl;
     }
     if (_url.empty()) _url = DEFAULT_URL;
-    if (_url.find("ws://") != 0 && _url.find("wss://") != 0) _url = "ws://" + _url;
+    if (_url.find("ws://") != 0 && _url.find("wss://") != 0) {
+        if (_url.find("localhost") == 0 || _url.find("127.") == 0) _url = "ws://" + _url;
+        else _url = "wss://" + _url;
+    }
 
     _application = inApplication;
 

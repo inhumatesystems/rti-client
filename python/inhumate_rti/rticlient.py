@@ -68,7 +68,11 @@ class RTIClient(Emitter):
             url = os.environ.get('RTI_URL')
         if not url:
             url = Constants.default_url
-        if not url.startswith("ws://") and not url.startswith("wss://"): url = f"ws://{url}"
+        if not url.startswith("ws://") and not url.startswith("wss://"): 
+            if url.startswith("localhost") or url.startswith("127."):
+                url = f"ws://{url}"
+            else:
+                url = f"wss://{url}"
         self.url = url
 
         self.application = application

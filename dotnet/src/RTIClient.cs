@@ -94,7 +94,10 @@ namespace Inhumate.RTI {
         public RTIClient(string url = null, bool connect = true, bool polling = false, string user = null, string password = null) {
             if (string.IsNullOrEmpty(url)) url = Environment.GetEnvironmentVariable("RTI_URL");
             if (string.IsNullOrEmpty(url)) url = RTIConstants.DefaultUrl;
-            if (!url.StartsWith("ws://") && !url.StartsWith("wss://")) url = $"ws://{url}";
+            if (!url.StartsWith("ws://") && !url.StartsWith("wss://")) {
+                if (url.StartsWith("localhost") || url.StartsWith("127.")) url = $"ws://{url}";
+                else url = $"wss://{url}";
+            }
             Url = url;
             if (string.IsNullOrEmpty(ClientId)) ClientId = Guid.NewGuid().ToString();
             if (string.IsNullOrEmpty(Federation)) Federation = Environment.GetEnvironmentVariable("RTI_FEDERATION");
