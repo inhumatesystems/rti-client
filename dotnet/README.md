@@ -38,6 +38,17 @@ rti.Publish("hello", "Hello World!");
 while (!done) Thread.Sleep(10);
 ```
 
+Depending on your use case, you might want to use a polling client:
+
+```c#
+var rti = new RTIClient(polling: true) { Applicatoin = "C# RTI App" };
+// ...
+while (!done) {
+    int numberOfMessages = rti.Poll(100);
+    Thread.Sleep(10);
+}
+```
+
 ## Building and running tests
 
 Clone the project from [GitHub](https://github.com/inhumatesystems/rti-client), and in the *dotnet* folder:

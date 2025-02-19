@@ -28,6 +28,7 @@ Then include it in a `script` tag in your HTML file:
 ## Quick Start
 
 ```ts
+import * as RTI from "inhumate-rti"
 const rti = new RTI.Client({ application: "JS RTI App" })
 rti.on("connect", () => console.log("RTI connected"))
 rti.subscribeText("hello", (channel, message) => console.log(`Received: ${message}`))
