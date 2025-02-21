@@ -293,7 +293,12 @@ export class RTIClient extends EventEmitter {
         })
         this.forAwait(this.socket.listener("authenticate"), (event) => {
             const token = this.socket.authToken as any
-            if ((token.user && this._user && this._user != token.user) || (token.federation && token.federation != this.federation)) {
+            if (
+                ((this._user || token.user) && this._user != token.user) ||
+                ((this._participant || token.participant) && this._participant != token.participant) ||
+                ((this.federation || token.federation) && this.federation != token.federation)
+            ) {
+                // Reauthenticate when user, participant, or federation changes
                 this.socket.deauthenticate()
                 this.socket.reconnect()
             } else {

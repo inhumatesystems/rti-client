@@ -291,8 +291,14 @@ export class RTIClient extends EventEmitter {
         })
         this.forAwait(this.socket.listener("authenticate"), (event) => {
             const token = this.socket.authToken as any
-            if (token.user && this._user && this._user != token.user) {
+            if (
+                ((this._user || token.user) && this._user != token.user) ||
+                ((this._participant || token.participant) && this._participant != token.participant) ||
+                ((this.federation || token.federation) && this.federation != token.federation)
+            ) {
+                // Reauthenticate when user, participant, or federation changes
                 this.socket.deauthenticate()
+                this.socket.reconnect()
             } else {
                 if (token.clientId && this._clientId != token.clientId) {
                     if (this._clientId) console.warn("RTI authenticated with unexpected client id", token.clientId)
@@ -665,7 +671,7 @@ export class RTIClient extends EventEmitter {
         if (!(channel.getName() in this._usedChannels)) this._usedChannels[channel.getName()] = new ChannelUse()
         const use = this._usedChannels[channel.getName()]
         use.setChannel(channel)
-        if (!this.incognito) {
+        if (this.connected && !this.incognito) {
             const message = new Channels()
             message.setChannel(channel)
             this.publish(RTIchannel.channels, message, false)
