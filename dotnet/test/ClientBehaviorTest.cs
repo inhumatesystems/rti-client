@@ -26,6 +26,12 @@ namespace Inhumate.RTI {
             rti.OnError += (channelName, exception) => {
                 if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
             };
+            rti.RegisterChannel(new Channel { Name = "foo", DataType = "text" });
+            try {
+                rti.Publish("foo", "bar");
+            } catch (Exception e) {
+                Console.Error.WriteLine(e);
+            }
             rti.WaitUntilConnected();
         }
 
@@ -541,6 +547,17 @@ namespace Inhumate.RTI {
             });
             for (int i = 0; i < 20 && !errorCaught; i++) Thread.Sleep(100);
             Assert.IsTrue(errorCaught);
+        }
+
+        [Test]
+        public void PublishBeforeConnected_ThrowsError() {
+            var temprti = new RTIClient(connect: false) { Application = "C# IntegrationTest Temp" };
+            try {
+                temprti.Publish("foo", "bar");
+                Assert.Fail("Should not be able to publish before connected");
+            } catch (Exception) {
+                // pass
+            }
         }
     }
 }

@@ -191,7 +191,7 @@ class RTIClient(Emitter):
             while True:
                 time.sleep(1)
                 if self.connected and self.socket.auth_token is None:
-                    self.socket.emit("auth", self._auth_token_data)
+                    self.socket.transmit("auth", self._auth_token_data)
         self.check_auth_thread = Thread(target=check_auth)
         self.check_auth_thread.daemon = True
         self.check_auth_thread.start()
@@ -221,7 +221,7 @@ class RTIClient(Emitter):
             self.emit("connect")
 
     def __on_auth(self, socket, is_authenticated):
-        socket.emit("auth", self._auth_token_data)
+        socket.transmit("auth", self._auth_token_data)
 
     def __on_fail(self, socket, error):
         self.emit("error", "fail", error, None)
@@ -231,7 +231,7 @@ class RTIClient(Emitter):
         self.broker_version = content
 
     def __on_ping(self, channel: str, content: str):
-        self.socket.emit("pong", content)
+        self.socket.transmit("pong", content)
 
     def get_clients_by_application(self, application: str):
         return list(filter(lambda c: c.application.lower() == application.lower(), self.known_clients.values()))
@@ -264,8 +264,11 @@ class RTIClient(Emitter):
 
     def verify_token(self, token: str, handler: Callable[[dict], None]):
         self.invoke("verifytoken", token, handler)
+        
+    def transmit(self, event: str, data = None):
+        self.socket.transmit(event, data)
 
-    def invoke(self, method: str, data = None, handler = None, error_handler = None):
+    def invoke(self, method: str, data, handler, error_handler = None):
         def invoke_handler(method, error, data):
             if error:
                 if error_handler:
@@ -274,7 +277,7 @@ class RTIClient(Emitter):
                     self.emit("error", f"rpc:{method}", error, None)
             elif handler:
                 handler(data)
-        self.socket.emit(method, data, invoke_handler if handler or error_handler else None)
+        self.socket.transmit(method, data, invoke_handler)
 
     def subscribe(self, channel_name: str, message_class: Type[_message.Message], handler: Callable, register: bool = True):
         def handle_message(content):

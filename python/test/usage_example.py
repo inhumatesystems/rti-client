@@ -37,6 +37,8 @@ try:
     message = RTI.proto.RuntimeControl()
     message.load_scenario.name = "python_test"
     rti.publish("control", message)
+    rti.transmit("disableping")
+    rti.transmit("enableping")
     print("Published a control message")
     time.sleep(1)
     input("Press enter or ctrl-c to quit...")

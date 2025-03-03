@@ -147,7 +147,7 @@ class RTISocketClusterClient:
             if func is not None:
                 func(key, obj, ack)
 
-    def emit(self, event, obj, ack=None):
+    def transmit(self, event, obj, ack=None):
         emit_obj = {"event": event, "data": obj}
         if ack:
             emit_obj['cid'] = self.get_and_increment()
@@ -323,7 +323,7 @@ class RTISocketClusterClient:
         self.enable_reconnect = False
         self.ws.close()
 
-    emit_ack = emit
+    emit_ack = transmit
     subscribe_ack = subscribe
     publish_ack = publish
     unsubscribe_ack = unsubscribe

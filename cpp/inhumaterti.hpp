@@ -65,8 +65,8 @@ namespace inhumate
 namespace rti
 {
 
-constexpr auto VERSION = "0.0.1-dev-version";
-constexpr auto DEFAULT_URL = "ws://localhost:8000/";
+constexpr auto RTI_CLIENT_VERSION = "0.0.1-dev-version";
+constexpr auto RTI_DEFAULT_URL = "ws://localhost:8000/";
 constexpr auto CONTROL_CHANNEL = "rti/control";
 constexpr auto CHANNELS_CHANNEL = "rti/channels";
 constexpr auto CLIENTS_CHANNEL = "rti/clients";
@@ -365,7 +365,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     void Measure(const std::string& measureId, const float value);
     void Measure(const proto::Measure &measure, const float value);
 
-    void Invoke(const std::string &method, const std::string &data = "");
+    void Transmit(const std::string &eventName, const std::string &data = "");
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback);
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback, const stringcallback_t errorCallback);
 
@@ -430,7 +430,6 @@ class INHUMATE_RTI_EXPORT RTIClient
     void DiscoverChannel(const proto::Channel &channel);
     void Subscribe(const std::string &channelName);
     void SendAuthToken();
-    void Emit(const std::string &eventName, const std::string &data);
     void Send(const std::string &content);
 
     void CollectMeasurements();

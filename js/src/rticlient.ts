@@ -370,6 +370,10 @@ export class RTIClient extends EventEmitter {
         this.connected = false
     }
 
+    transmit(event: string, data?: any) {
+        this.socket.transmit(event, data)
+    }
+
     invoke(event: string, data?: any, options?: { ackTimeout?: number | undefined }) {
         return this.socket.invoke(event, data, options)
     }

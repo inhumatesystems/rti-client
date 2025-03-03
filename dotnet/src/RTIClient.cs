@@ -82,6 +82,7 @@ namespace Inhumate.RTI {
 
         public string OwnChannelPrefix => $"@{ClientId}:";
 
+        private bool everConnected;
         private bool shouldBeConnected;
         private bool reconnecting;
         private string connectionError;
@@ -116,7 +117,7 @@ namespace Inhumate.RTI {
                 OnError?.Invoke("fail", new RTIConnectionFailure(content?.ToString()));
             });
             On("ping", (channel, content) => {
-                Emit("pong", $"{content}");
+                Transmit("pong", $"{content}");
             });
             Polling = polling;
             User = user;
@@ -201,12 +202,12 @@ namespace Inhumate.RTI {
                     AuthToken = ((Dictionary<string, object>)dict["data"])["token"].ToString();
                     foreach (var channelName in subscriptions.Keys) Subscribe(channelName);
                     if (!IsConnected || reconnecting) {
+                        reconnecting = false;
+                        IsConnected = everConnected = true;
                         if (!Incognito) {
                             PublishClient();
                             PublishMeasures();
                         }
-                        reconnecting = false;
-                        IsConnected = true;
                         OnConnected?.Invoke();
                     }
                 } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#removeAuthToken") {
@@ -429,6 +430,8 @@ namespace Inhumate.RTI {
         }
 
         protected void DoPublish(string channelName, string data) {
+            if (string.IsNullOrEmpty(channelName)) throw new ArgumentException("Channel name cannot be empty");
+            if (!everConnected || socket == null) throw new InvalidOperationException("Cannot publish before connected");
             if (!string.IsNullOrWhiteSpace(Federation) && !channelName.StartsWith("@")) channelName = $"//{Federation}/{channelName}";
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#publish" },
@@ -448,29 +451,22 @@ namespace Inhumate.RTI {
             listeners.Remove(eventName);
         }
 
-        public void Emit(string eventName, string data = null) {
+        public void Transmit(string eventName, string data = null) {
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", eventName },
                 { "data", data }
             }));
         }
 
-        public void Invoke(string procedureName, object data = null, RPCListener listener = null, RPCListener errorListener = null) {
-            if (listener != null || errorListener != null) {
-                int cid = ++this.cid;
-                if (listener != null) rpcListeners[cid] = listener;
-                if (errorListener != null) rpcErrorListeners[cid] = errorListener;
-                Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
+        public void Invoke(string procedureName, object data, RPCListener listener, RPCListener errorListener = null) {
+            int cid = ++this.cid;
+            if (listener != null) rpcListeners[cid] = listener;
+            if (errorListener != null) rpcErrorListeners[cid] = errorListener;
+            Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                     { "event", procedureName },
                     { "data", data },
                     { "cid", cid }
                 }));
-            } else {
-                Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
-                    { "event", procedureName },
-                    { "data", data }
-                }));
-            }
         }
 
         public int Poll(int max = int.MaxValue) {

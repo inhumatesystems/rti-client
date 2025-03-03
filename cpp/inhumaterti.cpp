@@ -62,7 +62,7 @@ RTIClient::RTIClient(const std::string &inApplication,
         char *envUrl = std::getenv("RTI_URL");
         if (envUrl) _url = envUrl;
     }
-    if (_url.empty()) _url = DEFAULT_URL;
+    if (_url.empty()) _url = RTI_DEFAULT_URL;
     if (_url.find("ws://") != 0 && _url.find("wss://") != 0) {
         if (_url.find("localhost") == 0 || _url.find("127.") == 0) _url = "ws://" + _url;
         else _url = "wss://" + _url;
@@ -425,7 +425,7 @@ void RTIClient::PublishClient()
     client->set_application_version(applicationVersion);
     client->set_engine_version(engineVersion);
     client->set_integration_version(integrationVersion);
-    client->set_client_library_version(VERSION);
+    client->set_client_library_version(RTI_CLIENT_VERSION);
     client->set_host(_host);
     client->set_station(_station);
     client->set_user(_user);
@@ -571,11 +571,11 @@ void RTIClient::Measure(const proto::Measure &measure, const float value) {
     }
 }
 
-void RTIClient::Invoke(const std::string &method, const std::string &data) {
-    nlohmann::json json;
-    json["event"] = method;
-    json["data"] = data;
-    Send(json.dump());
+void RTIClient::Transmit(const std::string &eventName, const std::string &data) {
+    nlohmann::json message;
+    message["event"] = eventName;
+    message["data"] = data;
+    Send(message.dump());
 }
 
 void RTIClient::Invoke(const std::string &method, const std::string &data, const stringcallback_t callback) {
@@ -666,7 +666,7 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
             } else if (event == "broker-version" && data.is_string()) {
                 brokerVersion = data.dump();
             } else if (event == "ping") {
-                Emit("pong", data.dump());
+                Transmit("pong", data.dump());
             }
         } else if (json_in.contains("rid")) {
             auto rid = json_in["rid"].get<int>();
@@ -786,7 +786,7 @@ void RTIClient::SendAuthToken()
 {
     nlohmann::json authToken;
     authToken["clientId"] = clientId;
-    authToken["clientLibraryVersion"] = VERSION;
+    authToken["clientLibraryVersion"] = RTI_CLIENT_VERSION;
     authToken["application"] = _application;
     if (!_federation.empty()) authToken["federation"] = _federation;
     if (!secret.empty()) authToken["secret"] = secret;
@@ -796,13 +796,6 @@ void RTIClient::SendAuthToken()
     json["event"] = "auth";
     json["data"] = authToken;
     Send(json.dump());
-}
-
-void RTIClient::Emit(const std::string &eventName, const std::string &data) {
-    nlohmann::json message;
-    message["event"] = eventName;
-    message["data"] = data;
-    Send(message.dump());
 }
 
 void RTIClient::Send(const std::string &content)
