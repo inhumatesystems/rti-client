@@ -484,3 +484,13 @@ TEST_CASE("broker_rpc_specific_error")
     REQUIRE(received);
 }
 
+TEST_CASE("publish_before_connect")
+{
+    RTIClient temprti("C++ test temp", false);
+    try {
+        temprti.Publish("test", "foo");
+        POLL(100);
+        FAIL("Should have thrown exception");
+    } catch (const std::exception &e) {
+    }
+}

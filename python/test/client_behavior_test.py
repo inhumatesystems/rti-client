@@ -458,3 +458,11 @@ class ClientBehaviorTest(unittest.TestCase):
         count = 0
         while count < 100 and not self.ok: count += 1 ; time.sleep(0.01)
         self.assertTrue(self.ok)
+        
+    def test_publish_before_connect(self):
+        temprti = RTI.Client("python_test_temp", connect=False)
+        try:
+            temprti.publish_text("foo", "bar")
+        except Exception as e:
+            self.assertTrue("connected" in str(e))
+        

@@ -177,6 +177,8 @@ class RTISocketClusterClient:
             self.acks[self.count] = [channel, ack]
 
     def publish(self, channel, data, ack=None):
+        if not self.ws or not self.ever_connected: 
+            raise Exception("Cannot publish before connected")
         obj = {"channel": channel, "data": data}
         pub_obj = {"event": "#publish", "data": obj, "cid": self.get_and_increment()}
         self.ws.send(json.dumps(pub_obj, sort_keys=True))

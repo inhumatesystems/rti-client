@@ -26,12 +26,6 @@ namespace Inhumate.RTI {
             rti.OnError += (channelName, exception) => {
                 if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
             };
-            rti.RegisterChannel(new Channel { Name = "foo", DataType = "text" });
-            try {
-                rti.Publish("foo", "bar");
-            } catch (Exception e) {
-                Console.Error.WriteLine(e);
-            }
             rti.WaitUntilConnected();
         }
 

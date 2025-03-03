@@ -7,6 +7,7 @@ using Google.Protobuf;
 using Utf8Json;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Inhumate.RTI {
 
@@ -53,11 +54,6 @@ namespace Inhumate.RTI {
 
         private RTIWebSocket socket;
 
-        private Dictionary<string, List<UntypedListener>> subscriptions = new Dictionary<string, List<UntypedListener>>();
-        private Dictionary<string, List<UntypedListener>> listeners = new Dictionary<string, List<UntypedListener>>();
-        private Dictionary<int, RPCListener> rpcListeners = new Dictionary<int, RPCListener>();
-        private Dictionary<int, RPCListener> rpcErrorListeners = new Dictionary<int, RPCListener>();
-
         private RuntimeState state;
         public RuntimeState State {
             get { return state; }
@@ -69,15 +65,20 @@ namespace Inhumate.RTI {
             }
         }
 
-        private Dictionary<string, ChannelUse> usedChannels = new Dictionary<string, ChannelUse>();
+        private ConcurrentDictionary<string, List<UntypedListener>> subscriptions = new ConcurrentDictionary<string, List<UntypedListener>>();
+        private ConcurrentDictionary<string, List<UntypedListener>> listeners = new ConcurrentDictionary<string, List<UntypedListener>>();
+        private ConcurrentDictionary<int, RPCListener> rpcListeners = new ConcurrentDictionary<int, RPCListener>();
+        private ConcurrentDictionary<int, RPCListener> rpcErrorListeners = new ConcurrentDictionary<int, RPCListener>();
+
+        private ConcurrentDictionary<string, ChannelUse> usedChannels = new ConcurrentDictionary<string, ChannelUse>();
         public ICollection<ChannelUse> UsedChannels { get { return new List<ChannelUse>(usedChannels.Values); } }
-        private Dictionary<string, Channel> knownChannels = new Dictionary<string, Channel>();
+        private ConcurrentDictionary<string, Channel> knownChannels = new ConcurrentDictionary<string, Channel>();
         public ICollection<Channel> KnownChannels { get { return new List<Channel>(knownChannels.Values); } }
-        private Dictionary<string, Proto.Client> knownClients = new Dictionary<string, Proto.Client>();
+        private ConcurrentDictionary<string, Proto.Client> knownClients = new ConcurrentDictionary<string, Proto.Client>();
         public ICollection<Proto.Client> KnownClients { get { return new List<Proto.Client>(knownClients.Values); } }
-        private Dictionary<string, Measure> usedMeasures = new Dictionary<string, Measure>();
+        private ConcurrentDictionary<string, Measure> usedMeasures = new ConcurrentDictionary<string, Measure>();
         public ICollection<Measure> UsedMeasures { get { return new List<Measure>(knownMeasures.Values); } }
-        private Dictionary<string, Measure> knownMeasures = new Dictionary<string, Measure>();
+        private ConcurrentDictionary<string, Measure> knownMeasures = new ConcurrentDictionary<string, Measure>();
         public ICollection<Measure> KnownMeasures { get { return new List<Measure>(knownMeasures.Values); } }
 
         public string OwnChannelPrefix => $"@{ClientId}:";
@@ -88,8 +89,8 @@ namespace Inhumate.RTI {
         private string connectionError;
 
         private Task collectMeasurementsTask;
-        private Dictionary<Measure, Queue<float>> collectQueue = new Dictionary<Measure, Queue<float>>();
-        private Dictionary<Measure, DateTime> lastCollect = new Dictionary<Measure, DateTime>();
+        private ConcurrentDictionary<Measure, Queue<float>> collectQueue = new ConcurrentDictionary<Measure, Queue<float>>();
+        private ConcurrentDictionary<Measure, DateTime> lastCollect = new ConcurrentDictionary<Measure, DateTime>();
         private Task pingTimeoutTask;
 
         public RTIClient(string url = null, bool connect = true, bool polling = false, string user = null, string password = null) {
@@ -257,8 +258,8 @@ namespace Inhumate.RTI {
                     } else {
                         if (rpcListeners.ContainsKey(rid)) rpcListeners[rid].Invoke(data);
                     }
-                    if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners.Remove(rid);
-                    if (rpcListeners.ContainsKey(rid)) rpcListeners.Remove(rid);
+                    if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners.TryRemove(rid, out _);
+                    if (rpcListeners.ContainsKey(rid)) rpcListeners.TryRemove(rid, out _);
                 }
             }
         }
@@ -390,7 +391,7 @@ namespace Inhumate.RTI {
 
         public void Unsubscribe(string channelName) {
             if (!string.IsNullOrWhiteSpace(Federation)) channelName = $"//{Federation}/{channelName}";
-            subscriptions.Remove(channelName);
+            subscriptions.TryRemove(channelName, out _);
             if (IsConnected) Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#unsubscribe" },
                 { "data", channelName }
@@ -448,7 +449,7 @@ namespace Inhumate.RTI {
         }
 
         public void Off(string eventName) {
-            listeners.Remove(eventName);
+            listeners.TryRemove(eventName, out _);
         }
 
         public void Transmit(string eventName, string data = null) {
@@ -540,7 +541,7 @@ namespace Inhumate.RTI {
 
         public void OnClientDisconnect(string channelName, object message) {
             if (message != null && knownClients.ContainsKey(message.ToString())) {
-                knownClients.Remove(message.ToString());
+                knownClients.TryRemove(message.ToString(), out _);
             }
         }
 
