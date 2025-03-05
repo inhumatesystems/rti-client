@@ -7,30 +7,30 @@
 #define __INHUMATE_RTI_H__
 
 #if defined(_MSC_VER)
-    #pragma warning(disable: 4251)
-    #pragma warning(disable: 4800)
-    #pragma warning(disable: 4946)
+#pragma warning(disable : 4251)
+#pragma warning(disable : 4800)
+#pragma warning(disable : 4946)
 #endif
 
 #if defined(WIN32) && defined(INHUMATE_RTI_SHARED)
-    #define PROTOBUF_USE_DLLS 1
-    #if defined(inhumaterti_shared_EXPORTS)
-        #define INHUMATE_RTI_EXPORT __declspec(dllexport)
-    #else
-        #define INHUMATE_RTI_EXPORT __declspec(dllimport)
-    #endif
-    #define INHUMATE_RTI_PROTOS_EXPORT __declspec(dllimport)
+#define PROTOBUF_USE_DLLS 1
+#if defined(inhumaterti_shared_EXPORTS)
+#define INHUMATE_RTI_EXPORT __declspec(dllexport)
 #else
-    #define INHUMATE_RTI_EXPORT
-    #define INHUMATE_RTI_PROTOS_EXPORT
+#define INHUMATE_RTI_EXPORT __declspec(dllimport)
+#endif
+#define INHUMATE_RTI_PROTOS_EXPORT __declspec(dllimport)
+#else
+#define INHUMATE_RTI_EXPORT
+#define INHUMATE_RTI_PROTOS_EXPORT
 #endif
 
+#include <chrono>
 #include <functional>
+#include <queue>
 #include <string>
 #include <unordered_map>
-#include <queue>
 #include <vector>
-#include <chrono>
 
 #include <google/protobuf/message.h>
 
@@ -44,21 +44,21 @@ typedef std::shared_ptr<void> message_ptr_t;
 
 #include "Channels.pb.h"
 #include "Clients.pb.h"
-#include "EntityOperation.pb.h"
+#include "Commands.pb.h"
 #include "Entity.pb.h"
+#include "EntityOperation.pb.h"
 #include "EntityPosition.pb.h"
+#include "Geometry.pb.h"
+#include "GeometryOperation.pb.h"
+#include "Injectable.pb.h"
+#include "InjectableOperation.pb.h"
+#include "Injection.pb.h"
+#include "InjectionOperation.pb.h"
+#include "Measurement.pb.h"
+#include "Measures.pb.h"
+#include "Parameter.pb.h"
 #include "RuntimeControl.pb.h"
 #include "Scenarios.pb.h"
-#include "GeometryOperation.pb.h"
-#include "Geometry.pb.h"
-#include "Measures.pb.h"
-#include "Measurement.pb.h"
-#include "InjectableOperation.pb.h"
-#include "Injectable.pb.h"
-#include "InjectionOperation.pb.h"
-#include "Injection.pb.h"
-#include "Parameter.pb.h"
-#include "Commands.pb.h"
 
 namespace inhumate
 {
@@ -130,17 +130,16 @@ std::string base64_decode(std::string const &input);
 class INHUMATE_RTI_EXPORT RTIClient
 {
     public:
-    
     RTIClient(const std::string &application = "C++",
-        const bool connect = true,
-        const std::string &url = "",
-        const std::string &federation = "",
-        const std::string &secret = "",
-        const std::string &user = "",
-        const std::string &password = "",
-        const std::string &clientId = "");
-    RTIClient(const RTIClient&) = delete;
-    RTIClient(RTIClient&&) = default;
+              const bool connect = true,
+              const std::string &url = "",
+              const std::string &federation = "",
+              const std::string &secret = "",
+              const std::string &user = "",
+              const std::string &password = "",
+              const std::string &clientId = "");
+    RTIClient(const RTIClient &) = delete;
+    RTIClient(RTIClient &&) = default;
     ~RTIClient();
 
     void Connect();
@@ -156,25 +155,36 @@ class INHUMATE_RTI_EXPORT RTIClient
     void OffError(errorcallback_p callback);
 
     void Publish(const std::string &channelName, const std::string &message, const bool registerChannel = true);
-    void Publish(const std::string &channelName, const google::protobuf::Message &message, const bool registerChannel = true);
+    void Publish(const std::string &channelName,
+                 const google::protobuf::Message &message,
+                 const bool registerChannel = true);
 
-    messagecallback_p Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel = true);
-    template <typename Message>
     messagecallback_p
-    Subscribe(const std::string &channelName, void (*callback)(const std::string &, const Message &), const bool registerChannel = true)
+    Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel = true);
+    template <typename Message>
+    messagecallback_p Subscribe(const std::string &channelName,
+                                void (*callback)(const std::string &, const Message &),
+                                const bool registerChannel = true)
     {
-        return Subscribe(channelName, [callback](const std::string &channelName, const std::string &content) {
+        return Subscribe(
+        channelName,
+        [callback](const std::string &channelName, const std::string &content) {
             callback(channelName, Parse<Message>(content));
-        }, registerChannel);
+        },
+        registerChannel);
     }
 
     template <typename Message>
     messagecallback_p Subscribe(const std::string &channelName,
-                                std::function<void(const std::string &, const Message &)> callback, const bool registerChannel = true)
+                                std::function<void(const std::string &, const Message &)> callback,
+                                const bool registerChannel = true)
     {
-        return Subscribe(channelName, [callback](const std::string &channelName, const std::string &content) {
+        return Subscribe(
+        channelName,
+        [callback](const std::string &channelName, const std::string &content) {
             callback(channelName, Parse<Message>(content));
-        }, registerChannel);
+        },
+        registerChannel);
     }
 
     void Unsubscribe(const std::string &channelName);
@@ -204,11 +214,19 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _federation;
     }
+    const bool incognito()
+    {
+        return _incognito;
+    }
+    void set_incognito(const bool incognito)
+    {
+        _incognito = incognito;
+    }
     const std::string &host()
     {
         return _host;
     }
-    void set_host(const std::string& host)
+    void set_host(const std::string &host)
     {
         _host = host;
     }
@@ -216,7 +234,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _station;
     }
-    void set_station(const std::string& station)
+    void set_station(const std::string &station)
     {
         _station = station;
     }
@@ -224,7 +242,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _participant;
     }
-    void set_participant(const std::string& participant)
+    void set_participant(const std::string &participant)
     {
         _participant = participant;
     }
@@ -232,7 +250,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _role;
     }
-    void set_role(const std::string& role)
+    void set_role(const std::string &role)
     {
         _role = role;
     }
@@ -240,7 +258,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _fullName;
     }
-    void set_full_name(const std::string& fullName)
+    void set_full_name(const std::string &fullName)
     {
         _fullName = fullName;
     }
@@ -272,7 +290,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return applicationVersion;
     }
-    void set_application_version(const std::string& version)
+    void set_application_version(const std::string &version)
     {
         applicationVersion = version;
     }
@@ -280,7 +298,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return engineVersion;
     }
-    void set_engine_version(const std::string& version)
+    void set_engine_version(const std::string &version)
     {
         engineVersion = version;
     }
@@ -288,7 +306,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return integrationVersion;
     }
-    void set_integration_version(const std::string& version)
+    void set_integration_version(const std::string &version)
     {
         integrationVersion = version;
     }
@@ -296,7 +314,8 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _capabilities;
     }
-    void add_capability(const std::string& capability) {
+    void add_capability(const std::string &capability)
+    {
         _capabilities.push_back(capability);
     }
     const float measurement_interval_time_scale()
@@ -324,7 +343,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     void PublishProgress(const unsigned int progress);
     void PublishValue(const std::string &value, const bool highlight = false, const bool error = false);
 
-    const std::vector<proto::Channel>& known_channels()
+    const std::vector<proto::Channel> &known_channels()
     {
         return knownChannels;
     }
@@ -364,12 +383,15 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     void RegisterChannel(const proto::Channel &channel);
     void RegisterMeasure(const proto::Measure &measure);
-    void Measure(const std::string& measureId, const float value);
+    void Measure(const std::string &measureId, const float value);
     void Measure(const proto::Measure &measure, const float value);
 
     void Transmit(const std::string &eventName, const std::string &data = "");
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback);
-    void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback, const stringcallback_t errorCallback);
+    void Invoke(const std::string &method,
+                const std::string &data,
+                const stringcallback_t callback,
+                const stringcallback_t errorCallback);
 
     private:
     std::unique_ptr<client> wsclient;
@@ -379,6 +401,7 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     std::string _url;
     std::string _federation;
+    bool _incognito;
     std::string _host;
     std::string _station;
     std::string _participant;
@@ -430,7 +453,9 @@ class INHUMATE_RTI_EXPORT RTIClient
     void OnChannels(const std::string &channelName, const proto::Channels &message);
     void OnMeasures(const std::string &channelName, const proto::Measures &message);
 
-    void RegisterChannelUsage(const std::string &channelName, const bool usePublish, const std::string &typeName = "unknown");
+    void RegisterChannelUsage(const std::string &channelName,
+                              const bool usePublish,
+                              const std::string &typeName = "unknown");
     void DiscoverChannel(const proto::Channel &channel);
     void Subscribe(const std::string &channelName);
     void SendAuthToken();

@@ -28,10 +28,10 @@ typedef client::message_ptr message_ptr_t;
 #include <cstdint>
 #include <functional> //for std::function
 #include <iostream>
+#include <limits>
 #include <random>
 #include <thread>
 #include <vector>
-#include <limits>
 
 using websocketpp::lib::bind;
 using websocketpp::lib::placeholders::_1;
@@ -49,13 +49,13 @@ std::string random_string(size_t length);
 uint64_t timeSinceEpochMs();
 
 RTIClient::RTIClient(const std::string &inApplication,
-         const bool autoConnect,
-         const std::string &inUrl,
-         const std::string &inFederation,
-         const std::string &inSecret,
-         const std::string &inUser,
-         const std::string &inPassword,
-         const std::string &inClientId)
+                     const bool autoConnect,
+                     const std::string &inUrl,
+                     const std::string &inFederation,
+                     const std::string &inSecret,
+                     const std::string &inUser,
+                     const std::string &inPassword,
+                     const std::string &inClientId)
 {
     _url = inUrl;
     if (_url.empty()) {
@@ -64,8 +64,10 @@ RTIClient::RTIClient(const std::string &inApplication,
     }
     if (_url.empty()) _url = RTI_DEFAULT_URL;
     if (_url.find("ws://") != 0 && _url.find("wss://") != 0) {
-        if (_url.find("localhost") == 0 || _url.find("127.") == 0) _url = "ws://" + _url;
-        else _url = "wss://" + _url;
+        if (_url.find("localhost") == 0 || _url.find("127.") == 0)
+            _url = "ws://" + _url;
+        else
+            _url = "wss://" + _url;
     }
 
     _application = inApplication;
@@ -103,7 +105,7 @@ RTIClient::RTIClient(const std::string &inApplication,
     if (_host.empty()) {
         char host[256];
         host[0] = host[255] = '\0';
-        gethostname(host,255);
+        gethostname(host, 255);
         _host = host;
         if (_host.find(".") >= 0) _host = _host.substr(0, _host.find("."));
     }
@@ -229,7 +231,8 @@ connectcallback_p RTIClient::OnConnected(connectcallback_t callback)
 
 void RTIClient::OffConnected(connectcallback_p callback)
 {
-    connectcallbacks.erase(std::remove(connectcallbacks.begin(), connectcallbacks.end(), callback), connectcallbacks.end());
+    connectcallbacks.erase(std::remove(connectcallbacks.begin(), connectcallbacks.end(), callback),
+                           connectcallbacks.end());
     callback.reset();
 }
 
@@ -242,7 +245,8 @@ connectcallback_p RTIClient::OnFirstConnect(connectcallback_t callback)
 
 void RTIClient::OffFirstConnect(connectcallback_p callback)
 {
-    firstconnectcallbacks.erase(std::remove(firstconnectcallbacks.begin(), firstconnectcallbacks.end(), callback), firstconnectcallbacks.end());
+    firstconnectcallbacks.erase(std::remove(firstconnectcallbacks.begin(), firstconnectcallbacks.end(), callback),
+                                firstconnectcallbacks.end());
     callback.reset();
 }
 
@@ -255,7 +259,8 @@ disconnectcallback_p RTIClient::OnDisconnected(disconnectcallback_t callback)
 
 void RTIClient::OffDisconnected(disconnectcallback_p callback)
 {
-    disconnectcallbacks.erase(std::remove(disconnectcallbacks.begin(), disconnectcallbacks.end(), callback), disconnectcallbacks.end());
+    disconnectcallbacks.erase(std::remove(disconnectcallbacks.begin(), disconnectcallbacks.end(), callback),
+                              disconnectcallbacks.end());
     callback.reset();
 }
 
@@ -268,7 +273,8 @@ errorcallback_p RTIClient::OnError(errorcallback_t callback)
 
 void RTIClient::OffError(errorcallback_p callback)
 {
-    errorcallbacks.erase(std::remove(errorcallbacks.begin(), errorcallbacks.end(), callback), errorcallbacks.end());
+    errorcallbacks.erase(std::remove(errorcallbacks.begin(), errorcallbacks.end(), callback),
+                         errorcallbacks.end());
     callback.reset();
 }
 
@@ -277,10 +283,9 @@ void RTIClient::Publish(const std::string &channelName, const std::string &messa
     if (registerChannel) RegisterChannelUsage(channelName, true);
     nlohmann::json json;
     json["event"] = "#publish";
-    json["data"] = { 
-        { "channel", !_federation.empty() && channelName[0] != '@' ? "//" + _federation + "/" + channelName : channelName }, 
-        { "data", message } 
-    };
+    json["data"] = { { "channel", !_federation.empty() && channelName[0] != '@' ? "//" + _federation + "/" + channelName :
+                                                                                  channelName },
+                     { "data", message } };
     Send(json.dump());
 }
 
@@ -291,7 +296,7 @@ void RTIClient::Publish(const std::string &channelName, const google::protobuf::
 #else
     auto size = message.ByteSizeLong();
 #endif
-    unsigned char *buf = (unsigned char*) malloc(size+1);
+    unsigned char *buf = (unsigned char *)malloc(size + 1);
     if (buf) {
         if (message.SerializeToArray(buf, size)) {
             auto content = base64_encode(buf, size);
@@ -333,8 +338,8 @@ void RTIClient::Unsubscribe(messagecallback_p callback)
 {
     if (!callback) return;
     for (subscriptionmap_t::iterator mapit = subscriptions.begin(); mapit != subscriptions.end(); mapit++) {
-        auto& channel = mapit->first;
-        auto& callbacks = mapit->second;
+        auto &channel = mapit->first;
+        auto &callbacks = mapit->second;
         auto callit = std::find(callbacks.begin(), callbacks.end(), callback);
         if (callit != callbacks.end()) {
             if (callbacks.size() <= 1) {
@@ -358,7 +363,8 @@ std::size_t RTIClient::Poll()
     else
         ret = wsclient->poll_one();
 
-    if (connectionPhase >= ConnectionPhase::CONNECTING && !shouldBeConnected && timeSinceEpochMs() - connectTime > 5000) {
+    if (connectionPhase >= ConnectionPhase::CONNECTING && !shouldBeConnected &&
+        timeSinceEpochMs() - connectTime > 5000) {
         shouldBeConnected = true;
     }
 
@@ -393,17 +399,18 @@ std::size_t RTIClient::Poll()
                 lastCollectCheck = now;
                 CollectMeasurements();
             }
-            if (lastPingTime > 0 && connectionPhase >= ConnectionPhase::CONNECTING && timeSinceEpochMs() - lastPingTime > 20000) {
+            if (lastPingTime > 0 && connectionPhase >= ConnectionPhase::CONNECTING &&
+                timeSinceEpochMs() - lastPingTime > 20000) {
                 for (auto callback : errorcallbacks)
                     if (callback) (*callback)("connection", "Ping timeout");
                 Disconnect();
                 Connect();
-            } else if (lastReconnectTime > 0 && connectionPhase < ConnectionPhase::CONNECTED && timeSinceEpochMs() - lastReconnectTime > 5000) {
+            } else if (lastReconnectTime > 0 && connectionPhase < ConnectionPhase::CONNECTED &&
+                       timeSinceEpochMs() - lastReconnectTime > 5000) {
                 for (auto callback : errorcallbacks)
                     if (callback) (*callback)("connection", "Reconnect timeout");
                 Disconnect();
                 Connect();
-
             }
         }
     }
@@ -426,7 +433,7 @@ void RTIClient::set_state(const RuntimeState newState)
 {
     if (newState != _state) {
         _state = newState;
-        if (connected()) PublishClient();
+        if (connected() && !_incognito) PublishClient();
     }
 }
 
@@ -447,7 +454,8 @@ void RTIClient::PublishClient()
     client->set_participant(_participant);
     client->set_role(_role);
     client->set_full_name(_fullName);
-    for (auto capability : _capabilities) client->add_capabilities(capability);
+    for (auto capability : _capabilities)
+        client->add_capabilities(capability);
     message.set_allocated_client(client);
     Publish(CLIENTS_CHANNEL, message);
 }
@@ -511,18 +519,21 @@ void RTIClient::PublishValue(const std::string &value, const bool highlight, con
 std::vector<Client> RTIClient::known_clients()
 {
     std::vector<Client> clients;
-    for (auto kv : knownClients) clients.push_back(kv.second);
+    for (auto kv : knownClients)
+        clients.push_back(kv.second);
     return clients;
 }
 
 std::vector<Measure> RTIClient::known_measures()
 {
     std::vector<proto::Measure> measures;
-    for (auto kv : knownMeasures) measures.push_back(kv.second);
+    for (auto kv : knownMeasures)
+        measures.push_back(kv.second);
     return measures;
 }
 
-void RTIClient::RegisterChannel(const proto::Channel& channel) {
+void RTIClient::RegisterChannel(const proto::Channel &channel)
+{
     if (channel.name() == "") return;
     if (channel.name()[0] == '@') return;
 
@@ -539,20 +550,21 @@ void RTIClient::RegisterChannel(const proto::Channel& channel) {
         use->set_allocated_channel(new Channel(channel));
     }
 
-    if (connected()) {
+    if (connected() && !_incognito) {
         Channels message;
         message.set_allocated_channel(new Channel(channel));
         Publish(CHANNELS_CHANNEL, message);
     }
 }
 
-void RTIClient::RegisterMeasure(const proto::Measure& measure) {
+void RTIClient::RegisterMeasure(const proto::Measure &measure)
+{
     proto::Measure usedMeasure(measure);
     usedMeasure.set_application(_application);
     usedMeasures[usedMeasure.id()] = usedMeasure;
     if (knownMeasures.find(measure.id()) == knownMeasures.end()) {
         knownMeasures[usedMeasure.id()] = usedMeasure;
-        if (connected()) {
+        if (connected() && !_incognito) {
             Measures message;
             message.set_allocated_measure(new proto::Measure(usedMeasure));
             Publish(MEASURES_CHANNEL, message);
@@ -560,16 +572,20 @@ void RTIClient::RegisterMeasure(const proto::Measure& measure) {
     }
 }
 
-void RTIClient::Measure(const std::string &measureId, const float value) {
-    if (usedMeasures.find(measureId) != usedMeasures.end()) return Measure(usedMeasures[measureId], value);
-    if (knownMeasures.find(measureId) != knownMeasures.end()) return Measure(knownMeasures[measureId], value);
+void RTIClient::Measure(const std::string &measureId, const float value)
+{
+    if (usedMeasures.find(measureId) != usedMeasures.end())
+        return Measure(usedMeasures[measureId], value);
+    if (knownMeasures.find(measureId) != knownMeasures.end())
+        return Measure(knownMeasures[measureId], value);
     proto::Measure measure;
     measure.set_id(measureId);
     measure.set_application(_application);
     Measure(measure, value);
 }
 
-void RTIClient::Measure(const proto::Measure &measure, const float value) {
+void RTIClient::Measure(const proto::Measure &measure, const float value)
+{
     if (usedMeasures.find(measure.id()) == usedMeasures.end()) RegisterMeasure(measure);
     if (measure.interval() > 1e-5f) {
         if (collectQueue.find(measure.id()) == collectQueue.end()) {
@@ -586,14 +602,16 @@ void RTIClient::Measure(const proto::Measure &measure, const float value) {
     }
 }
 
-void RTIClient::Transmit(const std::string &eventName, const std::string &data) {
+void RTIClient::Transmit(const std::string &eventName, const std::string &data)
+{
     nlohmann::json message;
     message["event"] = eventName;
     message["data"] = data;
     Send(message.dump());
 }
 
-void RTIClient::Invoke(const std::string &method, const std::string &data, const stringcallback_t callback) {
+void RTIClient::Invoke(const std::string &method, const std::string &data, const stringcallback_t callback)
+{
     auto cid = ++this->cid;
     stringcallback_p ptr(new stringcallback_t(std::move(callback)));
     rpcCallbacks[cid] = ptr;
@@ -604,7 +622,11 @@ void RTIClient::Invoke(const std::string &method, const std::string &data, const
     Send(json.dump());
 }
 
-void RTIClient::Invoke(const std::string &method, const std::string &data, const stringcallback_t callback, const stringcallback_t errorCallback) {
+void RTIClient::Invoke(const std::string &method,
+                       const std::string &data,
+                       const stringcallback_t callback,
+                       const stringcallback_t errorCallback)
+{
     auto cid = ++this->cid;
     stringcallback_p ptr(new stringcallback_t(std::move(callback)));
     rpcCallbacks[cid] = ptr;
@@ -649,19 +671,23 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
                 connectionPhase = ConnectionPhase::CONNECTED;
                 if (first) {
                     for (auto callback : firstconnectcallbacks)
-                    if (callback) (*callback)();
+                        if (callback) (*callback)();
                 }
                 for (auto callback : connectcallbacks)
                     if (callback) (*callback)();
-                PublishClient();
-                PublishMeasures();
+                if (!_incognito) {
+                    PublishClient();
+                    PublishMeasures();
+                }
             }
-            for (auto kv : subscriptions) if (kv.second.size() > 0) Subscribe(kv.first);
+            for (auto kv : subscriptions)
+                if (kv.second.size() > 0) Subscribe(kv.first);
         } else if (json_in.contains("event") && json_in["event"] == "#removeAuthToken") {
             SendAuthToken();
         } else if (json_in.contains("event") && json_in["event"] == "#publish") {
             auto channel = json_in["data"]["channel"].get<std::string>();
-            if (!_federation.empty() && channel.rfind("//" + _federation + "/", 0) == 0) channel = channel.substr(_federation.length()+1);
+            if (!_federation.empty() && channel.rfind("//" + _federation + "/", 0) == 0)
+                channel = channel.substr(_federation.length() + 1);
             auto data = json_in["data"]["data"].get<std::string>();
             if (subscriptions.find(channel) != subscriptions.end()) {
                 auto &callbacks = subscriptions[channel];
@@ -694,19 +720,27 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
             if (json_in.contains("error")) {
                 if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end()) {
                     auto callback = rpcErrorCallbacks[rid];
-                    if (callback) (*callback)(json_in["error"].is_string() ? json_in["error"].get<std::string>() : json_in["error"].dump());
+                    if (callback)
+                        (*callback)(json_in["error"].is_string() ? json_in["error"].get<std::string>() :
+                                                                   json_in["error"].dump());
                 } else {
                     for (auto errorcb : errorcallbacks)
-                        if (errorcb) (*errorcb)("rpc", json_in["error"].is_string() ? json_in["error"].get<std::string>() : json_in["error"].dump());
+                        if (errorcb)
+                            (*errorcb)("rpc", json_in["error"].is_string() ?
+                                              json_in["error"].get<std::string>() :
+                                              json_in["error"].dump());
                 }
             } else {
                 if (rpcCallbacks.find(rid) != rpcCallbacks.end()) {
                     auto callback = rpcCallbacks[rid];
-                    if (callback) (*callback)(json_in["data"].is_string() ? json_in["data"].get<std::string>() : json_in["data"].dump());
+                    if (callback)
+                        (*callback)(json_in["data"].is_string() ? json_in["data"].get<std::string>() :
+                                                                  json_in["data"].dump());
                 }
             }
             if (rpcCallbacks.find(rid) != rpcCallbacks.end()) rpcCallbacks.erase(rid);
-            if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end()) rpcErrorCallbacks.erase(rid);
+            if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end())
+                rpcErrorCallbacks.erase(rid);
         }
     }
 }
@@ -714,19 +748,19 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
 void RTIClient::OnClients(const std::string &channelName, const Clients &message)
 {
     if (message.which_case() == Clients::WhichCase::kRequestClients) {
-        PublishClient();
+        if (!_incognito) PublishClient();
     } else if (message.which_case() == Clients::WhichCase::kClient) {
         knownClients[message.client().id()] = message.client();
     } else if (message.which_case() == Clients::WhichCase::kRegisterParticipant) {
-        auto& reg = message.register_participant();
-        if ((reg.client_id().empty() || reg.client_id() == clientId)
-            && (reg.host().empty() || reg.host() == _host) && (reg.station().empty() || reg.station() == _station)
-            && (reg.participant() != _participant || reg.role() != _role || reg.full_name() != _fullName)) {
-                _participant = reg.participant();
-                _role = reg.role();
-                _fullName = reg.full_name();
-                PublishClient();
-            }
+        auto &reg = message.register_participant();
+        if ((reg.client_id().empty() || reg.client_id() == clientId) &&
+            (reg.host().empty() || reg.host() == _host) && (reg.station().empty() || reg.station() == _station) &&
+            (reg.participant() != _participant || reg.role() != _role || reg.full_name() != _fullName)) {
+            _participant = reg.participant();
+            _role = reg.role();
+            _fullName = reg.full_name();
+            PublishClient();
+        }
     }
 }
 
@@ -741,7 +775,7 @@ void RTIClient::OnChannels(const std::string &channelName, const Channels &messa
             use->CopyFrom(*used);
         }
         message.set_allocated_channel_usage(usage);
-        Publish(CHANNELS_CHANNEL, message);
+        if (!_incognito) Publish(CHANNELS_CHANNEL, message);
     } else if (message.which_case() == Channels::WhichCase::kChannelUsage) {
         for (auto use : message.channel_usage().usage()) {
             DiscoverChannel(use.channel());
@@ -754,7 +788,7 @@ void RTIClient::OnChannels(const std::string &channelName, const Channels &messa
 void RTIClient::OnMeasures(const std::string &channelName, const Measures &message)
 {
     if (message.which_case() == Measures::WhichCase::kRequestMeasures) {
-        PublishMeasures();
+        if (!_incognito) PublishMeasures();
     } else if (message.which_case() == Measures::WhichCase::kMeasure) {
         knownMeasures[message.measure().id()] = message.measure();
     }
@@ -772,22 +806,30 @@ void RTIClient::RegisterChannelUsage(const std::string &channelName, const bool 
     if (use == usedChannels.end()) {
         ChannelUse newUse;
         newUse.set_allocated_channel(new Channel(known != knownChannels.end() ? *known : channel));
-        if (usePublish) newUse.set_publish(true); else newUse.set_subscribe(true);
+        if (usePublish)
+            newUse.set_publish(true);
+        else
+            newUse.set_subscribe(true);
         usedChannels.push_back(newUse);
     } else {
-        if (usePublish) use->set_publish(true); else use->set_subscribe(true);
+        if (usePublish)
+            use->set_publish(true);
+        else
+            use->set_subscribe(true);
     }
     if (known == knownChannels.end()) RegisterChannel(channel);
 }
 
-void RTIClient::DiscoverChannel(const proto::Channel &channel) {
+void RTIClient::DiscoverChannel(const proto::Channel &channel)
+{
     if (channel.name() == "") return;
     if (channel.name()[0] == '@') return;
     auto known = find_channel(channel.name());
     if (known == knownChannels.end()) {
         knownChannels.push_back(channel);
     } else {
-        if (!channel.data_type().empty() && known->data_type().empty()) known->set_data_type(channel.data_type());
+        if (!channel.data_type().empty() && known->data_type().empty())
+            known->set_data_type(channel.data_type());
         if (channel.ephemeral()) known->set_ephemeral(true);
         if (channel.state()) known->set_state(true);
         if (channel.first_field_id()) known->set_first_field_id(true);
@@ -827,18 +869,21 @@ void RTIClient::Send(const std::string &content)
         wsclient->send(connection_hdl, content, websocketpp::frame::opcode::text);
 }
 
-void RTIClient::CollectMeasurements() {
+void RTIClient::CollectMeasurements()
+{
     auto it = collectQueue.begin();
     while (it != collectQueue.end()) {
-        auto& measure_id = it->first;
-        auto& queue = it->second;
+        auto &measure_id = it->first;
+        auto &queue = it->second;
         it++;
         auto now = std::chrono::steady_clock::now();
         if (lastCollect.find(measure_id) == lastCollect.end()) {
             lastCollect[measure_id] = now;
         } else {
-            auto& measure = knownMeasures[measure_id];
-            auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCollect[measure_id]).count() * measurementIntervalTimeScale;
+            auto &measure = knownMeasures[measure_id];
+            auto timePassed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCollect[measure_id]).count() *
+            measurementIntervalTimeScale;
             if (timePassed / 1000.f > measure.interval()) {
                 Measurement measurement;
                 measurement.set_measure_id(measure.id());
