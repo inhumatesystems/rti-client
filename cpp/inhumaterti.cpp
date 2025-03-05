@@ -429,6 +429,11 @@ void RTIClient::PollForever()
     }
 }
 
+void RTIClient::ResetPing()
+{
+    lastPingTime = timeSinceEpochMs();
+}
+
 void RTIClient::set_state(const RuntimeState newState)
 {
     if (newState != _state) {

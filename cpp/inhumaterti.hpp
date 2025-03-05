@@ -192,6 +192,7 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     std::size_t Poll();
     void PollForever();
+    void ResetPing();
 
     template <typename Message> static Message Parse(const std::string &content)
     {

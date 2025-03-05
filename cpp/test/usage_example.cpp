@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 
-#include "inhumaterti.hpp"
+#include "../inhumaterti.hpp"
 
 using namespace inhumate::rti;
 using namespace inhumate::rti::proto;

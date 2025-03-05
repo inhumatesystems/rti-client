@@ -126,12 +126,15 @@ message("OpenSSL: ${OPENSSL_INCLUDE_DIR} ${OPENSSL_LIBRARIES}")
 add_library(inhumaterti STATIC inhumaterti.cpp ${PROTO_SRCS})
 target_compile_definitions(inhumaterti PRIVATE "INHUMATE_RTI_PROTOS_EXPORT=")
 
-file(GLOB TEST_SRCS test/*.cpp)
-add_executable(inhumaterti_test ${TEST_SRCS})
+file(GLOB TEST_SRCS test/*_test.cpp)
+add_executable(inhumaterti_test test/test_main.cpp ${TEST_SRCS})
 target_link_libraries(inhumaterti_test inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
 
-add_executable(usage_example usage_example.cpp)
+add_executable(usage_example test/usage_example.cpp)
 target_link_libraries(usage_example inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
+
+add_executable(disableping_example test/disableping_example.cpp)
+target_link_libraries(disableping_example inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
 
 # Shared
 if (BUILD_SHARED)

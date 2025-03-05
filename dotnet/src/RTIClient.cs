@@ -760,6 +760,10 @@ namespace Inhumate.RTI {
             });
         }
 
+        public void ResetPing() {
+            LastPing = DateTime.Now;
+        }
+
     }
 
     public delegate void UntypedListener(string channelName, object data);
