@@ -154,6 +154,7 @@ RTIClient::RTIClient(const std::string &inApplication,
 
     shouldBeConnected = false;
     connectCalled = false;
+    firstConnected = false;
 
     Subscribe<Clients>(CLIENTS_CHANNEL, bind(&RTIClient::OnClients, this, ::_1, ::_2));
     Subscribe<Channels>(CHANNELS_CHANNEL, bind(&RTIClient::OnChannels, this, ::_1, ::_2));
@@ -213,6 +214,7 @@ void RTIClient::Disconnect()
     lastReconnectTime = 0;
     connectCalled = false;
     shouldBeConnected = false;
+    firstConnected = false;
     connectionPhase = ConnectionPhase::DISCONNECTED;
     for (auto callback : disconnectcallbacks)
         if (callback) (*callback)();
@@ -228,6 +230,19 @@ connectcallback_p RTIClient::OnConnected(connectcallback_t callback)
 void RTIClient::OffConnected(connectcallback_p callback)
 {
     connectcallbacks.erase(std::remove(connectcallbacks.begin(), connectcallbacks.end(), callback), connectcallbacks.end());
+    callback.reset();
+}
+
+connectcallback_p RTIClient::OnFirstConnect(connectcallback_t callback)
+{
+    connectcallback_p ptr(new connectcallback_t(std::move(callback)));
+    firstconnectcallbacks.push_back(ptr);
+    return ptr;
+}
+
+void RTIClient::OffFirstConnect(connectcallback_p callback)
+{
+    firstconnectcallbacks.erase(std::remove(firstconnectcallbacks.begin(), firstconnectcallbacks.end(), callback), firstconnectcallbacks.end());
     callback.reset();
 }
 
@@ -629,7 +644,13 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
         } else if (json_in.contains("event") && json_in["event"] == "#setAuthToken") {
             lastPingTime = timeSinceEpochMs();
             if (connectionPhase != ConnectionPhase::CONNECTED) {
+                auto first = !firstConnected;
+                firstConnected = true;
                 connectionPhase = ConnectionPhase::CONNECTED;
+                if (first) {
+                    for (auto callback : firstconnectcallbacks)
+                    if (callback) (*callback)();
+                }
                 for (auto callback : connectcallbacks)
                     if (callback) (*callback)();
                 PublishClient();

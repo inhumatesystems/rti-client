@@ -49,6 +49,7 @@ namespace Inhumate.RTI {
         public float MeasurementIntervalTimeScale { get; set; } = 1f;
 
         public event Action OnConnected;
+        public event Action OnFirstConnect;
         public event Action OnDisconnected;
         public event ErrorListener OnError;
 
@@ -83,7 +84,7 @@ namespace Inhumate.RTI {
 
         public string OwnChannelPrefix => $"@{ClientId}:";
 
-        private bool everConnected;
+        private bool firstConnected;
         private bool shouldBeConnected;
         private bool reconnecting;
         private string connectionError;
@@ -203,12 +204,14 @@ namespace Inhumate.RTI {
                     AuthToken = ((Dictionary<string, object>)dict["data"])["token"].ToString();
                     foreach (var channelName in subscriptions.Keys) Subscribe(channelName);
                     if (!IsConnected || reconnecting) {
+                        var first = !firstConnected;
                         reconnecting = false;
-                        IsConnected = everConnected = true;
+                        IsConnected = firstConnected = true;
                         if (!Incognito) {
                             PublishClient();
                             PublishMeasures();
                         }
+                        if (first) OnFirstConnect?.Invoke();
                         OnConnected?.Invoke();
                     }
                 } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#removeAuthToken") {
@@ -318,7 +321,10 @@ namespace Inhumate.RTI {
             };
             OnConnected += listener;
             int count = 0;
-            while (count++ < 500 && !connected && connectionError == null) { Thread.Sleep(10); }
+            while (count++ < 500 && !connected && connectionError == null) { 
+                if (polling) Poll(1); 
+                Thread.Sleep(10);
+            }
             OnConnected -= listener;
             if (!connected) throw new RTIConnectionFailure(connectionError?.ToString());
         }
@@ -432,7 +438,7 @@ namespace Inhumate.RTI {
 
         protected void DoPublish(string channelName, string data) {
             if (string.IsNullOrEmpty(channelName)) throw new ArgumentException("Channel name cannot be empty");
-            if (!everConnected || socket == null) throw new InvalidOperationException("Cannot publish before connected");
+            if (!firstConnected || socket == null) throw new InvalidOperationException("Cannot publish before connected");
             if (!string.IsNullOrWhiteSpace(Federation) && !channelName.StartsWith("@")) channelName = $"//{Federation}/{channelName}";
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
                 { "event", "#publish" },
@@ -478,6 +484,7 @@ namespace Inhumate.RTI {
 
         public void Disconnect() {
             shouldBeConnected = false;
+            firstConnected = false;
             if (socket != null) {
                 socket.Disconnect();
                 socket.Dispose();

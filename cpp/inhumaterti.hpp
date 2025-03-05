@@ -148,6 +148,8 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     connectcallback_p OnConnected(connectcallback_t callback);
     void OffConnected(connectcallback_p callback);
+    connectcallback_p OnFirstConnect(connectcallback_t callback);
+    void OffFirstConnect(connectcallback_p callback);
     disconnectcallback_p OnDisconnected(disconnectcallback_t callback);
     void OffDisconnected(disconnectcallback_p callback);
     errorcallback_p OnError(errorcallback_t callback);
@@ -394,6 +396,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     std::string brokerVersion;
     subscriptionmap_t subscriptions;
     std::vector<connectcallback_p> connectcallbacks;
+    std::vector<connectcallback_p> firstconnectcallbacks;
     std::vector<disconnectcallback_p> disconnectcallbacks;
     std::vector<errorcallback_p> errorcallbacks;
     intstringcallbackmap_t rpcCallbacks;
@@ -419,6 +422,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     proto::RuntimeState _state = proto::RuntimeState::UNKNOWN;
     bool connectCalled;
     bool shouldBeConnected;
+    bool firstConnected;
 
     void OnOpen(connection_hdl_t hdl);
     void OnMessage(connection_hdl_t hdl, message_ptr_t msg);

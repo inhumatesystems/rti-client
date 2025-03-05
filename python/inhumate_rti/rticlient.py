@@ -57,6 +57,7 @@ class RTIClient(Emitter):
         self.known_measures = {}
 
         self._state = Proto.UNKNOWN
+        self.first_connected = False
         self.connected = False
         self.broker_version = None
         self._connection_error = None
@@ -214,10 +215,13 @@ class RTIClient(Emitter):
         for channel_name in self.subscriptions:
             socket.subscribe(channel_name)
         if not self.connected:
+            first = not self.first_connected
+            self.first_connected = True
+            self.connected = True
             if not self.incognito:
                 self._publish_client()
                 self._publish_measures()
-            self.connected = True
+            if first: self.emit("firstconnect")
             self.emit("connect")
 
     def __on_auth(self, socket, is_authenticated):
@@ -247,6 +251,7 @@ class RTIClient(Emitter):
 
     def disconnect(self):
         self.socket.disconnect()
+        self.first_connected = False
         if self.connected:
             self.connected = False
             self.emit("disconnect")

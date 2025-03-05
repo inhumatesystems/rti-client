@@ -119,7 +119,7 @@ export class RTIClient extends EventEmitter {
     }
     readonly incognito: boolean = false
     private connected: boolean = false
-    private everConnected: boolean = false
+    private firstConnected: boolean = false
     public get isConnected(): boolean {
         return this.connected
     }
@@ -183,7 +183,7 @@ export class RTIClient extends EventEmitter {
 
     get ownChannelPrefix(): string {
         if (!this.clientId)
-            throw new Error(this.everConnected ? "RTI can't use ownChannelPrefix until connected" : "RTI ownChannelPrefix but no clientId")
+            throw new Error(this.firstConnected ? "RTI can't use ownChannelPrefix until connected" : "RTI ownChannelPrefix but no clientId")
         return `@${this.clientId}:`
     }
 
@@ -308,11 +308,13 @@ export class RTIClient extends EventEmitter {
                 if ("secret" in token) this._secret = undefined
                 if ("password" in token) this._password = undefined
                 if (!this.connected) {
-                    this.connected = this.everConnected = true
+                    const first = !this.firstConnected
+                    this.connected = this.firstConnected = true
                     if (!this.incognito && this.clientId) {
                         this.publishClient()
                         this.publishMeasures()
                     }
+                    if (first) this.emit("firstconnect")
                     this.emit("connect")
                 }
             }
@@ -606,7 +608,7 @@ export class RTIClient extends EventEmitter {
     }
 
     private doPublish(channelName: string, message: string) {
-        if (!this.everConnected) {
+        if (!this.firstConnected) {
             console.warn("RTI can't publish before connected - message dropped")
             return
         }
@@ -621,6 +623,7 @@ export class RTIClient extends EventEmitter {
     disconnect() {
         //this.socket.deauthenticate()
         this.socket.disconnect()
+        this.connected = this.firstConnected = false
     }
 
     setCredentials(user: string, password: string) {

@@ -551,7 +551,17 @@ namespace Inhumate.RTI {
                 Assert.Fail("Should not be able to publish before connected");
             } catch (Exception) {
                 // pass
+            } finally {
+                temprti.Disconnect();
             }
+        }
+
+        [Test]
+        public void Polling_WaitUntilConnected_Works() {
+            var temprti = new RTIClient(polling: true) { Application = "C# IntegrationTest Temp" };
+            temprti.WaitUntilConnected();
+            Assert.IsTrue(temprti.IsConnected);
+            temprti.Disconnect();
         }
     }
 }
