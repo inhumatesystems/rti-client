@@ -64,13 +64,16 @@ struct Listener : Catch::TestEventListenerBase {
 };
 CATCH_REGISTER_LISTENER(Listener);
 
+TEST_CASE("proper_defaults")
+{
+    REQUIRE(!rti.incognito());
+}
 
 TEST_CASE("connect_disconnect_works")
 {
     // Connection is done in RTI constructor
     REQUIRE(rti.connected());
 
-    // TODO disconnect and reconnect doesn't work... nothing happens after connect ??
     rti.Disconnect();
     POLL_CONDITION(500, rti.connected());
     REQUIRE(!rti.connected());
@@ -80,6 +83,7 @@ TEST_CASE("connect_disconnect_works")
     POLL_CONDITION(5000, !rti.connected());
     REQUIRE(rti.connected());
 }
+ 
 
 TEST_CASE("connect_disconnect_events_called")
 {

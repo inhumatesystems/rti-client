@@ -89,6 +89,7 @@ RTIClient::RTIClient(const std::string &inApplication,
     if (envSecret) secret = envSecret;
     if (secret.empty()) secret = inSecret;
 
+    _incognito = false;
     _user = inUser;
     _password = inPassword;
 
