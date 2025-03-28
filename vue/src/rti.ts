@@ -75,8 +75,8 @@ export const useRtiStore = defineStore("rti", () => {
             }
             if (hadRecorder && !recorderClient.value) {
                 log.value = undefined
-            } else {
-                rti.publish(RTI.channel.logs, RTI.proto.Logs, { requestLog: {} })
+            } else if (!hadRecorder && recorderClient.value) {
+                rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { requestCurrentLog: {} })
             }
         }
     })
