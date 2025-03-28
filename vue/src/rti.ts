@@ -158,7 +158,7 @@ export const useRtiStore = defineStore("rti", () => {
     }
 
     function requestChannels() {
-        rti.publish(RTI.channel.channels, RTI.proto.Channels, { requestChannels: {} })
+        rti.publish(RTI.channel.channels, RTI.proto.Channels, { requestChannelUsage: {} })
     }
 
     return {
