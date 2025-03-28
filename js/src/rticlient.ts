@@ -606,13 +606,17 @@ export class RTIClient extends EventEmitter {
             bytes = typeOrEncode
         }
         if (bytes.finish) bytes = bytes.finish()
-        this.doPublish(channelName, base64.fromByteArray(bytes))
+        const content = base64.fromByteArray(bytes)
+        if (content.length == 0) console.warn("RTI publish empty message")
+        this.doPublish(channelName, content)
     }
 
     publishBytes(channelName: string, bytes: Uint8Array | any, register = true, typeName?: string) {
         if (register) this.registerChannelUsage(channelName, true, typeName || "bytes")
         if ((bytes as any).finish) bytes = (bytes as any).finish()
-        this.doPublish(channelName, base64.fromByteArray(bytes))
+            const content = base64.fromByteArray(bytes)
+        if (content.length == 0) console.warn("RTI publish empty bytes")
+        this.doPublish(channelName, content)
     }
 
     publishText(channelName: string, message: string, register = true) {
