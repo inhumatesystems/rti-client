@@ -38,7 +38,7 @@ class RTIClient(Emitter):
     def auth_token(self):
         return self.socket.auth_token
 
-    def __init__(self, application: str = "Python",
+    def __init__(self, application: str = "Python", url: Optional[str] = None,
                  application_version: Optional[str] = None, engine_version: Optional[str] = None,
                  integration_version: Optional[str] = None, client_id: Optional[str] = None,
                  federation: Optional[str] = None, host: Optional[str] = None, station: Optional[str] = None,
@@ -64,7 +64,6 @@ class RTIClient(Emitter):
 
         self.create_rti_thread = main_loop is None
 
-        url = None
         if not url:
             url = os.environ.get('RTI_URL')
         if not url:
