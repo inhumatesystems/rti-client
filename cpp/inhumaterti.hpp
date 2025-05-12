@@ -1,3 +1,7 @@
+//
+// Inhumate RTI C++ Client
+// Copyright 2025 Inhumate AB
+//
 
 // Style guide: https://google.github.io/styleguide/cppguide.html
 // Conforming to Google's style guide because of protobuf dependency,
@@ -10,6 +14,7 @@
 #pragma warning(disable : 4251)
 #pragma warning(disable : 4800)
 #pragma warning(disable : 4946)
+#pragma warning(disable : 4996)
 #endif
 
 #if defined(WIN32) && defined(INHUMATE_RTI_SHARED)
