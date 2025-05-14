@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-[ -z "$UE5" -a -d "/Users/Shared/Epic Games/UE_5.3" ] && export UE5="/Users/Shared/Epic Games/UE_5.3"
+[ -z "$UE5" -a -d "/Users/Shared/Epic Games/UE_5.5" ] && export UE5="/Users/Shared/Epic Games/UE_5.5"
 if [ -z "$UE5" ]; then
     echo "Don't know where UE5 is installed. Please set environment variable UE5."
     exit 1
@@ -15,7 +15,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-ue5-build ]; then
     mkdir protobuf/cmake-ue5-build && cd protobuf/cmake-ue5-build
-    CMAKE_OSX_ARCHITECTURES="arm64;x86_64" cmake -Dprotobuf_BUILD_TESTS=OFF  -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_SHARED_LIBS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ../cmake
+    CMAKE_OSX_ARCHITECTURES="arm64;x86_64" cmake -Dprotobuf_BUILD_TESTS=OFF  -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_SHARED_LIBS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../cmake
     make
     cd -
 fi
