@@ -1,3 +1,5 @@
+// RTI client runtime state enumeration.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

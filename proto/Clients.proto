@@ -1,3 +1,5 @@
+// Used by RTI clients to exchange information about each other.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

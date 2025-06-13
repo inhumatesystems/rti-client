@@ -1,3 +1,5 @@
+// Log definitions used by the Inhumate Recorder.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

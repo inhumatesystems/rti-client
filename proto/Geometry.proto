@@ -1,3 +1,5 @@
+// Geometry - represention of the shape of an object
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

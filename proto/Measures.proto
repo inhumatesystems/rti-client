@@ -1,3 +1,5 @@
+// Measure - meta-data about a measure, for which measurements can be made.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

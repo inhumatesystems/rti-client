@@ -1,10 +1,10 @@
+// Injection - instantiation of Injectable, something that has been injected into the scenario
+// e.g. a triggered event or a change of environmental conditions
+
 syntax = "proto3";
 
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
-
-// Injection - instantiation of Injectable, something that has been injected into the scenario
-// e.g. a triggered event or a change of environmental conditions
 
 message Injection {
     string id = 1;

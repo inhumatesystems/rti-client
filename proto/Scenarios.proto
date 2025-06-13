@@ -1,3 +1,5 @@
+// Scenarios - used by clients to publish loadable scenarios.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

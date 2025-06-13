@@ -1,3 +1,5 @@
+// Commands can be used for generic RPC (remote procedure call) style communication.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

@@ -1,3 +1,5 @@
+// Measurement - data point representing a measurement or a time window of measurements
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

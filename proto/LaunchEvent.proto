@@ -1,3 +1,5 @@
+// LaunchEvent definitions used by the Inhumate Launcher.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

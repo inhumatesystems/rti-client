@@ -1,3 +1,6 @@
+// RTI runtime control messages definition.
+// This file defines the messages used to control the RTI runtime, including loading scenarios, starting, pausing, and stopping the runtime,
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

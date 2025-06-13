@@ -1,10 +1,10 @@
+// See https://en.wikipedia.org/wiki/Live,_virtual,_and_constructive
+// for a general intodruction to the concept of LVC (Live, Virtual, Constructive)
+
 syntax = "proto3";
 
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
-
-// See https://en.wikipedia.org/wiki/Live,_virtual,_and_constructive
-// for a general intodruction to the concept of LVC (Live, Virtual, Constructive)
 
 enum LVCCategory {
     UNKNOWN_LVC_CATEGORY = 0;

@@ -1,3 +1,5 @@
+// Entity - represents a shared "object of interested".
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

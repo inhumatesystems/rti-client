@@ -1,3 +1,5 @@
+// EntityPosition - represents the position and orientation of an entity, in local and/or geodetic coordinates.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

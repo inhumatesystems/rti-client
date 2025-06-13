@@ -1,9 +1,9 @@
+// EntityDomain - Answers the question: Where is this entity expected to reside/operate?
+
 syntax = "proto3";
 
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
-
-// Answers the question: Where is this entity expected to reside/operate?
 
 enum EntityDomain {
     UNKNOWN_DOMAIN = 0;

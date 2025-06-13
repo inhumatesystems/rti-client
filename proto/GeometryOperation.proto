@@ -1,3 +1,5 @@
+// Operations that can be performed on geometries.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

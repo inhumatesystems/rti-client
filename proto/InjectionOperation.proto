@@ -1,3 +1,5 @@
+// Operations that can be performed on injections.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

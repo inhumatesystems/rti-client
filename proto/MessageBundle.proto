@@ -1,3 +1,5 @@
+// Bundle of messages that can be requested from the Inhumate Recorder.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;

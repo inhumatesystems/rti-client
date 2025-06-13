@@ -1,10 +1,10 @@
+// Injectable - something that can be injected at runtime into a scenario
+// e.g. a triggered event or a change of environmental conditions
+
 syntax = "proto3";
 
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
-
-// Injectable - something that can be injected at runtime into a scenario
-// e.g. a triggered event or a change of environmental conditions
 
 import "Parameter.proto";
 

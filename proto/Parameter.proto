@@ -1,3 +1,18 @@
+// Parameter - generic definition of a parameter used in LaunchConfigurations, Scenarios, Commands, etc.
+
+// Parameter types implemented in the RTI UI components:
+// - switch - sets value to "true" or "false"
+// - checkbox - same as above
+// - choice - concatenate choices with a pipe-sign, e.g. "choice|optionA|B|C"
+// - text - multiple line text input
+// - integer - numeric integer input
+// - float - numeric float input
+// - string - single line text input
+
+// Note to developers receiving parameter values: validation is the responsibility of the receiver.
+// Even though the RTI UI components provide some basic validation, it is not guaranteed that the values are valid.
+// E.g. the CLI allows sending parameter values without validation or default values.
+
 syntax = "proto3";
 
 package inhumate.rti.proto;
