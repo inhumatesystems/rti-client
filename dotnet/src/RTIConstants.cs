@@ -3,7 +3,8 @@ namespace Inhumate.RTI {
         public const string Version = "0.0.1-dev-version";
         internal const string DefaultUrl = "ws://localhost:8000/";
     }
-    public static class RTIChannel {
+    public static class RTIChannel
+    {
         public const string InternalPrefix = "rti/";
         public const string Control = InternalPrefix + "control";
         public const string Channels = InternalPrefix + "channels";
@@ -31,6 +32,8 @@ namespace Inhumate.RTI {
         public const string InjectionOperation = InternalPrefix + "injections";
         public const string Injection = InternalPrefix + "injection";
         public const string Commands = InternalPrefix + "commands";
+        public const string TimelineEvent = InternalPrefix + "timelineevent";
+        public const string EntityEvent = InternalPrefix + "entityevent";
     }
     public static class RTICapability {
         public const string RuntimeControl = "runtime";

@@ -389,6 +389,49 @@ namespace Inhumate.RTI {
         }
 
         [Test]
+        public void EntityMeasureWithInterval_MultipleMeasurements_PublishesTumblingWindow() {
+            var measure = new Measure {
+                Id = "window",
+                Interval = 1,
+                Entity = true
+            };
+
+            bool received1 = false, received2 = false;
+            var subscription = rti.Subscribe<Measurement>(RTIChannel.Measurement, (channelName, measurement) => {
+                if (measurement.MeasureId == measure.Id && measurement.EntityId == "entity1") {
+                    Assert.AreEqual(measurement.Window.Count, 2);
+                    Assert.AreEqual(measurement.Window.Mean, 43, 0.01);
+                    received1 = true;
+                } else if (measurement.MeasureId == measure.Id && measurement.EntityId == "entity2") {
+                    //Assert.AreEqual(measurement.Window.Count, 1);
+                    //Assert.AreEqual(measurement.Window.Mean, 40, 0.01);
+                    Assert.AreEqual(measurement.Value, 40, 0.01);
+                    received2 = true;
+                }
+            });
+            Thread.Sleep(100);
+
+            // Make a couple of measurements
+            rti.Measure(measure, 42, "entity1");
+            rti.Measure(measure, 44, "entity1");
+            rti.Measure(measure, 40, "entity2");
+
+            // Should not be published until interval (1s) passes
+            Thread.Sleep(500);
+            Assert.IsFalse(received1);
+            Assert.IsFalse(received2);
+
+            // Should be received after ~1s
+            int count = 0;
+            while (!received1 && !received2 && count++ < 30) Thread.Sleep(100);
+            Thread.Sleep(100);
+            rti.Unsubscribe(subscription);
+            Thread.Sleep(100);
+            Assert.IsTrue(received1);
+            Assert.IsTrue(received2);
+        }
+
+        [Test]
         public void ParticipantRegistrationForStation_SetsParticipant() {
             rti2.Publish(RTIChannel.Clients, new Clients { RequestClients = new Google.Protobuf.WellKnownTypes.Empty() });
             var message = new Clients {
@@ -485,7 +528,7 @@ namespace Inhumate.RTI {
                 receiveCount++;
             });
             try {
-                Thread.Sleep(100);
+                Thread.Sleep(200);
 
                 rti.Publish("polling", "one");
                 rti.Publish("polling", "two");
@@ -500,6 +543,7 @@ namespace Inhumate.RTI {
             } finally {
                 rti2.Polling = false;
                 rti2.Unsubscribe("polling");
+                Thread.Sleep(200);
             }
         }
 

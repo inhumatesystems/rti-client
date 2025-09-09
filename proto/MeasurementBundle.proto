@@ -19,6 +19,7 @@ message MeasurementBundle {
         repeated string measures = 2;
         repeated string clients = 3;
         repeated string applications = 4;
+        repeated string entities = 5;
 
         double from_time = 8;
         double to_time = 9;
@@ -37,6 +38,7 @@ message MeasurementBundle {
     message MeasureResponse {
         Measure measure = 1;
         string client_id = 2;
+        string entity_id = 4;
         repeated HistoricMeasurement measurements = 3;
     }
 

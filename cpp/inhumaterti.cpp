@@ -578,7 +578,7 @@ void RTIClient::RegisterMeasure(const proto::Measure &measure)
     }
 }
 
-void RTIClient::Measure(const std::string &measureId, const float value)
+void RTIClient::Measure(const std::string &measureId, const float value, const std::string &entityId)
 {
     if (usedMeasures.find(measureId) != usedMeasures.end())
         return Measure(usedMeasures[measureId], value);
@@ -587,24 +587,28 @@ void RTIClient::Measure(const std::string &measureId, const float value)
     proto::Measure measure;
     measure.set_id(measureId);
     measure.set_application(_application);
-    Measure(measure, value);
+    if (!entityId.empty()) measure.set_entity(true);
+    Measure(measure, value, entityId);
 }
 
-void RTIClient::Measure(const proto::Measure &measure, const float value)
+void RTIClient::Measure(const proto::Measure &measure, const float value, const std::string &entityId)
 {
     if (usedMeasures.find(measure.id()) == usedMeasures.end()) RegisterMeasure(measure);
+    std::string key = measure.id();
+    if (!entityId.empty()) key += "|" + entityId;
     if (measure.interval() > 1e-5f) {
-        if (collectQueue.find(measure.id()) == collectQueue.end()) {
-            collectQueue[measure.id()] = std::unique_ptr<std::queue<float>>(new std::queue<float>());
+        if (collectQueue.find(key) == collectQueue.end()) {
+            collectQueue[key] = std::unique_ptr<std::queue<float>>(new std::queue<float>());
         }
-        collectQueue[measure.id()]->push(value);
+        collectQueue[key]->push(value);
     } else {
         Measurement measurement;
         measurement.set_measure_id(measure.id());
         measurement.set_client_id(clientId);
+        measurement.set_entity_id(entityId);
         measurement.set_value(value);
         auto channel = !measure.channel().empty() ? measure.channel() : MEASUREMENT_CHANNEL;
-        Publish(channel, measurement);
+        Publish(channel, measurement, false);
     }
 }
 
@@ -879,26 +883,31 @@ void RTIClient::CollectMeasurements()
 {
     auto it = collectQueue.begin();
     while (it != collectQueue.end()) {
-        auto &measure_id = it->first;
+        auto &key = it->first;
         auto &queue = it->second;
         it++;
         auto now = std::chrono::steady_clock::now();
-        if (lastCollect.find(measure_id) == lastCollect.end()) {
-            lastCollect[measure_id] = now;
+        if (lastCollect.find(key) == lastCollect.end()) {
+            lastCollect[key] = now;
         } else {
+            auto sepindex = key.find('|');
+            auto measure_id = sepindex == std::string::npos ? key : key.substr(0, sepindex);
+            auto entity_id = sepindex == std::string::npos ? "" : key.substr(sepindex + 1);
+            if (knownMeasures.find(measure_id) == knownMeasures.end()) continue;
             auto &measure = knownMeasures[measure_id];
             auto timePassed =
-            std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCollect[measure_id]).count() *
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCollect[key]).count() *
             measurementIntervalTimeScale;
             if (timePassed / 1000.f > measure.interval()) {
                 Measurement measurement;
                 measurement.set_measure_id(measure.id());
                 measurement.set_client_id(clientId);
+                measurement.set_entity_id(entity_id);
                 auto channel = !measure.channel().empty() ? measure.channel() : MEASUREMENT_CHANNEL;
                 if (queue->size() == 1) {
                     measurement.set_value(queue->front());
                     queue->pop();
-                    Publish(channel, measurement);
+                    Publish(channel, measurement, false);
                 } else if (queue->size() > 1) {
                     auto window = new proto::Measurement_Window();
                     window->set_max(std::numeric_limits<float>::min());
@@ -914,9 +923,9 @@ void RTIClient::CollectMeasurements()
                     if (window->count() > 0) window->set_mean(window->mean() / window->count());
                     window->set_duration(timePassed / 1000.f);
                     measurement.set_allocated_window(window);
-                    Publish(channel, measurement);
+                    Publish(channel, measurement, false);
                 }
-                lastCollect[measure_id] = now;
+                lastCollect[key] = now;
             }
         }
     }

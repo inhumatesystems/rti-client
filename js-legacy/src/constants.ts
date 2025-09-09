@@ -33,6 +33,8 @@ export const channel = {
     injectionOperation: internalPrefix + "injections",
     injection: internalPrefix + "injection",
     commands: internalPrefix + "commands",
+    timelineEvent: internalPrefix + "timelineevent",
+    entityEvent: internalPrefix + "entityevent",
 }
 
 export const capability = {

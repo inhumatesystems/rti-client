@@ -8,6 +8,7 @@ option csharp_namespace = "Inhumate.RTI.Proto";
 message Measurement {
     string measure_id = 1;
     string client_id = 2;
+    string entity_id = 5; // optional, if the measure is associated with an entity
     oneof which {
         float value = 3;
         Window window = 4;

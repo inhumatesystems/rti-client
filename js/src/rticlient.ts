@@ -614,7 +614,7 @@ export class RTIClient extends EventEmitter {
     publishBytes(channelName: string, bytes: Uint8Array | any, register = true, typeName?: string) {
         if (register) this.registerChannelUsage(channelName, true, typeName || "bytes")
         if ((bytes as any).finish) bytes = (bytes as any).finish()
-            const content = base64.fromByteArray(bytes)
+        const content = base64.fromByteArray(bytes)
         if (content.length == 0) console.warn("RTI publish empty bytes")
         this.doPublish(channelName, content)
     }
@@ -738,13 +738,14 @@ export class RTIClient extends EventEmitter {
         }
     }
 
-    measure(measureOrId: Measure | string, value: number) {
+    measure(measureOrId: Measure | string, value: number, entityId = "") {
         let measure: Measure | undefined = undefined
         if (typeof measureOrId == "string") {
             measure = this._usedMeasures[measureOrId]
             if (!measure) measure = this._knownMeasures[measureOrId]
             if (!measure) {
                 measure = Measure.create({ id: measureOrId, application: this.application })
+                if (entityId) measure.entity = true
             }
         } else {
             measure = measureOrId
@@ -753,10 +754,11 @@ export class RTIClient extends EventEmitter {
         if (!(measure.id in this._usedMeasures)) this.registerMeasure(measure)
         if (measure.interval > 1e-5) {
             if (!this.collectMeasurementsInterval) this.collectMeasurementsInterval = setInterval(() => this.collectMeasurements(), 500)
-            if (!(measure.id in this.collectQueue)) this.collectQueue[measure.id] = []
-            this.collectQueue[measure.id].push(value)
+            const key = measure.id + (entityId ? "|" + entityId : "")
+            if (!(key in this.collectQueue)) this.collectQueue[key] = []
+            this.collectQueue[key].push(value)
         } else {
-            const measurement = Measurement.create({ measureId: measure.id, clientId: this.clientId, value })
+            const measurement = Measurement.create({ measureId: measure.id, clientId: this.clientId, value, entityId })
             const channel = measure.channel || RTIchannel.measurement
             if (this.connected) this.publish(channel, Measurement, measurement, false)
         }
@@ -768,15 +770,20 @@ export class RTIClient extends EventEmitter {
             this.collectMeasurementsInterval = undefined
             return
         }
-        for (const id in this.collectQueue) {
-            if (!(id in this.lastCollect)) {
-                this.lastCollect[id] = new Date().getTime()
+        for (const key in this.collectQueue) {
+            if (!(key in this.lastCollect)) {
+                this.lastCollect[key] = new Date().getTime()
             } else {
-                const measure = this._knownMeasures[id]
-                if ((new Date().getTime() - this.lastCollect[id]) * this.measurementIntervalTimeScale > measure.interval * 1000) {
+                var measureId = key.includes("|") ? key.split("|")[0] : key
+                var entityId = key.includes("|") ? key.split("|")[1] : ""
+                const measure = this._knownMeasures[measureId]
+                if (
+                    measure &&
+                    (new Date().getTime() - this.lastCollect[key]) * this.measurementIntervalTimeScale > measure.interval * 1000
+                ) {
                     const channel = measure.channel || RTIchannel.measurement
-                    const measurement = Measurement.create({ measureId: id, clientId: this.clientId })
-                    const values = this.collectQueue[id]
+                    const measurement = Measurement.create({ measureId: measureId, clientId: this.clientId, entityId })
+                    const values = this.collectQueue[key]
                     if (values.length == 1) {
                         measurement.value = values.pop()!
                         this.publish(channel, Measurement, measurement, false)
@@ -787,13 +794,13 @@ export class RTIClient extends EventEmitter {
                             if (value > window.max) window.max = value
                             if (value < window.min) window.min = value
                         }
-                        this.collectQueue[id] = []
+                        this.collectQueue[key] = []
                         if (window.count > 0) window.mean /= window.count
-                        window.duration = (new Date().getTime() - this.lastCollect[id]) * this.measurementIntervalTimeScale
+                        window.duration = (new Date().getTime() - this.lastCollect[key]) * this.measurementIntervalTimeScale
                         measurement.window = window
                         this.publish(channel, Measurement, measurement, false)
                     }
-                    this.lastCollect[id] = new Date().getTime()
+                    this.lastCollect[key] = new Date().getTime()
                 }
             }
         }

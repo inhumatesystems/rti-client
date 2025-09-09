@@ -22,6 +22,7 @@ class ClientBehaviorTest(unittest.TestCase):
         rti2.on("error", on_error)
         rti2.wait_until_connected()
         cls.rti2 = rti2
+        rti2.request_clients()
 
         time.sleep(0.1)
 
@@ -316,6 +317,40 @@ class ClientBehaviorTest(unittest.TestCase):
         count = 0
         while count < 100 and not self.received: count += 1 ; time.sleep(0.01)
         self.assertTrue(self.received)
+        self.rti.unsubscribe(subscription)
+
+    def test_entity_measure_with_interval__multiple_measurements__publishes_tumbling_window(self):
+        measure = RTI.proto.Measure()
+        measure.id = "window"
+        measure.interval = 1
+        measure.entity = True
+        self.received1 = False
+        self.received2 = False
+
+        def on_measurement(measurement):
+            if measurement.entity_id == "entity1":
+                self.assertEqual(2, measurement.window.count)
+                self.assertAlmostEqual(43.0, measurement.window.mean, 0.01)
+                self.received1 = True
+            elif measurement.entity_id == "entity2":
+                self.assertAlmostEqual(40.0, measurement.value, 0.01)
+                self.received2 = True
+        subscription = self.rti.subscribe(RTI.channel.measurement, RTI.proto.Measurement, on_measurement)
+
+        # Make a few measurements
+        self.rti.measure(measure, 42, "entity1")
+        self.rti.measure(measure, 44, "entity1")
+        self.rti.measure(measure, 40, "entity2")
+
+        # Should not be published until interval (1s) passes
+        time.sleep(0.5)
+        self.assertFalse(self.received1 or self.received2)
+
+        # Should be received after ~1s
+        count = 0
+        while count < 100 and not self.received1 and not self.received2: count += 1 ; time.sleep(0.01)
+        self.assertTrue(self.received1)
+        self.assertTrue(self.received2)
         self.rti.unsubscribe(subscription)
 
     def test_participant_registration_for_station__sets_participant(self):

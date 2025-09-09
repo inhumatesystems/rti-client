@@ -349,23 +349,22 @@ class RTIClient(Emitter):
                         del self.subscriptions[channel_name]
                         break
 
-    def publish(self, channel_name: str, message: _message.Message) -> None:
-        self._register_channel_usage(
-            channel_name, True, data_type=str(type(message)))
+    def publish(self, channel_name: str, message: _message.Message, register = True) -> None:
+        if register: self._register_channel_usage(channel_name, True, data_type=str(type(message)))
         content = base64.b64encode(
             message.SerializeToString()).decode("utf8")
         if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, content)
 
-    def publish_text(self, channel_name: str, content: str) -> None:
-        self._register_channel_usage(channel_name, True, data_type="text")
+    def publish_text(self, channel_name: str, content: str, register = True) -> None:
+        if register: self._register_channel_usage(channel_name, True, data_type="text")
         if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, content)
 
-    def publish_json(self, channel_name: str, message: object) -> None:
-        self._register_channel_usage(channel_name, True, data_type="json")
+    def publish_json(self, channel_name: str, message: object, register = True) -> None:
+        if register: self._register_channel_usage(channel_name, True, data_type="json")
         if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, json.dumps(message))
@@ -515,7 +514,7 @@ class RTIClient(Emitter):
                 message.measure.CopyFrom(measure)
                 self.publish(Channel.measures, message)
 
-    def measure(self, measure_id: Union[str, Proto.Measure], value: float) -> None:
+    def measure(self, measure_id: Union[str, Proto.Measure], value: float, entity_id: str = "") -> None:
         measure = None
         if type(measure_id) is str:
             measure = self.used_measures.get(measure_id)
@@ -525,6 +524,7 @@ class RTIClient(Emitter):
                 measure = Proto.Measure()
                 measure.id = measure_id
                 measure.application = self.application
+                if entity_id: measure.entity = True
         else:
             measure = measure_id
 
@@ -537,35 +537,39 @@ class RTIClient(Emitter):
                 self.collect_measurements_thread.daemon = True
                 self.collect_measurements_thread.start()
             with self.collect_lock:
-                if measure.id not in self.collect_queue:
-                    self.collect_queue[measure.id] = []
-                self.collect_queue[measure.id].append(value)
+                key = measure.id + ("|" + entity_id if entity_id else "")
+                if key not in self.collect_queue: self.collect_queue[key] = []
+                self.collect_queue[key].append(value)
         else:
             measurement = Proto.Measurement()
             measurement.measure_id = measure.id
             measurement.client_id = self.client_id
+            measurement.entity_id = entity_id
             measurement.value = value
             channel = measure.channel if measure.channel else Channel.measurement
             if self.connected:
-                self.publish(channel, measurement)
+                self.publish(channel, measurement, False)
 
     def _collect_measurements_thread_func(self):
         while self.connected:
             time.sleep(0.1)
             with self.collect_lock:
-                for measure_id, values in self.collect_queue.items():
-                    if measure_id not in self.last_collect:
-                        self.last_collect[measure_id] = time.time()
+                for key, values in self.collect_queue.items():
+                    measure_id = key.split("|")[0]
+                    entity_id = key.split("|")[1] if "|" in key else ""
+                    if key not in self.last_collect: 
+                        self.last_collect[key] = time.time()
                     else:
-                        measure = self.known_measures[measure_id]
-                        if (time.time() - self.last_collect[measure_id]) * self.measurement_interval_time_scale > measure.interval:
+                        measure = self.known_measures.get(measure_id)
+                        if measure and (time.time() - self.last_collect[key]) * self.measurement_interval_time_scale > measure.interval:
                             channel = measure.channel if measure.channel else Channel.measurement
                             measurement = Proto.Measurement()
                             measurement.measure_id = measure.id
                             measurement.client_id = self.client_id
+                            measurement.entity_id = entity_id
                             if len(values) == 1:
                                 measurement.value = values.pop()
-                                self.publish(channel, measurement)
+                                self.publish(channel, measurement, False)
                             elif len(values) > 1:
                                 window = Proto.Measurement.Window()
                                 window.max = -float("inf")
@@ -581,10 +585,10 @@ class RTIClient(Emitter):
                                 if window.count > 0:
                                     window.mean /= window.count
                                 window.duration = (
-                                    time.time() - self.last_collect[measure_id]) * self.measurement_interval_time_scale
+                                    time.time() - self.last_collect[key]) * self.measurement_interval_time_scale
                                 measurement.window.CopyFrom(window)
-                                self.publish(channel, measurement)
-                            self.last_collect[measure_id] = time.time()
+                                self.publish(channel, measurement, False)
+                            self.last_collect[key] = time.time()
 
     def execute_command(self, name: str, client_id: str = None, entity_id: str = None, transaction_id: str = None, wait: bool = False, timeout: float = 5, **kwargs):
         message = Proto.Commands()

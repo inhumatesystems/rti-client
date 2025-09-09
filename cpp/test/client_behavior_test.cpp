@@ -386,6 +386,43 @@ TEST_CASE("measure_with_interval__multiple_measurements__publishes_window")
     rti.Unsubscribe(subscription);
 }
 
+TEST_CASE("entity_measure_with_interval__multiple_measurements__publishes_window")
+{
+    Measure measure;
+    measure.set_id("multinterval");
+    measure.set_interval(1);
+    measure.set_entity(true);
+
+    bool received1 = false;
+    bool received2 = false;
+    auto subscription = rti.Subscribe<Measurement>(MEASUREMENT_CHANNEL, [&](const std::string &channel, const Measurement &measurement) {
+        //REQUIRE(measurement.window().count() == 3);
+        if (measurement.entity_id() == "entity1") {
+            REQUIRE(std::abs(measurement.window().mean() - 43) < 0.01);
+            received1 = true;
+        } else if (measurement.entity_id() == "entity2") {
+            REQUIRE(std::abs(measurement.value() - 40) < 0.01);
+            received2 = true;
+        }
+    });
+
+    // Make measurements
+    rti.Measure(measure, 42, "entity1");
+    rti.Measure(measure, 44, "entity1");
+    rti.Measure(measure, 40, "entity2");
+
+    // Should not be published until interval (1s) passes
+    POLL_CONDITION(500, !received1 && !received2);
+    REQUIRE(!received1);
+    REQUIRE(!received2);
+
+    // Should be received after ~1s
+    POLL_CONDITION(1000, !received1 && !received2);
+    REQUIRE(received1);
+    REQUIRE(received2);
+    rti.Unsubscribe(subscription);
+}
+
 TEST_CASE("participant_registration_for_station__sets_participant")
 {
     Clients message;

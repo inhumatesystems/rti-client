@@ -98,6 +98,8 @@ constexpr auto INJECTABLE_CHANNEL = "rti/injectable";
 constexpr auto INJECTION_OPERATION_CHANNEL = "rti/injections";
 constexpr auto INJECTION_CHANNEL = "rti/injection";
 constexpr auto COMMANDS_CHANNEL = "rti/commands";
+constexpr auto TIMELINE_EVENT_CHANNEL = "rti/timelineevent";
+constexpr auto ENTITY_EVENT_CHANNEL = "rti/entityevent";
 
 constexpr auto RUNTIME_CONTROL_CAPABILITY = "runtime";
 constexpr auto SCENARIO_CAPABILITY = "scenario";
@@ -389,8 +391,8 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     void RegisterChannel(const proto::Channel &channel);
     void RegisterMeasure(const proto::Measure &measure);
-    void Measure(const std::string &measureId, const float value);
-    void Measure(const proto::Measure &measure, const float value);
+    void Measure(const std::string &measureId, const float value, const std::string &entityId = "");
+    void Measure(const proto::Measure &measure, const float value, const std::string &entityId = "");
 
     void Transmit(const std::string &eventName, const std::string &data = "");
     void Invoke(const std::string &method, const std::string &data, const stringcallback_t callback);
