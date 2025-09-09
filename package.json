@@ -6,5 +6,8 @@
         "js",
         "js-legacy",
         "vue"
-    ]
+    ],
+    "dependencies": {
+        "form-data": "^4.0.4"
+    }
 }
