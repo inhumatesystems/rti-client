@@ -1,0 +1,15 @@
+// EntityEvent - generic event message for entities
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message EntityEvent {
+
+    string id = 1; // entity id
+    string type = 2;
+    string description = 3;
+    string data = 4;
+
+}

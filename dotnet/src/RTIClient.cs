@@ -90,8 +90,8 @@ namespace Inhumate.RTI {
         private string connectionError;
 
         private Task collectMeasurementsTask;
-        private ConcurrentDictionary<Measure, Queue<float>> collectQueue = new ConcurrentDictionary<Measure, Queue<float>>();
-        private ConcurrentDictionary<Measure, DateTime> lastCollect = new ConcurrentDictionary<Measure, DateTime>();
+        private ConcurrentDictionary<string, Queue<float>> collectQueue = new ConcurrentDictionary<string, Queue<float>>();
+        private ConcurrentDictionary<string, DateTime> lastCollect = new ConcurrentDictionary<string, DateTime>();
         private Task pingTimeoutTask;
 
         public RTIClient(string url = null, bool connect = true, bool polling = false, string user = null, string password = null) {
@@ -671,30 +671,35 @@ namespace Inhumate.RTI {
             }
         }
 
-        public void Measure(string measureId, float value) {
+        public void Measure(string measureId, float value, string entityId = "") {
             usedMeasures.TryGetValue(measureId, out Measure measure);
             if (measure == null) knownMeasures.TryGetValue(measureId, out measure);
-            if (measure == null) measure = new Measure { Id = measureId, Application = Application };
+            if (measure == null) {
+                measure = new Measure { Id = measureId, Application = Application };
+                if (!string.IsNullOrEmpty(entityId)) measure.Entity = true;
+            }
             Measure(measure, value);
         }
 
-        public void Measure(Measure measure, float value) {
+        public void Measure(Measure measure, float value, string entityId = "") {
             if (!usedMeasures.ContainsKey(measure.Id)) RegisterMeasure(measure);
             if (measure.Interval > 1e-5) {
                 if (collectMeasurementsTask == null) StartCollectMeasurementsThread();
                 lock (collectQueue) {
-                    if (!collectQueue.ContainsKey(measure)) collectQueue[measure] = new Queue<float>();
-                    collectQueue[measure].Enqueue(value);
+                    var key = measure.Id + (string.IsNullOrEmpty(entityId) ? "" : ("|" + entityId));
+                    if (!collectQueue.ContainsKey(key)) collectQueue[key] = new Queue<float>();
+                    collectQueue[key].Enqueue(value);
                 }
             } else {
                 var measurement = new Measurement {
                     MeasureId = measure.Id,
                     ClientId = ClientId,
+                    EntityId = entityId
                 };
                 var channel = RTIChannel.Measurement;
                 if (!string.IsNullOrWhiteSpace(measure.Channel)) channel = measure.Channel;
                 measurement.Value = value;
-                if (IsConnected) Publish(channel, measurement);
+                if (IsConnected) Publish(channel, measurement, false);
             }
         }
 
@@ -704,20 +709,31 @@ namespace Inhumate.RTI {
                     Thread.Sleep(100);
                     lock (collectQueue) {
                         foreach (var item in collectQueue) {
-                            var measure = item.Key;
+                            var key = item.Key;
                             var queue = item.Value;
-                            if (!lastCollect.ContainsKey(measure)) {
-                                lastCollect[measure] = DateTime.Now;
-                            } else if ((DateTime.Now - lastCollect[measure]).TotalSeconds * MeasurementIntervalTimeScale > measure.Interval) {
+                            string measureId;
+                            var entityId = "";
+                            if (key.Contains("|")) {
+                                var parts = key.Split('|');
+                                measureId = parts[0];
+                                entityId = parts[1];
+                            } else {
+                                measureId = key;
+                            }
+                            if (!knownMeasures.ContainsKey(measureId)) continue;
+                            var measure = knownMeasures[measureId];
+                            if (!lastCollect.ContainsKey(key)) lastCollect[key] = DateTime.Now;
+                            if ((DateTime.Now - lastCollect[key]).TotalSeconds * MeasurementIntervalTimeScale > measure.Interval) {
                                 var measurement = new Measurement {
-                                    MeasureId = measure.Id,
+                                    MeasureId = measureId,
                                     ClientId = ClientId,
+                                    EntityId = entityId,
                                 };
                                 var channel = RTIChannel.Measurement;
                                 if (!string.IsNullOrWhiteSpace(measure.Channel)) channel = measure.Channel;
                                 if (queue.Count == 1) {
                                     measurement.Value = queue.Dequeue();
-                                    Publish(channel, measurement);
+                                    Publish(channel, measurement, false);
                                 } else if (queue.Count > 1) {
                                     var window = new Measurement.Types.Window { Max = float.MinValue, Min = float.MaxValue };
                                     while (queue.Count > 0) {
@@ -728,11 +744,11 @@ namespace Inhumate.RTI {
                                         if (value < window.Min) window.Min = value;
                                     }
                                     if (window.Count > 0) window.Mean /= window.Count;
-                                    window.Duration = (float)(DateTime.Now - lastCollect[measure]).TotalSeconds * MeasurementIntervalTimeScale;
+                                    window.Duration = (float)(DateTime.Now - lastCollect[key]).TotalSeconds * MeasurementIntervalTimeScale;
                                     measurement.Window = window;
-                                    Publish(channel, measurement);
+                                    Publish(channel, measurement, false);
                                 }
-                                lastCollect[measure] = DateTime.Now;
+                                lastCollect[key] = DateTime.Now;
                             }
                         }
                     }

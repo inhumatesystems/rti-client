@@ -1,0 +1,14 @@
+// Event - generic event message for time-line events etc
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message Event {
+
+    string type = 1;
+    string description = 2;
+    string data = 3;
+
+}

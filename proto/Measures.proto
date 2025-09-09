@@ -23,4 +23,13 @@ message Measure {
     string unit = 4;
     string channel = 5; // channel name if non-standard
     float interval = 6;
+    bool entity = 7; // true if measurements are individual per entity
+    MeasureGraphType graph_type = 8;
+}
+
+enum MeasureGraphType {
+    CONTINUOUS = 0;
+    DISCRETE = 1;
+    BAR = 2;
+    POINT = 3;
 }

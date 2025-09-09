@@ -723,7 +723,7 @@ export class RTIClient extends EventEmitter {
         }
     }
 
-    measure(measureOrId: Measure | string, value: number) {
+    measure(measureOrId: Measure | string, value: number, entityId = "") {
         let measure: Measure | undefined = undefined
         if (typeof measureOrId == "string") {
             measure = this._usedMeasures[measureOrId]
@@ -732,6 +732,7 @@ export class RTIClient extends EventEmitter {
                 measure = new Measure()
                 measure.setId(measureOrId)
                 measure.setApplication(this.application)
+                if (entityId) measure.setEntity(true)
             }
         } else {
             measure = measureOrId
@@ -747,6 +748,7 @@ export class RTIClient extends EventEmitter {
             measurement.setMeasureId(measure.getId())
             measurement.setClientId(this.clientId)
             measurement.setValue(value)
+            if (entityId) measurement.setEntityId(entityId)
             const channel = measure.getChannel() || RTIchannel.measurement
             if (this.connected) this.publish(channel, measurement, false)
         }
@@ -758,17 +760,23 @@ export class RTIClient extends EventEmitter {
             this.collectMeasurementsInterval = undefined
             return
         }
-        for (const id in this.collectQueue) {
-            if (!(id in this.lastCollect)) {
-                this.lastCollect[id] = new Date().getTime()
+        for (const key in this.collectQueue) {
+            if (!(key in this.lastCollect)) {
+                this.lastCollect[key] = new Date().getTime()
             } else {
-                const measure = this._knownMeasures[id]
-                if ((new Date().getTime() - this.lastCollect[id]) * this.measurementIntervalTimeScale > measure.getInterval() * 1000) {
+                var measureId = key.includes("|") ? key.split("|")[0] : key
+                var entityId = key.includes("|") ? key.split("|")[1] : ""
+                const measure = this._knownMeasures[measureId]
+                if (
+                    measure &&
+                    (new Date().getTime() - this.lastCollect[key]) * this.measurementIntervalTimeScale > measure.getInterval() * 1000
+                ) {
                     const channel = measure.getChannel() || RTIchannel.measurement
                     const measurement = new Measurement()
-                    measurement.setMeasureId(id)
+                    measurement.setMeasureId(measureId)
                     measurement.setClientId(this.clientId)
-                    const values = this.collectQueue[id]
+                    measurement.setEntityId(entityId)
+                    const values = this.collectQueue[key]
                     if (values.length == 1) {
                         measurement.setValue(values.pop()!)
                         this.publish(channel, measurement, false)
@@ -782,13 +790,13 @@ export class RTIClient extends EventEmitter {
                             if (value > window.getMax()) window.setMax(value)
                             if (value < window.getMin()) window.setMin(value)
                         }
-                        this.collectQueue[id] = []
+                        this.collectQueue[key] = []
                         if (window.getCount() > 0) window.setMean(window.getMean() / window.getCount())
-                        window.setDuration((new Date().getTime() - this.lastCollect[id]) * this.measurementIntervalTimeScale)
+                        window.setDuration((new Date().getTime() - this.lastCollect[key]) * this.measurementIntervalTimeScale)
                         measurement.setWindow(window)
                         this.publish(channel, measurement, false)
                     }
-                    this.lastCollect[id] = new Date().getTime()
+                    this.lastCollect[key] = new Date().getTime()
                 }
             }
         }

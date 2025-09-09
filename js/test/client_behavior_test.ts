@@ -267,6 +267,39 @@ test("measure with interval - multiple measurements - publishes tumbling window"
     rti.unsubscribe(subscription)
 })
 
+test("entity measure with interval - multiple measurements - publishes tumbling window", async () => {
+    const measure = RTI.proto.Measure.create({ id: "interval", interval: 1 })
+    let received1 = false, received2 = false
+
+    const subscription = rti.subscribe(RTI.channel.measurement, RTI.proto.Measurement, (measurement: RTI.proto.Measurement) => {
+        if (measurement.entityId == "entity1") {
+            expect(measurement.window!.count).toEqual(2)
+            expect(measurement.window!.mean).toBeCloseTo(43)
+            received1 = true
+        }
+        if (measurement.entityId == "entity2") {
+            expect(measurement.value!).toBeCloseTo(40)
+            received2 = true
+        }
+    })
+
+    // Measure
+    rti.measure(measure, 42, "entity1")
+    rti.measure(measure, 44, "entity1")
+    rti.measure(measure, 40, "entity2")
+
+    // Should not be published until interval (1s) passes
+    await sleep(500)
+    expect(received1 || received2).toBeFalsy()
+
+    // Should be published after ~1s
+    let count = 0
+    while (!received1 && !received2 && count++ < 50) await sleep(100)
+    expect(received1).toBeTruthy()
+    expect(received2).toBeTruthy()
+    rti.unsubscribe(subscription)
+})
+
 test("participant registration for station - sets participant", async () => {
     rti2.publish(RTI.channel.clients, RTI.proto.Clients.encode({
         registerParticipant: RTI.proto.ParticipantRegistration.create({
