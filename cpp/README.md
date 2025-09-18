@@ -32,7 +32,7 @@ int main() {
 }
 ```
 
-For a more complete usage example, see [usage_example.cpp](https://github.com/inhumatesystems/rti-client/blob/main/cpp/usage_example.cpp).
+For a more complete usage example, see [usage_example.cpp](https://github.com/inhumatesystems/rti-client/blob/main/cpp/test/usage_example.cpp).
 
 ## Building from Source
 
