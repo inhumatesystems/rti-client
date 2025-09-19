@@ -28,8 +28,8 @@ message Measure {
 }
 
 enum MeasureGraphType {
-    CONTINUOUS = 0;
-    DISCRETE = 1;
+    LINE = 0;
+    STEP = 1;
     BAR = 2;
-    POINT = 3;
+    SCATTER = 3;
 }

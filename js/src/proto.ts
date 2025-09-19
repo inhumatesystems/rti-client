@@ -36,7 +36,7 @@ export {
     MessageBundle_Request,
     MessageBundle_Response,
 } from "./generated/MessageBundle.js"
-export { Measures, Measure } from "./generated/Measures.js"
+export { Measures, Measure, MeasureGraphType, measureGraphTypeFromJSON, measureGraphTypeToJSON } from "./generated/Measures.js"
 export { Measurement, Measurement_Window } from "./generated/Measurement.js"
 export {
     MeasurementBundle,
