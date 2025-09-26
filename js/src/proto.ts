@@ -89,3 +89,5 @@ export {
 } from "./generated/InjectionOperation.js"
 export { Injection, Injection_State, injection_StateFromJSON, injection_StateToJSON } from "./generated/Injection.js"
 export { Commands, Command, ExecuteCommand, CommandResponse } from "./generated/Commands.js"
+export { Event } from "./generated/Event.js"
+export { EntityEvent } from "./generated/EntityEvent.js"

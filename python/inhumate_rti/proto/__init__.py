@@ -24,3 +24,5 @@ from ..generated.InjectionOperation_pb2 import *
 from ..generated.Injection_pb2 import *
 from ..generated.Parameter_pb2 import *
 from ..generated.Commands_pb2 import *
+from ..generated.Event_pb2 import *
+from ..generated.EntityEvent_pb2 import *

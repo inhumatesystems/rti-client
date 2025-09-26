@@ -24,6 +24,8 @@ export { Injectable } from "./generated/Injectable_pb"
 export { InjectionOperation } from "./generated/InjectionOperation_pb"
 export { Injection } from "./generated/Injection_pb"
 export { Commands, Command, ExecuteCommand, CommandResponse } from "./generated/Commands_pb"
+export { Event } from "./generated/Event_pb"
+export { EntityEvent } from "./generated/EntityEvent_pb"
 
 import { Empty } from "google-protobuf/google/protobuf/empty_pb"
 export { Empty }
