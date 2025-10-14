@@ -21,7 +21,7 @@
             </span>
         </div>
         <image-subscription channel="image" type="image/jpeg" fade="0.1s" scale style="width: 500px; height: 300px; margin-top: 30px">
-            <div style="opacity: 0.4; padding: 50px 20px 50px 20px; border: 1px solid grey">Try posting a jpeg image to the "image" channel</div>
+            <div style="opacity: 0.4; padding: 50px 20px 50px 20px; border: 1px solid grey">Try posting a jpeg image to the "image" channel, e.g. <pre>cat myimage.jpg | base64 | rti publish image</pre></div>
         </image-subscription>
     </main>
 </template>

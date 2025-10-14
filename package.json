@@ -4,7 +4,6 @@
     "scripts": {},
     "workspaces": [
         "js",
-        "js-legacy",
         "vue"
     ],
     "dependencies": {
