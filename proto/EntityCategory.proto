@@ -11,4 +11,5 @@ enum EntityCategory {
     PERSON = 2;
     ANIMAL = 3;
     VEHICLE = 4;
+    MUNITION = 5;
 }

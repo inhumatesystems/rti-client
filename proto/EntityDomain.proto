@@ -12,4 +12,7 @@ enum EntityDomain {
     SEA = 3;
     AIR = 4;
     SPACE = 5;
+    SUBSURFACE = 6;
+    SPECIAL = 7;
+    CYBER = 8;
 }

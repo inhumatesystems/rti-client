@@ -34,6 +34,7 @@ message Geometry {
     Usage usage = 30;
     string type = 31;
     Category category = 32;
+    string symbol = 33;
 
     bool disabled = 34;
     bool deleted = 35;
@@ -106,6 +107,7 @@ message Geometry {
     enum Usage {
         SCENARIO = 0; // geometry is part of the scenario, should be rendered in viewer
         ENTITY = 1;   // geometry is used to represent an entity, id = entity type
+        VISUALIZATION = 2; // geometry is used for visualization only, e.g. sensor coverage
     }
 
     enum Category {
@@ -128,6 +130,7 @@ message Geometry {
         PATH = 104;
         PLANNED_PATH = 105;
         HISTORIC_PATH = 106;
+        CONTROL_POINT = 107;
 
         SENSOR_COVERAGE = 151;
         SENSOR_HIT = 152;
