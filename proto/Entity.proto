@@ -27,6 +27,8 @@ message Entity {
     bool disabled = 11;
     bool deleted = 12;
     string symbol = 13;
+    int32 symbol_size = 14;
+    bool symbol_rotation = 15;
 
     message Dimensions {
         float length = 1;

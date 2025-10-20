@@ -25,19 +25,24 @@ message Geometry {
     Color color = 20;
     float transparency = 21;
     string title = 22;
-    Color label_color = 23;
+    Color label_color = 23; // defaults to color if not set
     float label_transparency = 24;
     bool scalable = 25;
     bool wireframe = 26;
     float line_width = 27;
+    Color fill_color = 28; // defaults to color if not set
+    float fill_transparency = 29;
 
     Usage usage = 30;
     string type = 31;
     Category category = 32;
-    string symbol = 33;
 
     bool disabled = 34;
     bool deleted = 35;
+
+    string symbol = 36;
+    int32 symbol_size = 37;
+    float zoom_level = 38;
 
     message Point2D {
         LocalPoint2D local = 1;
