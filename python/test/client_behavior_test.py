@@ -254,6 +254,7 @@ class ClientBehaviorTest(unittest.TestCase):
         count = 0
         while count < 100 and not self.received: count += 1 ; time.sleep(0.01)
         self.assertTrue(self.received)
+        self.rti.unregister_measure(measure.id)
 
     def test_measure_without_interval_publishes_instantly(self):
         self.received = False

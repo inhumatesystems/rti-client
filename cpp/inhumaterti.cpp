@@ -563,6 +563,15 @@ void RTIClient::RegisterChannel(const proto::Channel &channel)
     }
 }
 
+void RTIClient::UnregisterChannel(const std::string &channelName)
+{
+    auto existing = find_channel(channelName);
+    if (existing != knownChannels.end()) knownChannels.erase(existing);
+
+    auto use = find_used_channel(channelName);
+    if (use != usedChannels.end()) usedChannels.erase(use);
+}
+
 void RTIClient::RegisterMeasure(const proto::Measure &measure)
 {
     proto::Measure usedMeasure(measure);
@@ -576,6 +585,12 @@ void RTIClient::RegisterMeasure(const proto::Measure &measure)
             Publish(MEASURES_CHANNEL, message);
         }
     }
+}
+
+void RTIClient::UnregisterMeasure(const std::string &measureId)
+{
+    usedMeasures.erase(measureId);
+    knownMeasures.erase(measureId);
 }
 
 void RTIClient::Measure(const std::string &measureId, const float value, const std::string &entityId)

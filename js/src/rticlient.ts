@@ -699,6 +699,11 @@ export class RTIClient extends EventEmitter {
         }
     }
 
+    unregisterChannel(channelName: string) {
+        delete this._knownChannels[channelName]
+        delete this._usedChannels[channelName]
+    }
+
     private discoverChannel(channel: Channel) {
         if (!(channel.name in this._knownChannels)) {
             this._knownChannels[channel.name] = channel
@@ -727,6 +732,19 @@ export class RTIClient extends EventEmitter {
         this.publishClient()
     }
 
+    unregisterParticipant() {
+        const registration = ParticipantRegistration.create({
+            clientId: this.clientId,
+            station: this.station,
+            host: this.host,
+        })
+        this.publish(RTIchannel.clients, Clients, { registerParticipant: registration }, false)
+        this._participant = undefined
+        this._role = undefined
+        this._fullName = undefined
+        this.publishClient()
+    }
+
     registerMeasure(measure: Measure) {
         measure.application = this.application
         this._usedMeasures[measure.id] = measure
@@ -736,6 +754,11 @@ export class RTIClient extends EventEmitter {
                 this.publish(RTIchannel.measures, Measures, { measure }, false)
             }
         }
+    }
+
+    unregisterMeasure(measureId: string) {
+        delete this._knownMeasures[measureId]
+        delete this._usedMeasures[measureId]
     }
 
     measure(measureOrId: Measure | string, value: number, entityId = "") {

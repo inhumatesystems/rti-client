@@ -298,6 +298,7 @@ namespace Inhumate.RTI {
             rti2.Unsubscribe(subscription);
             Thread.Sleep(100);
             Assert.IsTrue(received);
+            rti.UnregisterMeasure(measure.Id);
         }
 
         [Test]

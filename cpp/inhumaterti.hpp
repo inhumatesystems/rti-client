@@ -396,7 +396,9 @@ class INHUMATE_RTI_EXPORT RTIClient
     }
 
     void RegisterChannel(const proto::Channel &channel);
+    void UnregisterChannel(const std::string &channelName);
     void RegisterMeasure(const proto::Measure &measure);
+    void UnregisterMeasure(const std::string &measureId);
     void Measure(const std::string &measureId, const float value, const std::string &entityId = "");
     void Measure(const proto::Measure &measure, const float value, const std::string &entityId = "");
 

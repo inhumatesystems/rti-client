@@ -201,6 +201,7 @@ test("responds to measures request", async () => {
     while (!received && count++ < 50) await sleep(10)
     expect(received).toBeTruthy()
     rti2.unsubscribe(subscription)
+    rti.unregisterMeasure(measure.id)
 })
 
 test("measure without interval publishes instantly", async () => {

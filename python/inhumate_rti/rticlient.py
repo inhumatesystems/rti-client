@@ -513,6 +513,12 @@ class RTIClient(Emitter):
                 message = Proto.Measures()
                 message.measure.CopyFrom(measure)
                 self.publish(Channel.measures, message)
+                
+    def unregister_measure(self, measure_id: str) -> None:
+        if measure_id in self.known_measures:
+            del(self.known_measures[measure_id])
+        if measure_id in self.used_measures:
+            del(self.used_measures[measure_id])
 
     def measure(self, measure_id: Union[str, Proto.Measure], value: float, entity_id: str = "") -> None:
         measure = None

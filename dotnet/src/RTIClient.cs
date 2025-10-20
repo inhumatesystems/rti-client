@@ -650,6 +650,11 @@ namespace Inhumate.RTI {
             }
         }
 
+        public void UnregisterChannel(string channelName) {
+            knownChannels.TryRemove(channelName, out _);
+            usedChannels.TryRemove(channelName, out _);
+        }
+
         private void DiscoverChannel(Channel channel) {
             if (!knownChannels.ContainsKey(channel.Name)) {
                 knownChannels[channel.Name] = channel;
@@ -669,6 +674,11 @@ namespace Inhumate.RTI {
                 knownMeasures[measure.Id] = measure;
                 if (IsConnected && !Incognito) Publish(RTIChannel.Measures, new Measures { Measure = measure });
             }
+        }
+
+        public void UnregisterMeasure(string measureId) {
+            knownMeasures.TryRemove(measureId, out _);
+            usedMeasures.TryRemove(measureId, out _);
         }
 
         public void Measure(string measureId, float value, string entityId = "") {
