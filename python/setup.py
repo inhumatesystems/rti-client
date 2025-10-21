@@ -23,7 +23,7 @@ setup(
     install_requires=[
         'protobuf',
         'emitter.py',
-        'websocket-client',
+        'websocket-client >= 1.4.0, <= 1.8.0',
     ],
     entry_points = {
         "console_scripts": [ "protoscribe=inhumate_rti.protoscribe:main" ]

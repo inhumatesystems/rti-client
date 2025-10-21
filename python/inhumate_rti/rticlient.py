@@ -180,7 +180,8 @@ class RTIClient(Emitter):
         self.subscribe(Channel.channels, Proto.Channels, on_channels)
         self.subscribe(Channel.measures, Proto.Measures, on_measures)
 
-        if connect:
+        # when using main_loop, connect must be done manually after setting up event handlers
+        if connect and not main_loop:
             self.connect()
             if wait:
                 self.wait_until_connected()
@@ -256,15 +257,18 @@ class RTIClient(Emitter):
             self.emit("disconnect")
 
     def wait_until_connected(self):
-        count = 0
-        while count < 500 and not self.connected and not self._connection_error:
-            count += 1
-            time.sleep(0.01)
-        if not self.connected:
-            if self._connection_error:
-                raise Exception(f"Connection failed: {self._connection_error}")
-            else:
-                raise Exception("Connection timeout")
+        if self.create_rti_thread:
+            count = 0
+            while count < 500 and not self.connected and not self._connection_error:
+                count += 1
+                time.sleep(0.01)
+            if not self.connected:
+                if self._connection_error:
+                    raise Exception(f"Connection failed: {self._connection_error}")
+                else:
+                    raise Exception("Connection timeout")
+        else:
+            raise Exception("Cannot use wait_until_connected() with main_loop, use connect() and check .connected instead")
 
     def verify_token(self, token: str, handler: Callable[[dict], None]):
         self.invoke("verifytoken", token, handler)
@@ -350,9 +354,9 @@ class RTIClient(Emitter):
                         break
 
     def publish(self, channel_name: str, message: _message.Message, register = True) -> None:
+        if type(message) is str: return self.publish_text(channel_name, message, register)
         if register: self._register_channel_usage(channel_name, True, data_type=str(type(message)))
-        content = base64.b64encode(
-            message.SerializeToString()).decode("utf8")
+        content = base64.b64encode(message.SerializeToString()).decode("utf8")
         if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
         self.socket.publish(channel_name, content)

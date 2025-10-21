@@ -7,7 +7,7 @@ def main_loop():
     print("." if rti.connected else "x", end="", flush=True)
     if rti.connected: rti.publish_text("foo", "bar")
 
-rti = RTI.Client(application="python_usage_example", main_loop=main_loop, main_loop_idle_time=1.0, connect=False)
+rti = RTI.Client(application="python_usage_example", main_loop=main_loop, main_loop_idle_time=1.0)
 runtime = RTI.RuntimeControl(rti)
 
 def on_control(message: RTI.proto.RuntimeControl):
