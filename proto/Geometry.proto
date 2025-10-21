@@ -73,7 +73,7 @@ message Geometry {
     message GeodeticPoint3D {
         double longitude = 1; // degrees, positive east
         double latitude = 2;  // degrees, positive north
-        double altitude = 3;  // meters, above mean sea level
+        double altitude = 3;  // meters, above WGS84 ellipsoid
     }
 
     message Line2D {

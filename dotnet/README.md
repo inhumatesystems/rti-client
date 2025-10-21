@@ -38,7 +38,9 @@ rti.Publish("hello", "Hello World!");
 while (!done) Thread.Sleep(10);
 ```
 
-Depending on your use case, you might want to use a polling client:
+Note that the .NET client is **multi-threaded by default**. 
+`Subscribe` callbacks are called from a separate receive thread.
+Depending on your use case, you might want to use a single-threaded polling client instead:
 
 ```c#
 var rti = new RTIClient(polling: true) { Applicatoin = "C# RTI App" };

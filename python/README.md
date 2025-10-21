@@ -29,8 +29,9 @@ rti.subscribe_text("hello", on_hello)
 
 rti.publish_text("hello", "Hello World!")
 ```
-
-Depending on your use case, you might want to avoid threading and use the `main_loop` constructor argument:
+Note that the Python client is **multi-threaded by default**. 
+`subscribe` callbacks are called from a separate receive thread.
+Depending on your use case, you might want to use the single-threaded pattern and `main_loop` constructor argument:
 
 ```python
 import inhumate_rti as RTI
@@ -40,7 +41,7 @@ def main_loop():
     if rti and rti.connected: rti.publish_text("foo", "bar")
 
 # connect after initializing, otherwise 'rti' will be undefined in the main loop
-rti = RTI.Client(application="Python RTI App", connect=False, main_loop=main_loop, main_loop_idle_time=1.0)
+rti = RTI.Client(application="Python RTI App", main_loop=main_loop, main_loop_idle_time=1.0)
 rti.connect() # blocks further execution
 ```
 
