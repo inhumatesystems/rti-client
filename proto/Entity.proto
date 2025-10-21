@@ -9,6 +9,7 @@ import "EntityPosition.proto";
 import "EntityCategory.proto";
 import "EntityDomain.proto";
 import "LVCCategory.proto";
+import "Affiliation.proto";
 import "Color.proto";
 
 message Entity {
@@ -29,6 +30,7 @@ message Entity {
     string symbol = 13;
     int32 symbol_size = 14;
     bool symbol_rotation = 15;
+    Affiliation affiliation = 16;
 
     message Dimensions {
         float length = 1;

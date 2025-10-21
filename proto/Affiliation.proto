@@ -1,0 +1,15 @@
+// Affiliation - which "team" e.g. any entity belongs to.
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+enum Affiliation {
+    UNKNOWN_AFFILIATION = 0;
+    PENDING = 1;
+    FRIENDLY = 2;
+    NEUTRAL = 3;
+    SUSPECT = 4;
+    HOSTILE = 5;
+}

@@ -9,6 +9,7 @@ from ..generated.Scenarios_pb2 import *
 from ..generated.EntityCategory_pb2 import *
 from ..generated.EntityDomain_pb2 import *
 from ..generated.LVCCategory_pb2 import *
+from ..generated.Affiliation_pb2 import *
 from ..generated.LaunchConfigurations_pb2 import *
 from ..generated.LaunchEvent_pb2 import *
 from ..generated.Logs_pb2 import *

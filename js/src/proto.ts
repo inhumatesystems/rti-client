@@ -57,6 +57,7 @@ export {
 export { EntityCategory, entityCategoryFromJSON, entityCategoryToJSON } from "./generated/EntityCategory.js"
 export { EntityDomain, entityDomainFromJSON, entityDomainToJSON } from "./generated/EntityDomain.js"
 export { LVCCategory, lVCCategoryFromJSON, lVCCategoryToJSON } from "./generated/LVCCategory.js"
+export { Affiliation, affiliationFromJSON, affiliationToJSON } from "./generated/Affiliation.js"
 export { GeometryOperation } from "./generated/GeometryOperation.js"
 export {
     Geometry,
