@@ -47,6 +47,8 @@ class RTIClient(Emitter):
                  password: Optional[str] = None, incognito: bool = False, connect: bool = True,
                  wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.01):
         super().__init__()
+        
+        self.on(Emitter.ERROR, lambda exc_info: self.emit("error", "connection", exc_info[1], exc_info[0]))
         self.measurement_interval_time_scale = 1
 
         self.subscriptions = {}

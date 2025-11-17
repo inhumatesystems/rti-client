@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(__file__) + "/..")
 import unittest
 import inhumate_rti as RTI
 import time
+import traceback
 
 class ClientBehaviorTest(unittest.TestCase):
 
@@ -501,4 +502,26 @@ class ClientBehaviorTest(unittest.TestCase):
             temprti.publish_text("foo", "bar")
         except Exception as e:
             self.assertTrue("connected" in str(e))
-        
+            
+    def test_on_connect_error(self):
+        temprti = RTI.Client("python_test_temp2", connect=False)
+        def on_connect():
+            print(temprti.foobar)
+            print("Shouldn't reach this")
+        temprti.on("connect", on_connect)
+        error_called = False
+        def on_error(type, message, exception):
+            nonlocal error_called
+            error_called = True
+            # print(f"Error (intentional): {type}: {message}: {exception}")
+            # traceback.print_exc()
+        temprti.on("error", on_error)
+        # def on_emitter_error(exception):
+        #     print(f"Emitter Error: {exception}")
+        # temprti.on(Emitter.ERROR, on_emitter_error)
+        temprti.connect()
+        temprti.wait_until_connected()
+        time.sleep(0.5)
+        temprti.disconnect()
+        self.assertTrue(error_called, "Error event was not called on connect handler error")
+
