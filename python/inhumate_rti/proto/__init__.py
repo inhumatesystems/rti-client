@@ -27,3 +27,4 @@ from ..generated.Parameter_pb2 import *
 from ..generated.Commands_pb2 import *
 from ..generated.Event_pb2 import *
 from ..generated.EntityEvent_pb2 import *
+from ..generated.Color_pb2 import *
