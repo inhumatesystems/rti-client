@@ -95,7 +95,7 @@ namespace Inhumate.RTI {
         public void PublishSubscribe_Works() {
             bool received = false;
             rti.Subscribe<RuntimeControl>("control-test", (channelName, message) => { received = true; });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
             rti.Publish("control-test", new RuntimeControl { Pause = new Google.Protobuf.WellKnownTypes.Empty() });
             int count = 0;
             while (!received && count++ < 300) Thread.Sleep(10);
@@ -108,7 +108,7 @@ namespace Inhumate.RTI {
         public void UnsubscribeSingleListener_Works() {
             bool received = false;
             var subscription = rti.Subscribe("test2", (channelName, message) => { received = true; });
-            Thread.Sleep(500);
+            Thread.Sleep(250);
             rti.Publish("test2", "foo");
             int count = 0;
             while (!received && count++ < 300) Thread.Sleep(10);
@@ -118,7 +118,7 @@ namespace Inhumate.RTI {
             rti.Subscribe("test2", (channelName, message) => { received2 = true; });
             rti.Unsubscribe(subscription);
             received = false;
-            Thread.Sleep(500);
+            Thread.Sleep(250);
             rti.Publish("test2", "foo again");
             while (!received2 && count++ < 300) Thread.Sleep(10);
             rti.Unsubscribe("test2");
@@ -148,6 +148,7 @@ namespace Inhumate.RTI {
             rti2.Subscribe<Clients>(RTIChannel.Clients, (channelName, message) => {
                 if (message.WhichCase == Clients.WhichOneofCase.Client && message.Client.Id == rti.ClientId && message.Client.Capabilities.Contains(RTICapability.RuntimeControl)) received = true;
             });
+            Thread.Sleep(250);
             rti2.Publish(RTIChannel.Clients, new Clients {
                 RequestClients = new Google.Protobuf.WellKnownTypes.Empty()
             });
@@ -163,6 +164,7 @@ namespace Inhumate.RTI {
             var subscription = rti2.Subscribe<Channels>(RTIChannel.Channels, (channelName, message) => {
                 if (message.WhichCase == Channels.WhichOneofCase.ChannelUsage && message.ChannelUsage.ClientId == rti.ClientId) received = true;
             });
+            Thread.Sleep(250);
             rti2.Publish(RTIChannel.Channels, new Channels {
                 RequestChannelUsage = new Google.Protobuf.WellKnownTypes.Empty()
             });
@@ -204,7 +206,7 @@ namespace Inhumate.RTI {
                 }
             });
             try {
-                Thread.Sleep(100);
+                Thread.Sleep(250);
                 rti.State = RuntimeState.Playback;
                 Thread.Sleep(100);
                 rti.State = RuntimeState.Paused;
@@ -228,7 +230,7 @@ namespace Inhumate.RTI {
                 }
             });
             try {
-                Thread.Sleep(100);
+                Thread.Sleep(250);
                 rti.PublishError("test");
                 int count = 0;
                 while (!received && count++ < 300) Thread.Sleep(10);
@@ -251,7 +253,7 @@ namespace Inhumate.RTI {
             rti.SubscribeJson("json", (string channelName, Dictionary<string, object> message) => {
                 if (message["foo"].ToString() == "bar") received = true;
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
             rti.PublishJson("json", new Dictionary<string, object> { { "foo", "bar" } });
             int count = 0;
             while (!received && count++ < 300) Thread.Sleep(10);
@@ -270,7 +272,7 @@ namespace Inhumate.RTI {
             rti.SubscribeJson("json2", (string channelName, TestDTO message) => {
                 if (message.Foo == "bar") received = true;
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
             rti.PublishJson("json2", new TestDTO { Foo = "bar" });
             int count = 0;
             while (!received && count++ < 300) Thread.Sleep(10);
@@ -290,6 +292,7 @@ namespace Inhumate.RTI {
             var subscription = rti2.Subscribe<Measures>(RTIChannel.Measures, (channelName, message) => {
                 if (message.WhichCase == Measures.WhichOneofCase.Measure && message.Measure.Id == measure.Id) received = true;
             });
+            Thread.Sleep(250);
             rti2.Publish(RTIChannel.Measures, new Measures {
                 RequestMeasures = new Google.Protobuf.WellKnownTypes.Empty()
             });
@@ -310,7 +313,7 @@ namespace Inhumate.RTI {
                     received = true;
                 }
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
             rti.Measure("test2", 42);
             int count = 0;
             while (!received && count++ < 300) Thread.Sleep(10);
@@ -369,7 +372,7 @@ namespace Inhumate.RTI {
                     received = true;
                 }
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
 
             // Make a couple of measurements
             rti.Measure(measure, 42);
@@ -410,7 +413,7 @@ namespace Inhumate.RTI {
                     received2 = true;
                 }
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
 
             // Make a couple of measurements
             rti.Measure(measure, 42, "entity1");
@@ -501,6 +504,7 @@ namespace Inhumate.RTI {
                 received = true;
                 ephemeral = rti2.GetChannel("ephie").Ephemeral;
             });
+            Thread.Sleep(250);
 
             rti.Publish("ephie", "foo");
             for (int i = 0; i < 20 && !received; i++) Thread.Sleep(100);
@@ -529,7 +533,7 @@ namespace Inhumate.RTI {
                 receiveCount++;
             });
             try {
-                Thread.Sleep(200);
+                Thread.Sleep(250);
 
                 rti.Publish("polling", "one");
                 rti.Publish("polling", "two");
