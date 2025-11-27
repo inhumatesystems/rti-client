@@ -62,6 +62,7 @@ message Log {
     bool persistent = 24;
     bool deletable = 25;
     bool locked = 26;
+    bool continuous = 27;
 }
 
 message LogMark {

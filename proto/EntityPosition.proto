@@ -51,7 +51,10 @@ message EntityPosition {
         float right = 2;
         float up = 3;
     }
-    VelocityVector velocity = 6;             // local reference frame, m/s
-    VelocityVector acceleration = 7;         // local reference frame, m/s2
+    VelocityVector velocity = 6;        // local reference frame, m/s
+    VelocityVector acceleration = 7;    // local reference frame, m/s2
     EulerRotation angular_velocity = 8; // local reference frame, degrees/second
+
+    float horizontal_accuracy = 9;      // error radius in meters
+    float vertical_accuracy = 10;       // linear error in meters
 }
