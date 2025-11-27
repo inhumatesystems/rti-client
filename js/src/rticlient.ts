@@ -557,7 +557,7 @@ export class RTIClient extends EventEmitter {
     private _handlers: any = {}
 
     private doSubscribe(channelName: string, handler: Function): Subscription {
-        const channel = this.socket.subscribe((this.federation ? "//" + this.federation + "/" : "") + channelName)
+        const channel = this.socket.subscribe((this.federation ? `//${this.federation}/` : "") + channelName)
         const wrappedHandler = (data: any) => {
             try {
                 if (handler.length == 2) {
@@ -585,7 +585,9 @@ export class RTIClient extends EventEmitter {
             const subscription = channelNameOrSubscription
             const channel = subscription.channel
             if (channel) {
-                const handlers = this._handlers[channel.name]
+                let channelName = channel.name
+                if (this.federation && channelName.startsWith(`//${this.federation}/`)) channelName = channelName.substring(this.federation.length+3)
+                const handlers = this._handlers[channelName]
                 if (handlers && handlers.length > 0) {
                     const index = handlers.indexOf(subscription.handler)
                     if (index >= 0) handlers.splice(index, 1)
