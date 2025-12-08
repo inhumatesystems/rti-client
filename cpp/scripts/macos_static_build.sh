@@ -11,7 +11,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-build ]; then
     mkdir protobuf/cmake-build && cd protobuf/cmake-build
-    cmake -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC" ../cmake
+    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC" ../cmake
     make
     cd -
 fi

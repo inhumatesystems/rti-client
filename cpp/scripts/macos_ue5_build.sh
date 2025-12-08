@@ -15,7 +15,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-ue5-build ]; then
     mkdir protobuf/cmake-ue5-build && cd protobuf/cmake-ue5-build
-    CMAKE_OSX_ARCHITECTURES="arm64;x86_64" cmake -Dprotobuf_BUILD_TESTS=OFF  -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_SHARED_LIBS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../cmake
+    CMAKE_OSX_ARCHITECTURES="arm64;x86_64" cmake -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_BUILD_SHARED_LIBS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../cmake
     make
     cd -
 fi

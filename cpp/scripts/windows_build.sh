@@ -21,7 +21,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-build-$variant ]; then
     mkdir protobuf/cmake-build-$variant && cd protobuf/cmake-build-$variant
-    cmake -A $arch -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_BUILD_SHARED_LIBS=$shared ../cmake
+    cmake -A $arch -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_BUILD_SHARED_LIBS=$shared ../cmake
     cmake --build . --config $config
     cd -
 fi

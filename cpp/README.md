@@ -51,19 +51,23 @@ The C++ client depends on:
 - OpenSSL
 - CMake (as build system)
 
+There's a script for getting the correct versions of all dependencies (except CMake):
+
+```sh
+scripts/get_dependencies.sh
+```
+
 ### Building on Linux
 
 Static/"normal" build:
 
 ```sh
-sudo apt install gcc g++ make cmake libasio-dev libssl-dev libwebsocketpp-dev
 scripts/linux_static_build.sh
 ```
 
 UE5 build:
 
 ```sh
-sudo apt install libc++-dev libc++abi-dev clang cmake
 export UE5=/path/to/UE5
 scripts/linux_ue5_build.sh
 ```
@@ -79,6 +83,9 @@ Static build:
 
 ```sh
 scripts/windows_static_build.sh
+# to run tests, make sure OpenSSL DLLs are available
+PATH="openssl-1.1/x64/bin:$PATH" build/Release/usage_example.exe
+
 ```
 
 UE5 build:

@@ -21,7 +21,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-ue5-build ]; then
     mkdir protobuf/cmake-ue5-build && cd protobuf/cmake-ue5-build
-    cmake -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC -stdlib=libc++ -std=c++11 -I$UE5/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1 -L$UE5/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu -Qunused-arguments" ../cmake
+    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC -stdlib=libc++ -std=c++11 -I$UE5/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1 -L$UE5/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu -Qunused-arguments" ../cmake
     make -j8
     cd -
 fi

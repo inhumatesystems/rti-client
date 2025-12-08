@@ -7,7 +7,7 @@ scripts/get_dependencies.sh
 
 if [ ! -d protobuf/cmake-build ]; then
     mkdir protobuf/cmake-build && cd protobuf/cmake-build
-    cmake -A x64 -Dprotobuf_BUILD_TESTS=OFF ../cmake
+    cmake -A x64 -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../cmake
     cmake --build . --config Release
     cd -
 fi
