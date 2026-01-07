@@ -168,11 +168,13 @@ class RTIClient(Emitter):
 
         socket.set_basic_listener(self.__on_connect, self.__on_disconnect, self.__on_connection_error)
         socket.set_auth_listener(self.__on_set_auth, self.__on_auth)
+        socket.set_remove_auth_listener(self.__on_remove_auth)
         socket.on("fail", self.__on_fail)
         socket.on("broker-version", self.__on_broker_version)
         socket.on("ping", self.__on_ping)
         self.socket = socket
         self.thread = None
+        self.lock = Lock()
         self.collect_measurements_thread = None
         self.collect_lock = Lock()
         self.collect_queue = {}
@@ -187,17 +189,6 @@ class RTIClient(Emitter):
             self.connect()
             if wait:
                 self.wait_until_connected()
-
-        # socketcluster python client provides no event emit for #removeAuthToken when token expires...
-        # so let's spawn a thread and check for it
-        def check_auth():
-            while True:
-                time.sleep(1)
-                if self.connected and self.socket.auth_token is None:
-                    self.socket.transmit("auth", self._auth_token_data)
-        self.check_auth_thread = Thread(target=check_auth)
-        self.check_auth_thread.daemon = True
-        self.check_auth_thread.start()
 
     def __on_connect(self, socket):
         # self.connected and emit "connect" event is done in __on_set_auth (after client handshake)
@@ -228,6 +219,10 @@ class RTIClient(Emitter):
 
     def __on_auth(self, socket, is_authenticated):
         socket.transmit("auth", self._auth_token_data)
+
+    def __on_remove_auth(self, socket):
+        if self.connected and self.socket.auth_token is None:
+            self.socket.transmit("auth", self._auth_token_data)
 
     def __on_fail(self, socket, error):
         self.emit("error", "fail", error, None)
@@ -324,36 +319,38 @@ class RTIClient(Emitter):
                 self._register_channel_usage(channel_name, False, data_type)
 
             def handle_message(in_channel_name, content):
-                for listener in self.subscriptions[socket_channel_name]:
-                    try:
-                        if len(signature(listener).parameters) < 2:
-                            listener(content)
-                        else:
-                            listener(channel_name, content)
-                    except Exception as e:
-                        self.emit("error", channel_name, e,
-                                  traceback.format_exc())
+                with self.lock:
+                    for listener in self.subscriptions[socket_channel_name]:
+                        try:
+                            if len(signature(listener).parameters) < 2:
+                                listener(content)
+                            else:
+                                listener(channel_name, content)
+                        except Exception as e:
+                            self.emit("error", channel_name, e,
+                                    traceback.format_exc())
             self.socket.on_channel(socket_channel_name, handle_message)
 
-        self.subscriptions[socket_channel_name].append(handler)
+        with self.lock: self.subscriptions[socket_channel_name].append(handler)
         return handler
 
     def unsubscribe(self, channel_name_or_handler: Union[str, Callable[[str], None]]) -> None:
-        if channel_name_or_handler is str:
-            if self.federation:
-                channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
-            self.socket.unsubscribe(channel_name_or_handler)
-            if channel_name_or_handler in self.subscriptions:
-                del self.subscriptions[channel_name_or_handler]
-        else:
-            for channel_name in self.subscriptions:
-                if channel_name_or_handler in self.subscriptions[channel_name]:
-                    self.subscriptions[channel_name].remove(
-                        channel_name_or_handler)
-                    if len(self.subscriptions[channel_name]) <= 0:
-                        self.socket.unsubscribe(channel_name)
-                        del self.subscriptions[channel_name]
-                        break
+        with self.lock: 
+            if channel_name_or_handler is str:
+                if self.federation:
+                    channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
+                self.socket.unsubscribe(channel_name_or_handler)
+                if channel_name_or_handler in self.subscriptions:
+                    del self.subscriptions[channel_name_or_handler]
+            else:
+                for channel_name in self.subscriptions:
+                    if channel_name_or_handler in self.subscriptions[channel_name]:
+                        self.subscriptions[channel_name].remove(
+                            channel_name_or_handler)
+                        if len(self.subscriptions[channel_name]) <= 0:
+                            self.socket.unsubscribe(channel_name)
+                            del self.subscriptions[channel_name]
+                            break
 
     def publish(self, channel_name: str, message: _message.Message, register = True) -> None:
         if type(message) is str: return self.publish_text(channel_name, message, register)

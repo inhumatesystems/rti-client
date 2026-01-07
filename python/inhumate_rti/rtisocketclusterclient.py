@@ -101,7 +101,7 @@ class RTISocketClusterClient:
         self.enable_reconnect = True
         self.reconnect_delay = 3
         self.ws = None
-        self.on_connected = self.on_disconnected = self.on_connect_error = self.on_set_auth = self.on_auth = None
+        self.on_connected = self.on_disconnected = self.on_connect_error = self.on_set_auth = self.on_auth = self.on_remove_auth = None
         self.ever_connected = False
 
     @staticmethod
@@ -224,6 +224,8 @@ class RTISocketClusterClient:
                 self.execute(data_obj["channel"], data_obj["data"])
             elif result == EventEnum.REMOVE_AUTH_TOKEN:
                 self.auth_token = None
+                if self.on_remove_auth is not None:
+                    self.on_remove_auth(self)
             elif result == EventEnum.SET_AUTH_TOKEN:
                 if self.on_set_auth is not None:
                     self.on_set_auth(self, data_obj["token"])
@@ -320,6 +322,9 @@ class RTISocketClusterClient:
     def set_auth_listener(self, set_auth_cb, on_auth_cb):
         self.on_set_auth = set_auth_cb
         self.on_auth = on_auth_cb
+        
+    def set_remove_auth_listener(self, remove_auth_cb):
+        self.on_remove_auth = remove_auth_cb
 
     def disconnect(self):
         self.enable_reconnect = False
