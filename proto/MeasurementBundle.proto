@@ -12,6 +12,7 @@ message MeasurementBundle {
     oneof which {
         Request request = 1;
         Response response = 2;
+        Insert insert = 3;
     }
 
     message Request {
@@ -31,11 +32,16 @@ message MeasurementBundle {
     }
 
     message Response {
-        repeated MeasureResponse measures = 1;
+        repeated MeasureMeasurements measures = 1;
         int64 total_count = 2;
     }
 
-    message MeasureResponse {
+    message Insert {
+        bool clear = 1; // if true, delete all measurements for the given measures before inserting
+        repeated MeasureMeasurements measures = 2;
+    }
+
+    message MeasureMeasurements {
         Measure measure = 1;
         string client_id = 2;
         string entity_id = 4;

@@ -5,10 +5,13 @@ syntax = "proto3";
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
 
+import "Color.proto";
+
 message Event {
 
     string type = 1;
     string description = 2;
     string data = 3;
+    Color color = 4;
 
 }

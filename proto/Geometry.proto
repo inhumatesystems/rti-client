@@ -37,7 +37,6 @@ message Geometry {
     string type = 31;
     Category category = 32;
 
-    bool disabled = 34;
     bool deleted = 35;
 
     string symbol = 36;
@@ -56,7 +55,7 @@ message Geometry {
 
     message GeodeticPoint2D {
         double longitude = 1; // degrees, positive east
-        double latitude = 2;  // degrees, positive north
+        double latitude = 2; // degrees, positive north
     }
 
     message Point3D {
@@ -72,8 +71,8 @@ message Geometry {
 
     message GeodeticPoint3D {
         double longitude = 1; // degrees, positive east
-        double latitude = 2;  // degrees, positive north
-        double altitude = 3;  // meters, above WGS84 ellipsoid
+        double latitude = 2; // degrees, positive north
+        double altitude = 3; // meters, above WGS84 ellipsoid
     }
 
     message Line2D {
@@ -111,7 +110,7 @@ message Geometry {
 
     enum Usage {
         SCENARIO = 0; // geometry is part of the scenario, should be rendered in viewer
-        ENTITY = 1;   // geometry is used to represent an entity, id = entity type
+        ENTITY = 1; // geometry is used to represent an entity, id = entity type
         VISUALIZATION = 2; // geometry is used for visualization only, e.g. sensor coverage
     }
 

@@ -10,6 +10,7 @@ message MessageBundle {
     oneof which {
         Request request = 1;
         Response response = 2;
+        Insert insert = 3;
     }
 
     message Request {
@@ -26,11 +27,16 @@ message MessageBundle {
     }
 
     message Response {
-        repeated Channel channels = 1;
+        repeated ChannelMessages channels = 1;
         int64 total_count = 2;
     }
 
-    message Channel {
+    message Insert {
+        bool clear = 1; // if true, delete all messages in the given channels before inserting
+        repeated ChannelMessages channels = 2;
+    }
+
+    message ChannelMessages {
         string name = 1;
         repeated Message messages = 2;
     }

@@ -31,6 +31,7 @@ message Entity {
     int32 symbol_size = 14;
     bool symbol_rotation = 15;
     Affiliation affiliation = 16;
+    string part_of_entity_id = 17;
 
     message Dimensions {
         float length = 1;
