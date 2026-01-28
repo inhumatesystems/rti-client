@@ -66,6 +66,8 @@ typedef std::shared_ptr<void> message_ptr_t;
 #include "Logs.pb.h"
 #include "Measurement.pb.h"
 #include "Measures.pb.h"
+#include "MeasurementBundle.pb.h"
+#include "MessageBundle.pb.h"
 #include "Parameter.pb.h"
 #include "RuntimeControl.pb.h"
 #include "RuntimeState.pb.h"

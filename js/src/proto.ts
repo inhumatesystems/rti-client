@@ -31,7 +31,7 @@ export { Scenarios, Scenario } from "./generated/Scenarios.js"
 export { Logs, Log, LogMark, LogPause, LogTimeScale, Logs_ListRequest, Logs_SearchRequest } from "./generated/Logs.js"
 export {
     MessageBundle,
-    MessageBundle_Channel,
+    MessageBundle_ChannelMessages,
     MessageBundle_Message,
     MessageBundle_Request,
     MessageBundle_Response,
@@ -40,6 +40,7 @@ export { Measures, Measure, MeasureGraphType, measureGraphTypeFromJSON, measureG
 export { Measurement, Measurement_Window } from "./generated/Measurement.js"
 export {
     MeasurementBundle,
+    MeasurementBundle_MeasureMeasurements,
     MeasurementBundle_HistoricMeasurement,
     MeasurementBundle_Request,
     MeasurementBundle_Response,
