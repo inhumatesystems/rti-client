@@ -79,7 +79,7 @@ namespace rti
 {
 
 constexpr auto RTI_CLIENT_VERSION = "0.0.1-dev-version";
-constexpr auto RTI_DEFAULT_URL = "ws://localhost:8000/";
+constexpr auto RTI_DEFAULT_URL = "ws://127.0.0.1:8000/";
 constexpr auto CONTROL_CHANNEL = "rti/control";
 constexpr auto CHANNELS_CHANNEL = "rti/channels";
 constexpr auto CLIENTS_CHANNEL = "rti/clients";
