@@ -525,3 +525,17 @@ class ClientBehaviorTest(unittest.TestCase):
         temprti.disconnect()
         self.assertTrue(error_called, "Error event was not called on connect handler error")
 
+    def test_subscribe_in_handler(self):
+        sub = []
+        self.received = False
+        def on_message(message):
+            nonlocal sub
+            self.received = True
+            sub.append(self.rti.subscribe_text("test", on_message))
+        sub.append(self.rti.subscribe_text("test", on_message))
+        self.rti.publish_text("test", "foo")
+        count = 0
+        while count < 100 and not self.received: count += 1 ; time.sleep(0.01)
+        self.assertTrue(self.received)
+        for s in sub:
+            self.rti.unsubscribe(s)

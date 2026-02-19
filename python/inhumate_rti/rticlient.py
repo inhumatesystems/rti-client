@@ -174,7 +174,7 @@ class RTIClient(Emitter):
         socket.on("ping", self.__on_ping)
         self.socket = socket
         self.thread = None
-        self.lock = Lock()
+        self.subscribe_lock = Lock()
         self.collect_measurements_thread = None
         self.collect_lock = Lock()
         self.collect_queue = {}
@@ -319,23 +319,26 @@ class RTIClient(Emitter):
                 self._register_channel_usage(channel_name, False, data_type)
 
             def handle_message(in_channel_name, content):
-                with self.lock:
+                listeners = []
+                with self.subscribe_lock:
                     for listener in self.subscriptions[socket_channel_name]:
-                        try:
-                            if len(signature(listener).parameters) < 2:
-                                listener(content)
-                            else:
-                                listener(channel_name, content)
-                        except Exception as e:
-                            self.emit("error", channel_name, e,
-                                    traceback.format_exc())
+                        listeners.append(listener)
+                for listener in listeners:
+                    try:
+                        if len(signature(listener).parameters) < 2:
+                            listener(content)
+                        else:
+                            listener(channel_name, content)
+                    except Exception as e:
+                        self.emit("error", channel_name, e,
+                                traceback.format_exc())
             self.socket.on_channel(socket_channel_name, handle_message)
 
-        with self.lock: self.subscriptions[socket_channel_name].append(handler)
+        with self.subscribe_lock: self.subscriptions[socket_channel_name].append(handler)
         return handler
 
     def unsubscribe(self, channel_name_or_handler: Union[str, Callable[[str], None]]) -> None:
-        with self.lock: 
+        with self.subscribe_lock: 
             if channel_name_or_handler is str:
                 if self.federation:
                     channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
