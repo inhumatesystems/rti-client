@@ -1,6 +1,6 @@
 export default {
     version: "0.0.1-dev-version",
-    defaultHost: "localhost",
+    defaultHost: "127.0.0.1",
     defaultPort: 8000,
 }
 

@@ -196,10 +196,10 @@ export class RTIClient extends EventEmitter {
                 url = `wss://${location.host}`
             } else if (location.protocol == "app:" && location.hostname == ".") {
                 // i.e. in an electron app
-                url = `ws://localhost:${constants.defaultPort}`
+                url = `ws://127.0.0.1:${constants.defaultPort}`
             } else if (location.hostname && location.hostname.startsWith("127.")) {
                 url = `ws://${location.hostname}:${constants.defaultPort}`
-            } else if (location.host && location.host != "localhost" && !location.host.startsWith("localhost:")) {
+            } else if (location.host && location.host != "localhost" && !location.host.startsWith("localhost:") && location.host != "127.0.0.1" && !location.host.startsWith("127.0.0.1:")) {
                 url = `ws://${location.host}`
             }
         }

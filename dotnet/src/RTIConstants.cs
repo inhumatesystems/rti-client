@@ -1,7 +1,7 @@
 namespace Inhumate.RTI {
     public static class RTIConstants {
         public const string Version = "0.0.1-dev-version";
-        internal const string DefaultUrl = "ws://localhost:8000/";
+        internal const string DefaultUrl = "ws://127.0.0.1:8000/";
     }
     public static class RTIChannel
     {
