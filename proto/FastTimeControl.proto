@@ -1,0 +1,53 @@
+// RTI fast-time control messages definition.
+// This file defines the messages used to control and synchronize fast-time stepping
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message FastTimeControl {
+
+    oneof control {
+        Configure configure = 1;
+        Acknowledge acknowledge = 2;
+        StepGrant step_grant = 3;
+        StepComplete step_complete = 4;
+    }
+
+    message Configure {
+        string controller_client_id = 1;
+        string run_id = 2;
+        double time_step = 3; // seconds (sim time)
+        // TODO maybe later start_time, stop_condition, mode (fixed_step/event_driven), seed
+    }
+
+    message Acknowledge {
+        string client_id = 1;
+        string run_id = 2;
+        bool failed = 3;
+        string reason = 4; // if failed
+    }
+
+    message StepGrant {
+        string run_id = 1;
+        int64 step_number = 2;
+        double start_time = 3; // seconds (sim time)
+        double end_time = 4; // seconds (sim time)
+    }
+
+    message StepComplete {
+        string client_id = 1;
+        string run_id = 2;
+        int64 step_number = 3;
+        int32 duration = 4; // milliseconds (real time)
+        bool failed = 5;
+        string reason = 7; // if failed
+        // TODO common performance metrics like messages processed, etc.
+    }
+
+    // Later, add TAR (Time Advance Request) / NER (Next Event Request) style messages without breaking v1:
+    // TimeAdvanceRequest { requested_time | next_event_request, lookahead }
+    // TimeAdvanceGrant { granted_time }
+
+}

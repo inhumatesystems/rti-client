@@ -167,7 +167,9 @@ namespace Inhumate.RTI {
                             try {
                                 res = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), tokenSource.Token);
                             } catch (Exception) {
-                                socket.Abort();
+                                // Don't abort if we initiated the disconnect — Disconnect() is
+                                // responsible for the clean close handshake via CloseAsync.
+                                if (!disconnecting) socket.Abort();
                                 throw;
                             }
                             if (res == null) {
@@ -176,7 +178,9 @@ namespace Inhumate.RTI {
                             }
                             if (res.MessageType == WebSocketMessageType.Close) {
                                 try {
-                                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "SERVER REQUESTED CLOSE", tokenSource.Token);
+                                    // Use CancellationToken.None — our token may already be
+                                    // cancelled if Disconnect() was called concurrently.
+                                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "SERVER REQUESTED CLOSE", CancellationToken.None);
                                 } catch (WebSocketException) { }
                                 disconnecting = true;
                                 return Task.CompletedTask;
@@ -216,6 +220,8 @@ namespace Inhumate.RTI {
 
                         }
                     }
+                } catch (OperationCanceledException) {
+                    // Normal shutdown — token was cancelled by Disconnect()
                 } catch (Exception ex) {
                     OnError?.Invoke(this, ex);
                 }
@@ -229,8 +235,11 @@ namespace Inhumate.RTI {
                 sendThreadDone = false;
                 try {
                     while (!_disposedValue) {
-                        if (socket.State == WebSocketState.Open) {
+                        if (socket.State == WebSocketState.Open && !disconnecting) {
                             var msg = outQueue.Take(tokenSource.Token);
+                            // Re-check after Take() which may have blocked; token cancellation or
+                            // Disconnect() setting disconnecting=true are both exit signals.
+                            if (disconnecting) break;
                             if (msg.Key.Add(sendTimeout) < DateTime.UtcNow) {
                                 continue;
                             }
@@ -238,15 +247,20 @@ namespace Inhumate.RTI {
                             var buffer = msg.Value.Data;
                             try {
                                 var msgType = msg.Value.IsBinary ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
+                                // Use CancellationToken.None so a partial frame is never written;
+                                // the loop exit conditions above prevent sending after disconnect.
                                 await socket.SendAsync(new ArraySegment<byte>(buffer), msgType, true,
-                                    tokenSource.Token).ConfigureAwait(false);
+                                    CancellationToken.None).ConfigureAwait(false);
                             } catch (Exception ex) {
                                 OnError?.Invoke(this, ex);
-                                socket.Abort();
+                                // Don't abort if we're in the middle of a clean close handshake
+                                if (!disconnecting) socket.Abort();
                                 break;
                             }
                         }
                     }
+                } catch (OperationCanceledException) {
+                    // Normal shutdown — token was cancelled during Disconnect/Dispose
                 } catch (Exception ex) {
                     OnError?.Invoke(this, ex);
                 }
@@ -259,7 +273,10 @@ namespace Inhumate.RTI {
         public void Disconnect() {
             try {
                 disconnecting = true;
-                socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL SHUTDOWN", tokenSource.Token).Wait(2000);
+                // Cancel the token first so any blocked outQueue.Take() exits immediately
+                // via OperationCanceledException, preventing a send racing with CloseAsync.
+                tokenSource.Cancel();
+                socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL SHUTDOWN", CancellationToken.None).Wait(2000);
             } catch (Exception) { }
         }
 

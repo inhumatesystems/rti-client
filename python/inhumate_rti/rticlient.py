@@ -17,6 +17,11 @@ from inspect import signature
 from typing import List, Optional, Type, Union, Callable
 
 
+class DispatchMode:
+    IMMEDIATE = "immediate"
+    BUFFERED = "buffered"
+
+
 class RTIClient(Emitter):
 
     @property
@@ -57,6 +62,9 @@ class RTIClient(Emitter):
         self.known_clients = {}
         self.used_measures = {}
         self.known_measures = {}
+        self.default_dispatch_mode = DispatchMode.IMMEDIATE
+        self._message_buffer = []
+        self._buffer_lock = Lock()
 
         self._state = Proto.UNKNOWN
         self.first_connected = False
@@ -180,9 +188,9 @@ class RTIClient(Emitter):
         self.collect_queue = {}
         self.last_collect = {}
 
-        self.subscribe(Channel.clients, Proto.Clients, on_clients)
-        self.subscribe(Channel.channels, Proto.Channels, on_channels)
-        self.subscribe(Channel.measures, Proto.Measures, on_measures)
+        self.subscribe(Channel.clients, Proto.Clients, on_clients, dispatch=DispatchMode.IMMEDIATE)
+        self.subscribe(Channel.channels, Proto.Channels, on_channels, dispatch=DispatchMode.IMMEDIATE)
+        self.subscribe(Channel.measures, Proto.Measures, on_measures, dispatch=DispatchMode.IMMEDIATE)
 
         # when using main_loop, connect must be done manually after setting up event handlers
         if connect and not main_loop:
@@ -267,6 +275,26 @@ class RTIClient(Emitter):
         else:
             raise Exception("Cannot use wait_until_connected() with main_loop, use connect() and check .connected instead")
 
+    @property
+    def buffer_depth(self):
+        with self._buffer_lock: return len(self._message_buffer)
+
+    def flush_buffers(self):
+        with self._buffer_lock:
+            messages = list(self._message_buffer)
+            self._message_buffer.clear()
+        for handler, channel_name, content in messages:
+            self._call_handler(handler, channel_name, content)
+
+    def _call_handler(self, handler, channel_name, content):
+        try:
+            if len(signature(handler).parameters) < 2:
+                handler(content)
+            else:
+                handler(channel_name, content)
+        except Exception as e:
+            self.emit("error", channel_name, e, traceback.format_exc())
+
     def verify_token(self, token: str, handler: Callable[[dict], None]):
         self.invoke("verifytoken", token, handler)
         
@@ -284,14 +312,14 @@ class RTIClient(Emitter):
                 handler(data)
         self.socket.transmit(method, data, invoke_handler)
 
-    def subscribe(self, channel_name: str, message_class: Type[_message.Message], handler: Callable, register: bool = True):
+    def subscribe(self, channel_name: str, message_class: Type[_message.Message], handler: Callable, register: bool = True, dispatch=None):
         def handle_message(content):
             message = self.parse(message_class, content)
             if len(signature(handler).parameters) < 2:
                 handler(message)
             else:
                 handler(channel_name, message)
-        return self.subscribe_text(channel_name, handle_message, register, str(message_class))
+        return self.subscribe_text(channel_name, handle_message, register, str(message_class), dispatch=dispatch)
 
     @classmethod
     def parse(cls, message_class, content):
@@ -299,15 +327,15 @@ class RTIClient(Emitter):
         message.ParseFromString(base64.b64decode(content))
         return message
 
-    def subscribe_json(self, channel_name: str, handler: Union[Callable[[str, dict], None], Callable[[dict], None]], register=True):
+    def subscribe_json(self, channel_name: str, handler: Union[Callable[[str, dict], None], Callable[[dict], None]], register=True, dispatch=None):
         def handle_message(content):
             if len(signature(handler).parameters) < 2:
                 handler(json.loads(content))
             else:
                 handler(channel_name, json.loads(content))
-        return self.subscribe_text(channel_name, handle_message, register, "json")
+        return self.subscribe_text(channel_name, handle_message, register, "json", dispatch=dispatch)
 
-    def subscribe_text(self, channel_name: str, handler: Union[Callable[[str, str], None], Callable[[str], None]], register: bool = True, data_type: str = "text"):
+    def subscribe_text(self, channel_name: str, handler: Union[Callable[[str, str], None], Callable[[str], None]], register: bool = True, data_type: str = "text", dispatch=None):
         socket_channel_name = channel_name
         if self.federation:
             socket_channel_name = "//" + self.federation + "/" + channel_name
@@ -321,24 +349,22 @@ class RTIClient(Emitter):
             def handle_message(in_channel_name, content):
                 listeners = []
                 with self.subscribe_lock:
-                    for listener in self.subscriptions[socket_channel_name]:
-                        listeners.append(listener)
-                for listener in listeners:
-                    try:
-                        if len(signature(listener).parameters) < 2:
-                            listener(content)
-                        else:
-                            listener(channel_name, content)
-                    except Exception as e:
-                        self.emit("error", channel_name, e,
-                                traceback.format_exc())
+                    for entry in self.subscriptions[socket_channel_name]:
+                        listeners.append(entry)
+                for listener, mode in listeners:
+                    effective_mode = mode if mode is not None else self.default_dispatch_mode
+                    if effective_mode == DispatchMode.BUFFERED:
+                        with self._buffer_lock:
+                            self._message_buffer.append((listener, channel_name, content))
+                    else:
+                        self._call_handler(listener, channel_name, content)
             self.socket.on_channel(socket_channel_name, handle_message)
 
-        with self.subscribe_lock: self.subscriptions[socket_channel_name].append(handler)
+        with self.subscribe_lock: self.subscriptions[socket_channel_name].append((handler, dispatch))
         return handler
 
     def unsubscribe(self, channel_name_or_handler: Union[str, Callable[[str], None]]) -> None:
-        with self.subscribe_lock: 
+        with self.subscribe_lock:
             if channel_name_or_handler is str:
                 if self.federation:
                     channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
@@ -347,9 +373,13 @@ class RTIClient(Emitter):
                     del self.subscriptions[channel_name_or_handler]
             else:
                 for channel_name in self.subscriptions:
-                    if channel_name_or_handler in self.subscriptions[channel_name]:
-                        self.subscriptions[channel_name].remove(
-                            channel_name_or_handler)
+                    entry_to_remove = None
+                    for entry in self.subscriptions[channel_name]:
+                        if entry[0] == channel_name_or_handler:
+                            entry_to_remove = entry
+                            break
+                    if entry_to_remove is not None:
+                        self.subscriptions[channel_name].remove(entry_to_remove)
                         if len(self.subscriptions[channel_name]) <= 0:
                             self.socket.unsubscribe(channel_name)
                             del self.subscriptions[channel_name]

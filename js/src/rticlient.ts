@@ -78,6 +78,10 @@ export interface GetTokenResult {
     reason?: string
 }
 
+export enum DispatchMode { IMMEDIATE = "immediate", BUFFERED = "buffered" }
+
+interface BufferedMessage { wrappedHandler: Function; channelName: string; data: any; handler: Function }
+
 export class RTIClient extends EventEmitter {
     readonly socket: AGClientSocket
 
@@ -171,6 +175,16 @@ export class RTIClient extends EventEmitter {
     private _compatibilityMode = false
     get compatibilityMode() {
         return this._compatibilityMode
+    }
+
+    public defaultDispatchMode: DispatchMode = DispatchMode.IMMEDIATE
+    private _messageBuffer: BufferedMessage[] = []
+    get bufferDepth(): number { return this._messageBuffer.length }
+    flushBuffers(): void {
+        const messages = this._messageBuffer.splice(0)
+        for (const { wrappedHandler, channelName, handler, data } of messages) {
+            if (this._handlers[channelName]?.includes(handler)) wrappedHandler(data)
+        }
     }
 
     public measurementIntervalTimeScale = 1
@@ -349,9 +363,9 @@ export class RTIClient extends EventEmitter {
             })
         }
 
-        this.subscribe(RTIchannel.clients, Clients, (m: Clients) => this.onClients(m), false)
-        this.subscribe(RTIchannel.channels, Channels, (m: Channels) => this.onChannels(m), false)
-        this.subscribe(RTIchannel.measures, Measures, (m: Measures) => this.onMeasures(m), false)
+        this.subscribe(RTIchannel.clients, Clients, (m: Clients) => this.onClients(m), false, DispatchMode.IMMEDIATE)
+        this.subscribe(RTIchannel.channels, Channels, (m: Channels) => this.onChannels(m), false, DispatchMode.IMMEDIATE)
+        this.subscribe(RTIchannel.measures, Measures, (m: Measures) => this.onMeasures(m), false, DispatchMode.IMMEDIATE)
     }
 
     private die = false
@@ -520,7 +534,7 @@ export class RTIClient extends EventEmitter {
         return result as ChangePasswordResult
     }
 
-    subscribe(channelName: string, type: any, handler: Function, register = true): Subscription {
+    subscribe(channelName: string, type: any, handler: Function, register = true, dispatchMode?: DispatchMode): Subscription {
         if (!type) throw new Error("cannot subscribe with undefined type")
         if (register) this.registerChannelUsage(channelName, false, type.name)
         return this.doSubscribe(channelName, (message: any) => {
@@ -530,19 +544,19 @@ export class RTIClient extends EventEmitter {
             } else {
                 handler(data)
             }
-        })
+        }, dispatchMode)
     }
 
     static parse(type: DecodableMessageType, content: string) {
         return type.decode(base64.toByteArray(content))
     }
 
-    subscribeText(channelName: string, handler: Function, register = true): Subscription {
+    subscribeText(channelName: string, handler: Function, register = true, dispatchMode?: DispatchMode): Subscription {
         if (register) this.registerChannelUsage(channelName, false, "text")
-        return this.doSubscribe(channelName, handler)
+        return this.doSubscribe(channelName, handler, dispatchMode)
     }
 
-    subscribeJSON(channelName: string, handler: Function, register = true): Subscription {
+    subscribeJSON(channelName: string, handler: Function, register = true, dispatchMode?: DispatchMode): Subscription {
         if (register) this.registerChannelUsage(channelName, false, "json")
         return this.doSubscribe(channelName, (message: string) => {
             const data = JSON.parse(message)
@@ -551,12 +565,12 @@ export class RTIClient extends EventEmitter {
             } else {
                 handler(data)
             }
-        })
+        }, dispatchMode)
     }
 
     private _handlers: any = {}
 
-    private doSubscribe(channelName: string, handler: Function): Subscription {
+    private doSubscribe(channelName: string, handler: Function, dispatchMode?: DispatchMode): Subscription {
         const channel = this.socket.subscribe((this.federation ? `//${this.federation}/` : "") + channelName)
         const wrappedHandler = (data: any) => {
             try {
@@ -573,7 +587,12 @@ export class RTIClient extends EventEmitter {
         this._handlers[channelName].push(handler)
         this.forAwait(channel, (data) => {
             if (this._handlers[channelName].indexOf(handler) < 0) return false
-            wrappedHandler(data)
+            const effectiveMode = dispatchMode ?? this.defaultDispatchMode
+            if (effectiveMode === DispatchMode.BUFFERED) {
+                this._messageBuffer.push({ wrappedHandler, channelName, data, handler })
+            } else {
+                wrappedHandler(data)
+            }
         })
         return { channel, handler }
     }

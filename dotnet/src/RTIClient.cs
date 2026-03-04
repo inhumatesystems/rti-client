@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 
 namespace Inhumate.RTI {
+
+    public enum DispatchMode { Immediate = 0, Buffered = 1 }
 
     public class RTIClient {
 
@@ -48,6 +50,19 @@ namespace Inhumate.RTI {
 
         public float MeasurementIntervalTimeScale { get; set; } = 1f;
 
+        public DispatchMode DefaultDispatchMode { get; set; } = DispatchMode.Immediate;
+        private ConcurrentQueue<(UntypedListener Listener, string Channel, object Data)> messageBuffer
+            = new ConcurrentQueue<(UntypedListener, string, object)>();
+        public int BufferDepth => messageBuffer.Count;
+        public void FlushBuffers() {
+            var messages = new List<(UntypedListener, string, object)>();
+            while (messageBuffer.TryDequeue(out var msg)) messages.Add(msg);
+            foreach (var (listener, channel, data) in messages) {
+                try { listener.Invoke(channel, data); }
+                catch (Exception e) { OnError?.Invoke(channel, e); }
+            }
+        }
+
         public event Action OnConnected;
         public event Action OnFirstConnect;
         public event Action OnDisconnected;
@@ -66,7 +81,7 @@ namespace Inhumate.RTI {
             }
         }
 
-        private ConcurrentDictionary<string, List<UntypedListener>> subscriptions = new ConcurrentDictionary<string, List<UntypedListener>>();
+        private ConcurrentDictionary<string, List<(UntypedListener Listener, DispatchMode? Mode)>> subscriptions = new ConcurrentDictionary<string, List<(UntypedListener, DispatchMode?)>>();
         private ConcurrentDictionary<string, List<UntypedListener>> listeners = new ConcurrentDictionary<string, List<UntypedListener>>();
         private ConcurrentDictionary<int, RPCListener> rpcListeners = new ConcurrentDictionary<int, RPCListener>();
         private ConcurrentDictionary<int, RPCListener> rpcErrorListeners = new ConcurrentDictionary<int, RPCListener>();
@@ -108,10 +123,10 @@ namespace Inhumate.RTI {
             if (string.IsNullOrEmpty(Host)) Host = Environment.GetEnvironmentVariable("RTI_HOST");
             if (string.IsNullOrEmpty(Host)) Host = Environment.MachineName;
             if (string.IsNullOrEmpty(Station)) Station = Environment.GetEnvironmentVariable("RTI_STATION");
-            Subscribe<Clients>(RTIChannel.Clients, OnClients);
-            Subscribe<Channels>(RTIChannel.Channels, OnChannels);
-            Subscribe<Measures>(RTIChannel.Measures, OnMeasures);
-            Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnect, false);
+            Subscribe<Clients>(RTIChannel.Clients, OnClients, dispatchMode: DispatchMode.Immediate);
+            Subscribe<Channels>(RTIChannel.Channels, OnChannels, dispatchMode: DispatchMode.Immediate);
+            Subscribe<Measures>(RTIChannel.Measures, OnMeasures, dispatchMode: DispatchMode.Immediate);
+            Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnect, false, dispatchMode: DispatchMode.Immediate);
             On("broker-version", (channel, content) => { BrokerVersion = content?.ToString(); });
             On("fail", (channel, content) => {
                 shouldBeConnected = false;
@@ -224,12 +239,17 @@ namespace Inhumate.RTI {
                     var data = eventData.ContainsKey("data") ? eventData["data"] : null;
                     if (subscriptions.ContainsKey(channel)) {
                         // Make a temp list to allow unsubscribing/subscribing from listeners
-                        var tempListeners = new List<UntypedListener>(subscriptions[channel]);
-                        foreach (var listener in tempListeners) {
-                            try {
-                                listener.Invoke(channel, data);
-                            } catch (Exception e) {
-                                OnError?.Invoke(channel, e);
+                        var tempListeners = new List<(UntypedListener, DispatchMode?)>(subscriptions[channel]);
+                        foreach (var (listener, mode) in tempListeners) {
+                            var effectiveMode = mode ?? DefaultDispatchMode;
+                            if (effectiveMode == DispatchMode.Buffered) {
+                                messageBuffer.Enqueue((listener, channel, data));
+                            } else {
+                                try {
+                                    listener.Invoke(channel, data);
+                                } catch (Exception e) {
+                                    OnError?.Invoke(channel, e);
+                                }
                             }
                         }
                     } else {
@@ -298,7 +318,7 @@ namespace Inhumate.RTI {
             reconnecting = true;
             new Thread(() => {
                 Thread.Sleep(5000);
-                while (socket == null || !IsConnected) {
+                while ((socket == null || !IsConnected) && shouldBeConnected) {
                     if (socket != null) {
                         try {
                             socket.Disconnect();
@@ -329,12 +349,12 @@ namespace Inhumate.RTI {
             if (!connected) throw new RTIConnectionFailure(connectionError?.ToString());
         }
 
-        public UntypedListener Subscribe(string channelName, UntypedListener callback, bool register = true) {
+        public UntypedListener Subscribe(string channelName, UntypedListener callback, bool register = true, DispatchMode? dispatchMode = null) {
             if (register) RegisterChannelUsage(channelName, false, "text");
-            return DoSubscribe(channelName, callback);
+            return DoSubscribe(channelName, callback, dispatchMode);
         }
 
-        public UntypedListener SubscribeJson<T>(string channelName, TypedListener<T> callback, bool register = true) {
+        public UntypedListener SubscribeJson<T>(string channelName, TypedListener<T> callback, bool register = true, DispatchMode? dispatchMode = null) {
             if (register) RegisterChannelUsage(channelName, false, "json");
             return DoSubscribe(channelName, (name, data) => {
                 try {
@@ -343,10 +363,10 @@ namespace Inhumate.RTI {
                 } catch (Exception e) {
                     OnError?.Invoke(name, e);
                 }
-            });
+            }, dispatchMode);
         }
 
-        public UntypedListener Subscribe<T>(string channelName, TypedListener<T> callback, bool register = true) where T : IMessage<T>, new() {
+        public UntypedListener Subscribe<T>(string channelName, TypedListener<T> callback, bool register = true, DispatchMode? dispatchMode = null) where T : IMessage<T>, new() {
             if (register) RegisterChannelUsage(channelName, false, typeof(T).Name);
             return DoSubscribe(channelName, (name, data) => {
                 try {
@@ -354,7 +374,7 @@ namespace Inhumate.RTI {
                 } catch (Exception e) {
                     OnError?.Invoke(name, e);
                 }
-            });
+            }, dispatchMode);
         }
 
         public static T Parse<T>(string content) where T : IMessage<T>, new() {
@@ -362,7 +382,7 @@ namespace Inhumate.RTI {
             return parser.ParseFrom(Convert.FromBase64String(content));
         }
 
-        public UntypedListener Subscribe<T>(string channelName, TypedIdListener<T> callback, bool register = true) where T : IMessage<T>, new() {
+        public UntypedListener Subscribe<T>(string channelName, TypedIdListener<T> callback, bool register = true, DispatchMode? dispatchMode = null) where T : IMessage<T>, new() {
             if (register) RegisterChannelUsage(channelName, false, typeof(T).Name);
             var parser = new MessageParser<T>(() => new T());
             return DoSubscribe(channelName, (name, data) => {
@@ -374,13 +394,13 @@ namespace Inhumate.RTI {
                 } catch (Exception e) {
                     OnError?.Invoke(name, e);
                 }
-            });
+            }, dispatchMode);
         }
 
-        private UntypedListener DoSubscribe(string channelName, UntypedListener callback) {
+        private UntypedListener DoSubscribe(string channelName, UntypedListener callback, DispatchMode? dispatchMode = null) {
             if (IsConnected) Subscribe(channelName);
-            if (!subscriptions.ContainsKey(channelName)) subscriptions[channelName] = new List<UntypedListener>();
-            subscriptions[channelName].Add(callback);
+            if (!subscriptions.ContainsKey(channelName)) subscriptions[channelName] = new List<(UntypedListener, DispatchMode?)>();
+            subscriptions[channelName].Add((callback, dispatchMode));
             return callback;
         }
 
@@ -407,12 +427,13 @@ namespace Inhumate.RTI {
         public void Unsubscribe(UntypedListener listener) {
             var channels = new List<string>();
             foreach (var pair in subscriptions) {
-                var listeners = pair.Value;
-                if (listeners.Contains(listener)) {
-                    if (listeners.Count <= 1) {
+                var entries = pair.Value;
+                var entry = entries.Find(e => e.Listener == listener);
+                if (entry.Listener != null) {
+                    if (entries.Count <= 1) {
                         channels.Add(pair.Key);
                     } else {
-                        listeners.Remove(listener);
+                        entries.Remove(entry);
                     }
                 }
             }

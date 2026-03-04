@@ -8,6 +8,7 @@ const internalPrefix = "rti/"
 export const channel = {
     internalPrefix,
     control: internalPrefix + "control",
+    fastTimeControl: internalPrefix + "fasttimecontrol",
     channels: internalPrefix + "channels",
     clients: internalPrefix + "clients",
     scenarios: internalPrefix + "scenarios",
@@ -43,5 +44,7 @@ export const capability = {
     timeScale: "timescale",
     log: "log",
     playback: "playback",
-    launch: "launch"
+    launch: "launch",
+    fastTimeController: "fasttimecontroller",
+    fastTimeWorker: "fasttimeworker",
 }
