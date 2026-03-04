@@ -234,33 +234,33 @@ namespace Inhumate.RTI {
             Task.Run(async () => {
                 sendThreadDone = false;
                 try {
-                    while (!_disposedValue) {
-                        if (socket.State == WebSocketState.Open && !disconnecting) {
-                            var msg = outQueue.Take(tokenSource.Token);
-                            // Re-check after Take() which may have blocked; token cancellation or
-                            // Disconnect() setting disconnecting=true are both exit signals.
-                            if (disconnecting) break;
-                            if (msg.Key.Add(sendTimeout) < DateTime.UtcNow) {
-                                continue;
-                            }
+                    // Loop exits when disconnecting is set or the token is cancelled (Dispose).
+                    // TryTake with a short timeout polls the disconnecting flag regularly so
+                    // sends stop before CloseAsync is called, without cancelling the token
+                    // (which would abort the socket via ReceiveAsync, causing ungraceful closes).
+                    while (!_disposedValue && !disconnecting) {
+                        KeyValuePair<DateTime, QueuedMessage> msg;
+                        if (!outQueue.TryTake(out msg, 50, tokenSource.Token)) continue;
+                        // Re-check after TryTake in case Disconnect() ran while we waited.
+                        if (disconnecting || socket.State != WebSocketState.Open) break;
+                        if (msg.Key.Add(sendTimeout) < DateTime.UtcNow) continue;
 
-                            var buffer = msg.Value.Data;
-                            try {
-                                var msgType = msg.Value.IsBinary ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
-                                // Use CancellationToken.None so a partial frame is never written;
-                                // the loop exit conditions above prevent sending after disconnect.
-                                await socket.SendAsync(new ArraySegment<byte>(buffer), msgType, true,
-                                    CancellationToken.None).ConfigureAwait(false);
-                            } catch (Exception ex) {
-                                OnError?.Invoke(this, ex);
-                                // Don't abort if we're in the middle of a clean close handshake
-                                if (!disconnecting) socket.Abort();
-                                break;
-                            }
+                        var buffer = msg.Value.Data;
+                        try {
+                            var msgType = msg.Value.IsBinary ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
+                            // CancellationToken.None: avoids a partial frame if Dispose later
+                            // cancels the token mid-send; the loop guard above is the exit path.
+                            await socket.SendAsync(new ArraySegment<byte>(buffer), msgType, true,
+                                CancellationToken.None).ConfigureAwait(false);
+                        } catch (Exception ex) {
+                            OnError?.Invoke(this, ex);
+                            // Don't abort if we're in the middle of a clean close handshake
+                            if (!disconnecting) socket.Abort();
+                            break;
                         }
                     }
                 } catch (OperationCanceledException) {
-                    // Normal shutdown — token was cancelled during Disconnect/Dispose
+                    // Normal shutdown — token was cancelled during Dispose
                 } catch (Exception ex) {
                     OnError?.Invoke(this, ex);
                 }
@@ -273,10 +273,10 @@ namespace Inhumate.RTI {
         public void Disconnect() {
             try {
                 disconnecting = true;
-                // Cancel the token first so any blocked outQueue.Take() exits immediately
-                // via OperationCanceledException, preventing a send racing with CloseAsync.
-                tokenSource.Cancel();
-                socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL SHUTDOWN", CancellationToken.None).Wait(2000);
+                // Do NOT cancel tokenSource here: cancelling it causes ReceiveAsync to abort
+                // the socket internally, producing ungraceful closes (broker code 1006).
+                // The send thread exits cleanly via the !disconnecting TryTake loop above.
+                socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL SHUTDOWN", tokenSource.Token).Wait(2000);
             } catch (Exception) { }
         }
 
