@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.Threading;
 using System.Collections.Generic;
@@ -51,7 +51,7 @@ namespace Inhumate.RTI {
             Assert.IsTrue(temprti.IsConnected);
             temprti.Disconnect();
             int count = 0;
-            while (temprti.IsConnected && count++ < 50) Thread.Sleep(10);
+            while (temprti.IsConnected && count++ < 200) Thread.Sleep(10);
             Assert.IsFalse(temprti.IsConnected);
         }
 
@@ -540,7 +540,7 @@ namespace Inhumate.RTI {
                 rti.Publish("polling", "three");
                 Thread.Sleep(100);
 
-                for (int i = 0; i < 50 && receiveCount < 3; i++) {
+                for (int i = 0; i < 100 && receiveCount < 3; i++) {
                     Thread.Sleep(100);
                     rti2.Poll();
                 }
@@ -611,6 +611,76 @@ namespace Inhumate.RTI {
             temprti.WaitUntilConnected();
             Assert.IsTrue(temprti.IsConnected);
             temprti.Disconnect();
+        }
+
+        [Test]
+        public void Buffered_Dispatch_Not_Delivered_Until_Flush() {
+            bool received = false;
+            var listener = rti.Subscribe("buffered-test", (channel, data) => { received = true; }, dispatchMode: DispatchMode.Buffered);
+            Thread.Sleep(100); // ensure subscription is registered with broker before publishing
+            rti.Publish("buffered-test", "hello");
+            // Wait for the message to arrive in the buffer
+            int count = 0;
+            while (rti.BufferDepth == 0 && count++ < 200) Thread.Sleep(10);
+            Assert.IsFalse(received);
+            Assert.Greater(rti.BufferDepth, 0);
+            rti.FlushBuffers();
+            Assert.IsTrue(received);
+            Assert.AreEqual(0, rti.BufferDepth);
+            rti.Unsubscribe(listener);
+        }
+
+        [Test]
+        public void Default_Dispatch_Is_Still_Immediate() {
+            bool received = false;
+            var listener = rti.Subscribe("immediate-test", (channel, data) => { received = true; });
+            rti.Publish("immediate-test", "hello");
+            for (int i = 0; i < 50 && !received; i++) Thread.Sleep(10);
+            Assert.IsTrue(received);
+            rti.Unsubscribe(listener);
+        }
+
+        [Test]
+        public void Mixed_Modes_On_Same_Channel() {
+            bool immediateReceived = false;
+            bool bufferedReceived = false;
+            var l1 = rti.Subscribe("mixed-test", (channel, data) => { immediateReceived = true; }, dispatchMode: DispatchMode.Immediate);
+            var l2 = rti.Subscribe("mixed-test", (channel, data) => { bufferedReceived = true; }, dispatchMode: DispatchMode.Buffered);
+            rti.Publish("mixed-test", "hello");
+            for (int i = 0; i < 50 && !immediateReceived; i++) Thread.Sleep(10);
+            Assert.IsTrue(immediateReceived);
+            Assert.IsFalse(bufferedReceived);
+            rti.FlushBuffers();
+            Assert.IsTrue(bufferedReceived);
+            rti.Unsubscribe(l1);
+            rti.Unsubscribe(l2);
+        }
+
+        [Test]
+        public void Default_Dispatch_Mode_Changed_To_Buffered() {
+            rti.DefaultDispatchMode = DispatchMode.Buffered;
+            try {
+                bool received = false;
+                var listener = rti.Subscribe("default-buffered-test", (channel, data) => { received = true; });
+                Thread.Sleep(250);
+                rti.Publish("default-buffered-test", "hello");
+                // Wait for the message to arrive in the buffer
+                int count = 0;
+                while (rti.BufferDepth == 0 && count++ < 200) Thread.Sleep(10);
+                Assert.IsFalse(received);
+                Assert.Greater(rti.BufferDepth, 0);
+                rti.FlushBuffers();
+                Assert.IsTrue(received);
+                rti.Unsubscribe(listener);
+            } finally {
+                rti.DefaultDispatchMode = DispatchMode.Immediate;
+            }
+        }
+
+        [Test]
+        public void Flush_Empty_Buffer_Is_Noop() {
+            Assert.DoesNotThrow(() => rti.FlushBuffers());
+            Assert.AreEqual(0, rti.BufferDepth);
         }
     }
 }

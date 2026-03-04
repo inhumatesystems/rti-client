@@ -535,3 +535,75 @@ TEST_CASE("publish_before_connect")
     } catch (const std::exception &e) {
     }
 }
+
+TEST_CASE("buffered_dispatch_not_delivered_until_flush")
+{
+    bool received = false;
+    auto listener = rti.Subscribe("buffered-test",
+        [&](const std::string &channel, const std::string &message) { received = true; },
+        true, DispatchMode::BUFFERED);
+    POLL(100);
+    rti.Publish("buffered-test", "hello");
+    POLL(100);
+    REQUIRE(!received);
+    REQUIRE(rti.BufferDepth() > 0);
+    rti.FlushBuffers();
+    REQUIRE(received);
+    REQUIRE(rti.BufferDepth() == 0);
+    rti.Unsubscribe(listener);
+}
+
+TEST_CASE("default_dispatch_is_still_immediate")
+{
+    bool received = false;
+    auto listener = rti.Subscribe("immediate-test",
+        [&](const std::string &channel, const std::string &message) { received = true; });
+    POLL(100);
+    rti.Publish("immediate-test", "hello");
+    POLL_CONDITION(500, !received);
+    REQUIRE(received);
+    rti.Unsubscribe(listener);
+}
+
+TEST_CASE("mixed_modes_on_same_channel")
+{
+    bool immediateReceived = false;
+    bool bufferedReceived = false;
+    auto l1 = rti.Subscribe("mixed-test",
+        [&](const std::string &channel, const std::string &message) { immediateReceived = true; },
+        true, DispatchMode::IMMEDIATE);
+    auto l2 = rti.Subscribe("mixed-test",
+        [&](const std::string &channel, const std::string &message) { bufferedReceived = true; },
+        true, DispatchMode::BUFFERED);
+    POLL(100);
+    rti.Publish("mixed-test", "hello");
+    POLL_CONDITION(500, !immediateReceived);
+    REQUIRE(immediateReceived);
+    REQUIRE(!bufferedReceived);
+    rti.FlushBuffers();
+    REQUIRE(bufferedReceived);
+    rti.Unsubscribe(l1);
+    rti.Unsubscribe(l2);
+}
+
+TEST_CASE("default_dispatch_mode_changed_to_buffered")
+{
+    rti.defaultDispatchMode = DispatchMode::BUFFERED;
+    bool received = false;
+    auto listener = rti.Subscribe("default-buffered-test",
+        [&](const std::string &channel, const std::string &message) { received = true; });
+    POLL(100);
+    rti.Publish("default-buffered-test", "hello");
+    POLL(100);
+    REQUIRE(!received);
+    rti.FlushBuffers();
+    REQUIRE(received);
+    rti.defaultDispatchMode = DispatchMode::IMMEDIATE;
+    rti.Unsubscribe(listener);
+}
+
+TEST_CASE("flush_empty_buffer_is_noop")
+{
+    REQUIRE_NOTHROW(rti.FlushBuffers());
+    REQUIRE(rti.BufferDepth() == 0);
+}

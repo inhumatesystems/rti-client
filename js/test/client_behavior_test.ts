@@ -371,3 +371,55 @@ test("broker rpc error", async () => {
         expect(error).toBe("error test")
     }
 })
+
+test("buffered dispatch not delivered until flush", async () => {
+    let received = false
+    rti.subscribeText("buffered-test", () => { received = true }, true, RTI.DispatchMode.BUFFERED)
+    rti.publishText("buffered-test", "hello")
+    await sleep(100)
+    expect(received).toBeFalsy()
+    expect(rti.bufferDepth).toBeGreaterThan(0)
+    rti.flushBuffers()
+    expect(received).toBeTruthy()
+    expect(rti.bufferDepth).toBe(0)
+})
+
+test("default dispatch is still immediate", async () => {
+    let received = false
+    rti.subscribeText("immediate-test", () => { received = true })
+    rti.publishText("immediate-test", "hello")
+    let count = 0
+    while (!received && count++ < 50) await sleep(10)
+    expect(received).toBeTruthy()
+})
+
+test("mixed modes on same channel", async () => {
+    let immediateReceived = false
+    let bufferedReceived = false
+    rti.subscribeText("mixed-test", () => { immediateReceived = true }, true, RTI.DispatchMode.IMMEDIATE)
+    rti.subscribeText("mixed-test", () => { bufferedReceived = true }, true, RTI.DispatchMode.BUFFERED)
+    rti.publishText("mixed-test", "hello")
+    let count = 0
+    while (!immediateReceived && count++ < 50) await sleep(10)
+    expect(immediateReceived).toBeTruthy()
+    expect(bufferedReceived).toBeFalsy()
+    rti.flushBuffers()
+    expect(bufferedReceived).toBeTruthy()
+})
+
+test("default dispatch mode changed to buffered", async () => {
+    rti.defaultDispatchMode = RTI.DispatchMode.BUFFERED
+    let received = false
+    rti.subscribeText("default-buffered-test", () => { received = true })
+    rti.publishText("default-buffered-test", "hello")
+    await sleep(100)
+    expect(received).toBeFalsy()
+    rti.flushBuffers()
+    expect(received).toBeTruthy()
+    rti.defaultDispatchMode = RTI.DispatchMode.IMMEDIATE
+})
+
+test("flush empty buffer is a no-op", async () => {
+    expect(() => rti.flushBuffers()).not.toThrow()
+    expect(rti.bufferDepth).toBe(0)
+})

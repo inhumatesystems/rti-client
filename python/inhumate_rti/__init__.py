@@ -4,9 +4,9 @@ from . import proto
 from . import constants
 from . import channel
 from . import capability
-from .rticlient import RTIClient
+from .rticlient import RTIClient, DispatchMode
 Client = RTIClient
-from .rtiruntimecontrol import RTIRuntimeControl
+from .rtiruntimecontrol import RTIRuntimeControl, StepGrant
 RuntimeControl = RTIRuntimeControl
 from .rticommand import RTICommand
 Command = RTICommand

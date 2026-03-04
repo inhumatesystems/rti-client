@@ -1,4 +1,4 @@
-namespace Inhumate.RTI {
+﻿namespace Inhumate.RTI {
     public static class RTIConstants {
         public const string Version = "0.0.1-dev-version";
         internal const string DefaultUrl = "ws://127.0.0.1:8000/";
@@ -7,6 +7,7 @@ namespace Inhumate.RTI {
     {
         public const string InternalPrefix = "rti/";
         public const string Control = InternalPrefix + "control";
+        public const string FastTimeControl = InternalPrefix + "fasttimecontrol";
         public const string Channels = InternalPrefix + "channels";
         public const string Clients = InternalPrefix + "clients";
         public const string EntityOperation = InternalPrefix + "entities";
@@ -42,5 +43,7 @@ namespace Inhumate.RTI {
         public const string Log = "log";
         public const string Playback = "playback";
         public const string Launch = "launch";
+        public const string FastTimeController = "fasttimecontroller";
+        public const string FastTimeWorker = "fasttimeworker";
     }
 }

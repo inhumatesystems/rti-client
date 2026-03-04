@@ -539,3 +539,58 @@ class ClientBehaviorTest(unittest.TestCase):
         self.assertTrue(self.received)
         for s in sub:
             self.rti.unsubscribe(s)
+
+    def test_buffered_dispatch_not_delivered_until_flush(self):
+        received = False
+        def on_message(msg): nonlocal received; received = True
+        self.rti.subscribe_text("buffered-test", on_message, dispatch=RTI.DispatchMode.BUFFERED)
+        self.rti.publish_text("buffered-test", "hello")
+        time.sleep(0.1)
+        self.assertFalse(received)
+        self.assertGreater(self.rti.buffer_depth, 0)
+        self.rti.flush_buffers()
+        self.assertTrue(received)
+        self.assertEqual(0, self.rti.buffer_depth)
+
+    def test_default_dispatch_is_still_immediate(self):
+        received = False
+        def on_message(msg): nonlocal received; received = True
+        self.rti.subscribe_text("immediate-test", on_message)
+        self.rti.publish_text("immediate-test", "hello")
+        count = 0
+        while count < 100 and not received: count += 1; time.sleep(0.01)
+        self.assertTrue(received)
+
+    def test_mixed_modes_on_same_channel(self):
+        immediate_received = False
+        buffered_received = False
+        def on_immediate(msg): nonlocal immediate_received; immediate_received = True
+        def on_buffered(msg): nonlocal buffered_received; buffered_received = True
+        self.rti.subscribe_text("mixed-test", on_immediate, dispatch=RTI.DispatchMode.IMMEDIATE)
+        self.rti.subscribe_text("mixed-test", on_buffered, dispatch=RTI.DispatchMode.BUFFERED)
+        self.rti.publish_text("mixed-test", "hello")
+        count = 0
+        while count < 100 and not immediate_received: count += 1; time.sleep(0.01)
+        self.assertTrue(immediate_received)
+        self.assertFalse(buffered_received)
+        self.rti.flush_buffers()
+        self.assertTrue(buffered_received)
+
+    def test_default_dispatch_mode_changed_to_buffered(self):
+        self.rti.default_dispatch_mode = RTI.DispatchMode.BUFFERED
+        received = False
+        def on_message(msg): nonlocal received; received = True
+        self.rti.subscribe_text("default-buffered-test", on_message)
+        self.rti.publish_text("default-buffered-test", "hello")
+        time.sleep(0.1)
+        self.assertFalse(received)
+        self.rti.flush_buffers()
+        self.assertTrue(received)
+        self.rti.default_dispatch_mode = RTI.DispatchMode.IMMEDIATE
+
+    def test_flush_empty_buffer_is_noop(self):
+        try:
+            self.rti.flush_buffers()
+        except Exception as e:
+            self.fail(f"flush_buffers raised an exception: {e}")
+        self.assertEqual(0, self.rti.buffer_depth)

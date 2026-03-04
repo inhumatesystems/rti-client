@@ -1,4 +1,4 @@
-export { RTIClient as Client } from "./rticlient.js"
+export { RTIClient as Client, DispatchMode } from "./rticlient.js"
 export type { RTIOptions as Options } from "./rticlient.js"
 
 import * as proto from "./proto.js"

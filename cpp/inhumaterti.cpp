@@ -159,9 +159,9 @@ RTIClient::RTIClient(const std::string &inApplication,
     connectCalled = false;
     firstConnected = false;
 
-    Subscribe<Clients>(CLIENTS_CHANNEL, bind(&RTIClient::OnClients, this, ::_1, ::_2));
-    Subscribe<Channels>(CHANNELS_CHANNEL, bind(&RTIClient::OnChannels, this, ::_1, ::_2));
-    Subscribe<Measures>(MEASURES_CHANNEL, bind(&RTIClient::OnMeasures, this, ::_1, ::_2));
+    Subscribe<Clients>(CLIENTS_CHANNEL, bind(&RTIClient::OnClients, this, ::_1, ::_2), false, DispatchMode::IMMEDIATE);
+    Subscribe<Channels>(CHANNELS_CHANNEL, bind(&RTIClient::OnChannels, this, ::_1, ::_2), false, DispatchMode::IMMEDIATE);
+    Subscribe<Measures>(MEASURES_CHANNEL, bind(&RTIClient::OnMeasures, this, ::_1, ::_2), false, DispatchMode::IMMEDIATE);
 
     if (autoConnect) Connect();
 }
@@ -313,17 +313,28 @@ void RTIClient::Publish(const std::string &channelName, const google::protobuf::
     }
 }
 
-messagecallback_p RTIClient::Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel)
+messagecallback_p RTIClient::Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel, const DispatchMode dispatchMode)
 {
     if (connected()) Subscribe(channelName);
     messagecallback_p ptr(new messagecallback_t(std::move(callback)));
-    subscriptions[channelName].push_back(ptr);
+    subscriptions[channelName].emplace_back(ptr, dispatchMode);
     if (registerChannel) RegisterChannelUsage(channelName, false);
     return ptr;
 }
 
 void RTIClient::Unsubscribe(const std::string &channelName)
 {
+    // Remove buffered messages for callbacks being unsubscribed
+    if (subscriptions.find(channelName) != subscriptions.end()) {
+        auto &entries = subscriptions[channelName];
+        messageBuffer.erase(std::remove_if(messageBuffer.begin(), messageBuffer.end(),
+            [&entries](const BufferedMessage &m) {
+                for (auto &e : entries)
+                    if (e.callback == m.callback) return true;
+                return false;
+            }),
+            messageBuffer.end());
+    }
     subscriptions[channelName].clear();
     auto use = find_used_channel(channelName);
     if (use != usedChannels.end()) usedChannels.erase(use);
@@ -340,18 +351,44 @@ void RTIClient::Unsubscribe(messagecallback_p callback)
     if (!callback) return;
     for (subscriptionmap_t::iterator mapit = subscriptions.begin(); mapit != subscriptions.end(); mapit++) {
         auto &channel = mapit->first;
-        auto &callbacks = mapit->second;
-        auto callit = std::find(callbacks.begin(), callbacks.end(), callback);
-        if (callit != callbacks.end()) {
-            if (callbacks.size() <= 1) {
+        auto &entries = mapit->second;
+        auto callit = std::find_if(entries.begin(), entries.end(), [&callback](const SubscriptionEntry &e) { return e.callback == callback; });
+        if (callit != entries.end()) {
+            if (entries.size() <= 1) {
                 Unsubscribe(channel);
             } else {
-                callbacks.erase(callit);
+                entries.erase(callit);
             }
+            // Also remove buffered messages for this callback
+            messageBuffer.erase(std::remove_if(messageBuffer.begin(), messageBuffer.end(),
+                [&callback](const BufferedMessage &m) { return m.callback == callback; }),
+                messageBuffer.end());
             callback.reset();
             break;
         }
     }
+}
+
+void RTIClient::FlushBuffers()
+{
+    auto buf = std::move(messageBuffer);
+    messageBuffer.clear();
+    for (auto &msg : buf) {
+        try {
+            if (msg.callback) (*msg.callback)(msg.channel, msg.data);
+        } catch (std::exception &e) {
+            for (auto errorcb : errorcallbacks)
+                if (errorcb) (*errorcb)(msg.channel, e.what());
+        } catch (...) {
+            for (auto errorcb : errorcallbacks)
+                if (errorcb) (*errorcb)(msg.channel, "caught something");
+        }
+    }
+}
+
+std::size_t RTIClient::BufferDepth() const
+{
+    return messageBuffer.size();
 }
 
 std::size_t RTIClient::Poll()
@@ -715,16 +752,22 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
                 channel = channel.substr(_federation.length() + 1);
             auto data = json_in["data"]["data"].get<std::string>();
             if (subscriptions.find(channel) != subscriptions.end()) {
-                auto &callbacks = subscriptions[channel];
-                for (auto callback : callbacks) {
-                    try {
-                        if (callback) (*callback)(channel, data);
-                    } catch (std::exception &e) {
-                        for (auto errorcb : errorcallbacks)
-                            if (errorcb) (*errorcb)(channel, e.what());
-                    } catch (...) {
-                        for (auto errorcb : errorcallbacks)
-                            if (errorcb) (*errorcb)(channel, "caught something");
+                auto &entries = subscriptions[channel];
+                for (auto &entry : entries) {
+                    DispatchMode mode = entry.dispatchMode == DispatchMode::DEFAULT
+                        ? defaultDispatchMode : entry.dispatchMode;
+                    if (mode == DispatchMode::BUFFERED) {
+                        messageBuffer.push_back({entry.callback, channel, data});
+                    } else {
+                        try {
+                            if (entry.callback) (*entry.callback)(channel, data);
+                        } catch (std::exception &e) {
+                            for (auto errorcb : errorcallbacks)
+                                if (errorcb) (*errorcb)(channel, e.what());
+                        } catch (...) {
+                            for (auto errorcb : errorcallbacks)
+                                if (errorcb) (*errorcb)(channel, "caught something");
+                        }
                     }
                 }
             }

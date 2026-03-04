@@ -72,6 +72,7 @@ typedef std::shared_ptr<void> message_ptr_t;
 #include "RuntimeControl.pb.h"
 #include "RuntimeState.pb.h"
 #include "Scenarios.pb.h"
+#include "FastTimeControl.pb.h"
 
 namespace inhumate
 {
@@ -81,6 +82,7 @@ namespace rti
 constexpr auto RTI_CLIENT_VERSION = "0.0.1-dev-version";
 constexpr auto RTI_DEFAULT_URL = "ws://127.0.0.1:8000/";
 constexpr auto CONTROL_CHANNEL = "rti/control";
+constexpr auto FAST_TIME_CONTROL_CHANNEL = "rti/fasttimecontrol";
 constexpr auto CHANNELS_CHANNEL = "rti/channels";
 constexpr auto CLIENTS_CHANNEL = "rti/clients";
 constexpr auto ENTITY_OPERATION_CHANNEL = "rti/entities";
@@ -115,6 +117,10 @@ constexpr auto TIME_SCALE_CAPABILITY = "timescale";
 constexpr auto LOG_CAPABILITY = "log";
 constexpr auto PLAYBACK_CAPABILITY = "playback";
 constexpr auto LAUNCH_CAPABILITY = "launch";
+constexpr auto FAST_TIME_CONTROLLER_CAPABILITY = "fasttimecontroller";
+constexpr auto FAST_TIME_WORKER_CAPABILITY = "fasttimeworker";
+
+enum class DispatchMode { DEFAULT = 0, IMMEDIATE = 1, BUFFERED = 2 };
 
 typedef std::function<void()> connectcallback_t;
 typedef std::shared_ptr<connectcallback_t> connectcallback_p;
@@ -132,7 +138,14 @@ typedef std::function<void(const std::string &)> stringcallback_t;
 typedef std::shared_ptr<stringcallback_t> stringcallback_p;
 typedef std::unordered_map<int, stringcallback_p> intstringcallbackmap_t;
 
-typedef std::unordered_map<std::string, std::vector<messagecallback_p>> subscriptionmap_t;
+struct SubscriptionEntry {
+    messagecallback_p callback;
+    DispatchMode dispatchMode = DispatchMode::DEFAULT;
+    SubscriptionEntry(messagecallback_p cb, DispatchMode dm = DispatchMode::DEFAULT)
+        : callback(std::move(cb)), dispatchMode(dm) {}
+};
+
+typedef std::unordered_map<std::string, std::vector<SubscriptionEntry>> subscriptionmap_t;
 
 typedef std::chrono::time_point<std::chrono::steady_clock> timestamp_t;
 
@@ -175,35 +188,43 @@ class INHUMATE_RTI_EXPORT RTIClient
                  const bool registerChannel = true);
 
     messagecallback_p
-    Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel = true);
+    Subscribe(const std::string &channelName, messagecallback_t callback, const bool registerChannel = true, const DispatchMode dispatchMode = DispatchMode::DEFAULT);
     template <typename Message>
     messagecallback_p Subscribe(const std::string &channelName,
                                 void (*callback)(const std::string &, const Message &),
-                                const bool registerChannel = true)
+                                const bool registerChannel = true,
+                                const DispatchMode dispatchMode = DispatchMode::DEFAULT)
     {
         return Subscribe(
         channelName,
         [callback](const std::string &channelName, const std::string &content) {
             callback(channelName, Parse<Message>(content));
         },
-        registerChannel);
+        registerChannel,
+        dispatchMode);
     }
 
     template <typename Message>
     messagecallback_p Subscribe(const std::string &channelName,
                                 std::function<void(const std::string &, const Message &)> callback,
-                                const bool registerChannel = true)
+                                const bool registerChannel = true,
+                                const DispatchMode dispatchMode = DispatchMode::DEFAULT)
     {
         return Subscribe(
         channelName,
         [callback](const std::string &channelName, const std::string &content) {
             callback(channelName, Parse<Message>(content));
         },
-        registerChannel);
+        registerChannel,
+        dispatchMode);
     }
 
     void Unsubscribe(const std::string &channelName);
     void Unsubscribe(messagecallback_p callback);
+
+    DispatchMode defaultDispatchMode = DispatchMode::IMMEDIATE;
+    void FlushBuffers();
+    std::size_t BufferDepth() const;
 
     std::size_t Poll();
     void PollForever();
@@ -412,6 +433,9 @@ class INHUMATE_RTI_EXPORT RTIClient
                 const stringcallback_t errorCallback);
 
     private:
+    struct BufferedMessage { messagecallback_p callback; std::string channel; std::string data; };
+    std::vector<BufferedMessage> messageBuffer;
+
     std::unique_ptr<client> wsclient;
     std::unique_ptr<client_tls> wsclient_tls;
 

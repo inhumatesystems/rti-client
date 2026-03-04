@@ -1,5 +1,6 @@
 internal_prefix = "rti/"
 control = internal_prefix + "control"
+fast_time_control = internal_prefix + "fasttimecontrol"
 channels = internal_prefix + "channels"
 clients = internal_prefix + "clients"
 scenarios = internal_prefix + "scenarios"

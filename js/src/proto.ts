@@ -93,3 +93,4 @@ export { Injection, Injection_State, injection_StateFromJSON, injection_StateToJ
 export { Commands, Command, ExecuteCommand, CommandResponse } from "./generated/Commands.js"
 export { Event } from "./generated/Event.js"
 export { EntityEvent } from "./generated/EntityEvent.js"
+export { FastTimeControl, FastTimeControl_Configure, FastTimeControl_Acknowledge, FastTimeControl_StepGrant, FastTimeControl_StepComplete } from "./generated/FastTimeControl.js"
