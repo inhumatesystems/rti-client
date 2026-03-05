@@ -41,7 +41,9 @@ class MainLoopDispatcher:
             try:
                 if sock.fileno() >= 0:
                     read_sockets, _, _ = select.select([sock], [], [], self._timeout())
-                    if read_sockets: read_callback()
+                    if read_sockets:
+                        read_callback()
+                        continue  # drain all buffered messages before calling main_loop
                 else:
                     break
                 self.idle = time.time() - self.called
