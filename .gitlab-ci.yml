@@ -271,13 +271,16 @@ test dotnet client:
     - build dotnet client
   script:
     - apt-get update -qq && apt-get install -qq curl unzip
-    # Install node and broker
-    - curl -sL https://deb.nodesource.com/setup_20.x | bash -
-    - apt-get install -y nodejs
-    - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
-    # Start broker
-    - node broker/dist/broker.js &
-    - sleep 20
+    # Shared gitlab runners are so god-awful slow... run the tests with the inhumatelabs broker instead
+    - export RTI_URL=rti.inhumatelabs.com
+    - export RTI_FEDERATION=dotnet-integration-test
+    # # Install node and broker
+    # - curl -sL https://deb.nodesource.com/setup_20.x | bash -
+    # - apt-get install -y nodejs
+    # - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
+    # # Start broker
+    # - node broker/dist/broker.js &
+    # - sleep 20
     # Run tests
     - cd dotnet/test
     - dotnet test -v n --test-adapter-path:. --logger:"junit;LogFilePath=./test-result.xml;MethodFormat=Class;FailureBodyFormat=Verbose"
