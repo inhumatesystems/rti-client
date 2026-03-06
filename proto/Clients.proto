@@ -44,6 +44,7 @@ message Client {
     string integration_version = 16;
 
     repeated string capabilities = 17;
+    bool fast_time_mode = 18;
 }
 
 message ParticipantRegistration {

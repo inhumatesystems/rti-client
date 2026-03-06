@@ -480,6 +480,14 @@ void RTIClient::set_state(const RuntimeState newState)
     }
 }
 
+void RTIClient::set_fast_time_mode(const bool newFastTimeMode)
+{
+    if (newFastTimeMode != _fastTimeMode) {
+        _fastTimeMode = newFastTimeMode;
+        if (connected() && !_incognito) PublishClient();
+    }
+}
+
 void RTIClient::PublishClient()
 {
     Clients message;
@@ -499,6 +507,7 @@ void RTIClient::PublishClient()
     client->set_full_name(_fullName);
     for (auto capability : _capabilities)
         client->add_capabilities(capability);
+    client->set_fast_time_mode(_fastTimeMode);
     message.set_allocated_client(client);
     Publish(CLIENTS_CHANNEL, message);
 }

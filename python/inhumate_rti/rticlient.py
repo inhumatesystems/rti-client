@@ -36,6 +36,17 @@ class RTIClient(Emitter):
                 self._publish_client()
 
     @property
+    def fast_time_mode(self):
+        return self._fast_time_mode
+
+    @fast_time_mode.setter
+    def fast_time_mode(self, fast_time_mode):
+        if fast_time_mode != self._fast_time_mode:
+            self._fast_time_mode = fast_time_mode
+            if self.connected and not self.incognito:
+                self._publish_client()
+
+    @property
     def own_channel_prefix(self):
         return f"@{self.client_id}:"
 
@@ -71,6 +82,7 @@ class RTIClient(Emitter):
         self.connected = False
         self.broker_version = None
         self._connection_error = None
+        self._fast_time_mode = False
 
         self.create_rti_thread = main_loop is None
 
@@ -463,6 +475,7 @@ class RTIClient(Emitter):
             message.client.full_name = self.full_name
         for capability in self.capabilities:
             message.client.capabilities.append(capability)
+        message.client.fast_time_mode = self._fast_time_mode
         self.publish(Channel.clients, message)
 
     def _publish_measures(self):

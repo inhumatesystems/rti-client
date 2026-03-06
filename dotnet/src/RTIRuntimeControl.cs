@@ -205,6 +205,7 @@ namespace Inhumate.RTI {
                             RunId = message.Configure.RunId,
                         }
                     });
+                    rti.FastTimeMode = true;
                     break;
                 case FastTimeControl.ControlOneofCase.StepGrant:
                     if (message.StepGrant.RunId == fastTimeRunId) {
@@ -236,6 +237,7 @@ namespace Inhumate.RTI {
                 while (grantQueue.TryTake(out _)) {}
                 rti.DefaultDispatchMode = DispatchMode.Immediate;
                 rti.FlushBuffers();
+                rti.FastTimeMode = false;
             }
         }
 

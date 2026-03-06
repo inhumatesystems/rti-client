@@ -243,6 +243,13 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         return _state;
     }
+
+    void set_fast_time_mode(const bool newFastTimeMode);
+    
+    const bool fast_time_mode()
+    {
+        return _fastTimeMode;
+    }
     const std::string &url()
     {
         return _url;
@@ -485,6 +492,7 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     ConnectionPhase connectionPhase = ConnectionPhase::DISCONNECTED;
     proto::RuntimeState _state = proto::RuntimeState::UNKNOWN;
+    bool _fastTimeMode = false;
     bool connectCalled;
     bool shouldBeConnected;
     bool firstConnected;

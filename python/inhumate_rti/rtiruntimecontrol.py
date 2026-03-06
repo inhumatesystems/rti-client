@@ -227,6 +227,7 @@ class RTIRuntimeControl:
             ack.acknowledge.client_id = self.rti.client_id
             ack.acknowledge.run_id = message.configure.run_id
             self.rti.publish(Channel.fast_time_control, ack)
+            self.rti.fast_time_mode = True
         elif message.HasField("step_grant") and message.step_grant.run_id == self._fast_time_run_id:
             grant = StepGrant(message.step_grant, self._fast_time_run_id)
             self.rti.flush_buffers()  # dispatch messages buffered since last step
@@ -253,6 +254,7 @@ class RTIRuntimeControl:
             self._grant_queue.put(_FAST_TIME_STOP)
             self.rti.default_dispatch_mode = DispatchMode.IMMEDIATE
             self.rti.flush_buffers()
+            self.rti.fast_time_mode = False
 
     def _receive(self, message: Proto.RuntimeControl):
         if message.HasField("reset"):

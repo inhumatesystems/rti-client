@@ -81,6 +81,17 @@ namespace Inhumate.RTI {
             }
         }
 
+        private bool fastTimeMode;
+        public bool FastTimeMode {
+            get { return fastTimeMode; }
+            set {
+                if (value != fastTimeMode) {
+                    fastTimeMode = value;
+                    if (IsConnected && !Incognito) PublishClient();
+                }
+            }
+        }
+
         private ConcurrentDictionary<string, List<(UntypedListener Listener, DispatchMode? Mode)>> subscriptions = new ConcurrentDictionary<string, List<(UntypedListener, DispatchMode?)>>();
         private ConcurrentDictionary<string, List<UntypedListener>> listeners = new ConcurrentDictionary<string, List<UntypedListener>>();
         private ConcurrentDictionary<int, RPCListener> rpcListeners = new ConcurrentDictionary<int, RPCListener>();
@@ -588,7 +599,8 @@ namespace Inhumate.RTI {
                 Participant = Participant ?? "",
                 Role = Role ?? "",
                 FullName = FullName ?? "",
-                Url = ClientUrl ?? ""
+                Url = ClientUrl ?? "",
+                FastTimeMode = FastTimeMode
             };
             if (Capabilities != null) myClient.Capabilities.AddRange(Capabilities);
             Publish(RTIChannel.Clients, new Clients { Client = myClient });

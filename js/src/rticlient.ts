@@ -150,6 +150,19 @@ export class RTIClient extends EventEmitter {
         }
     }
 
+    private _fastTimeMode: boolean = false
+    get fastTimeMode(): boolean {
+        return this._fastTimeMode
+    }
+    set fastTimeMode(value: boolean) {
+        if (value != this._fastTimeMode) {
+            this._fastTimeMode = value
+            this.emit("fastTimeMode", this._fastTimeMode)
+            this.emit("client", this.myClient)
+            this.publishClient()
+        }
+    }
+
     private _usedChannels: { [key: string]: ChannelUse } = {}
     private _knownChannels: { [key: string]: Channel } = {}
     private _knownClients: { [key: string]: Client } = {}
@@ -499,6 +512,7 @@ export class RTIClient extends EventEmitter {
                 !this.engineVersion && typeof process !== "undefined" && process.version ? `Node ${process.version}` : this.engineVersion,
             userAgent: typeof navigator !== "undefined" && navigator.userAgent ? navigator.userAgent : "",
             capabilities: this.capabilities,
+            fastTimeMode: this.fastTimeMode,
         })
     }
 
