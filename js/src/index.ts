@@ -1,5 +1,6 @@
 export { RTIClient as Client, DispatchMode } from "./rticlient.js"
 export type { RTIOptions as Options } from "./rticlient.js"
+export { RTIRuntimeControl as RuntimeControl, StepGrant } from "./rtiruntimecontrol.js"
 
 import * as proto from "./proto.js"
 export { proto }

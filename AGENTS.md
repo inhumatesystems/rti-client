@@ -132,7 +132,35 @@ Internal RTI channel subscriptions (`rti/clients`, `rti/channels`, `rti/measures
 
 ## Runtime Control Helper
 
-`RTIRuntimeControl` / `RTIRuntimeControl` simplifies responding to runtime control messages (start, stop, reset, load scenario, time scale) and adds fast-time worker support. Implemented for **Python** and **.NET**; JS/C++ do not have this helper yet.
+`RTIRuntimeControl` simplifies responding to runtime control messages (start, stop, reset, load scenario, time scale) and adds fast-time worker support. Implemented for **TypeScript/JavaScript**, **Python**, and **.NET**; C++ does not have this helper yet.
+
+### TypeScript/JavaScript (`js/src/rtiruntimecontrol.ts`)
+
+```typescript
+const runtime = new RTI.RuntimeControl(rti)                          // real-time only
+const runtime = new RTI.RuntimeControl(rti, true, true)              // fast-time (getStepGrant pattern)
+const runtime = new RTI.RuntimeControl(rti, true, false, stepFn)     // fast-time (callback pattern)
+```
+
+Exported as `RTI.RuntimeControl` (class) from `index.ts`; `RTI.StepGrant` for the grant type.
+
+Override methods by assigning or subclassing: `onReset`, `onLoadScenario(msg, playback) -> bool`, `onStart`, `onPlay`, `onPause`, `onEnd`, `onStop`, `onEndStop`, `onResetEndStop`, `onTimeScale(ts)`, `onTimeSync(msg)`, `onStepGrant(grant)`
+
+Fast-time: `runtime.isFastTime`, `runtime.getStepGrant(timeoutMs=1000)` (returns `Promise<StepGrant | null>`), `runtime.completeStep(grant, failed?, reason?)`
+
+**Important**: In Node.js the event loop processes incoming socket messages while `await`ing `getStepGrant()`, so a blocking timeout is safe and natural:
+```typescript
+while (true) {
+    const grant = await runtime.getStepGrant()  // default 1000ms timeout
+    if (grant === null) continue                 // timeout/stopped — loop again
+    // do simulation work
+    runtime.completeStep(grant)
+}
+```
+
+On stop/end/reset, `resetFastTime()` resolves all pending `getStepGrant()` promises with `null` immediately.
+
+See `js/test/runtimecontrol_example.ts` and `js/test/fasttime_example.ts` for working examples.
 
 ### Python (`python/inhumate_rti/rtiruntimecontrol.py`)
 
@@ -168,7 +196,7 @@ Fast-time: `runtime.IsFastTime`, `runtime.GetStepGrant(timeout=30)`, `runtime.Co
 
 See `../cli/Inhumate.CLI/MockSim/MockSim.cs` for an example using the subclassing pattern with `stepFn`.
 
-### Shared behaviour (both languages)
+### Shared behaviour (all three languages)
 
 - Constructor auto-adds `runtime`, `scenario`, `timescale` capabilities (and `fasttimeworker` when fast-time is enabled)
 - Runtime control channel subscriptions (`rti/control`) are always `IMMEDIATE` so stop/end/reset messages are processed even while in `BUFFERED` dispatch mode during a fast-time step

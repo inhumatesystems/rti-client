@@ -146,7 +146,7 @@ export class RTIClient extends EventEmitter {
             this._state = value
             this.emit("state", this._state)
             this.emit("client", this.myClient)
-            this.publishClient()
+            if (this.connected && !this.incognito) this.publishClient()
         }
     }
 
@@ -159,7 +159,7 @@ export class RTIClient extends EventEmitter {
             this._fastTimeMode = value
             this.emit("fastTimeMode", this._fastTimeMode)
             this.emit("client", this.myClient)
-            this.publishClient()
+            if (this.connected && !this.incognito) this.publishClient()
         }
     }
 
@@ -666,11 +666,12 @@ export class RTIClient extends EventEmitter {
 
     private doPublish(channelName: string, message: string) {
         if (!channelName) {
-            console.warn("Can't publish with empty channel name - message dropped")
+            console.warn("RTI can't publish with empty channel name - message dropped")
             return
         }
         if (!this.firstConnected) {
             console.warn("RTI can't publish before connected - message dropped")
+            console.log(new Error().stack)
             return
         }
         if (this.federation && !channelName.startsWith("@")) channelName = "//" + this.federation + "/" + channelName
