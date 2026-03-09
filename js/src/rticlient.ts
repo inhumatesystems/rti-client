@@ -671,7 +671,6 @@ export class RTIClient extends EventEmitter {
         }
         if (!this.firstConnected) {
             console.warn("RTI can't publish before connected - message dropped")
-            console.log(new Error().stack)
             return
         }
         if (this.federation && !channelName.startsWith("@")) channelName = "//" + this.federation + "/" + channelName
