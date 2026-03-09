@@ -24,7 +24,7 @@ def main_loop():
         # Fast-time mode: poll for the next step grant (timeout=0, non-blocking).
         #
         # IMPORTANT: with main_loop=, the socket read loop and main_loop share one
-        # thread via MainLoopDispatcher.  A blocking wait_for_step_grant(timeout>0)
+        # thread via MainLoopDispatcher.  A blocking get_step_grant(timeout>0)
         # would stall that thread, preventing select() from reading the incoming
         # StepGrant — which then sits in the OS buffer until the timeout fires.
         # Use timeout=0 so main_loop returns immediately when no grant is queued;
@@ -33,8 +33,8 @@ def main_loop():
         #
         # If you use the multi-threaded pattern instead (no main_loop= argument),
         # the socket is read on a background thread and a blocking timeout is fine:
-        #   grant = runtime.wait_for_step_grant(timeout=5)
-        grant = runtime.wait_for_step_grant(timeout=0)
+        #   grant = runtime.get_step_grant(timeout=5)
+        grant = runtime.get_step_grant()
         if grant is not None:
             sim_time = grant.start_time
             update(grant.time_step)

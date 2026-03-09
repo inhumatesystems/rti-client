@@ -83,18 +83,18 @@ namespace Inhumate.RTI {
         public virtual void OnTimeSync(RuntimeControl.Types.TimeSync timeSync) {}
 
         /// Called when a fast-time step grant is received. Override to add custom behavior.
-        /// Only called when using the WaitForStepGrant() pattern (no stepFn provided).
+        /// Only called when using the GetStepGrant() pattern (no stepFn provided).
         public virtual void OnStepGrant(StepGrant grant) {}
 
         /// Block until a fast-time step grant arrives. Returns a StepGrant or null on timeout/stop.
         /// For use in a polling loop. Call CompleteStep(grant) when simulation work is done.
         ///
-        /// IMPORTANT: In polling mode (rti.Polling = true), use timeout = 0 so that WaitForStepGrant
+        /// IMPORTANT: In polling mode (rti.Polling = true), use timeout = 0 so that GetStepGrant
         /// returns immediately when no grant is queued, allowing Poll() to read the incoming StepGrant
         /// from the socket. A blocking timeout would stall Poll() and delay grant delivery.
         /// In multi-threaded mode (the default), a blocking timeout is fine.
-        public StepGrant WaitForStepGrant(double timeout = 30) {
-            var timeoutMs = timeout <= 0 ? 0 : (int)(timeout * 1000);
+        public StepGrant GetStepGrant(int timeout = 1) {
+            var timeoutMs = timeout <= 0 ? 0 : timeout;
             try {
                 if (grantQueue.TryTake(out var grant, timeoutMs, resetCts.Token))
                     return grant;
@@ -231,7 +231,7 @@ namespace Inhumate.RTI {
             if (fastTimeRunId != null) {
                 fastTimeRunId = null;
                 fastTimeControllerClientId = null;
-                // Cancel any thread blocking in WaitForStepGrant() and drain the queue
+                // Cancel any thread blocking in GetStepGrant() and drain the queue
                 resetCts.Cancel();
                 resetCts = new CancellationTokenSource();
                 while (grantQueue.TryTake(out _)) {}

@@ -87,7 +87,7 @@ class RTIRuntimeControl:
 
     def on_step_grant(self, grant: StepGrant):
         """Called when a fast-time step grant is received. Override to add custom behavior.
-        Only called when using the wait_for_step_grant() pattern (no step_fn provided)."""
+        Only called when using the get_step_grant() pattern (no step_fn provided)."""
         pass
 
     @property
@@ -95,7 +95,7 @@ class RTIRuntimeControl:
         """True if currently in a fast-time run."""
         return self._fast_time_run_id is not None
 
-    def wait_for_step_grant(self, timeout: float = 30) -> StepGrant:
+    def get_step_grant(self, timeout: float = 0.01) -> StepGrant:
         """Block until a fast-time step grant arrives. Returns StepGrant or None on timeout/stop.
         For use in the main_loop pattern. Call complete_step(grant) when simulation work is done."""
         try:
@@ -245,7 +245,7 @@ class RTIRuntimeControl:
         if self._fast_time_run_id is not None:
             self._fast_time_run_id = None
             self._fast_time_controller_client_id = None
-            # Drain queue and wake up any thread blocking in wait_for_step_grant()
+            # Drain queue and wake up any thread blocking in get_step_grant()
             try:
                 while True:
                     self._grant_queue.get_nowait()

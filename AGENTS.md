@@ -138,15 +138,15 @@ Internal RTI channel subscriptions (`rti/clients`, `rti/channels`, `rti/measures
 
 ```python
 runtime = RTI.RuntimeControl(rti)                          # real-time only
-runtime = RTI.RuntimeControl(rti, fast_time=True)          # fast-time worker (wait_for_step_grant pattern)
+runtime = RTI.RuntimeControl(rti, fast_time=True)          # fast-time worker (get_step_grant pattern)
 runtime = RTI.RuntimeControl(rti, step_fn=my_step)         # fast-time worker (callback pattern)
 ```
 
 Override methods: `on_reset`, `on_load_scenario(msg, playback) -> bool`, `on_start`, `on_play`, `on_pause`, `on_end`, `on_stop`, `on_end_stop`, `on_reset_end_stop`, `on_time_scale(ts)`, `on_time_sync(msg)`, `on_step_grant(grant)`
 
-Fast-time properties/methods: `runtime.is_fast_time`, `runtime.wait_for_step_grant(timeout=30)`, `runtime.complete_step(grant, failed=False, reason="")`
+Fast-time properties/methods: `runtime.is_fast_time`, `runtime.get_step_grant(timeout=30)`, `runtime.complete_step(grant, failed=False, reason="")`
 
-**Important**: When using `main_loop=` (single-threaded `MainLoopDispatcher`), always call `wait_for_step_grant(timeout=0)` (non-blocking). A blocking timeout stalls the socket read loop, preventing the StepGrant from being received. Blocking timeouts are safe in multi-threaded mode (no `main_loop=`).
+**Important**: When using `main_loop=` (single-threaded `MainLoopDispatcher`), always call `get_step_grant(timeout=0)` (non-blocking). A blocking timeout stalls the socket read loop, preventing the StepGrant from being received. Blocking timeouts are safe in multi-threaded mode (no `main_loop=`).
 
 See `python/test/fasttime_example.py` for a working example of both patterns.
 
@@ -154,17 +154,17 @@ See `python/test/fasttime_example.py` for a working example of both patterns.
 
 ```csharp
 var runtime = new RTIRuntimeControl(rti);                                    // real-time only
-var runtime = new RTIRuntimeControl(rti, fastTime: true);                    // fast-time (WaitForStepGrant pattern)
+var runtime = new RTIRuntimeControl(rti, fastTime: true);                    // fast-time (GetStepGrant pattern)
 var runtime = new RTIRuntimeControl(rti, stepFn: grant => { ... });         // fast-time (callback pattern)
 ```
 
 Subclass and override virtual methods: `OnReset`, `OnLoadScenario(msg, playback) -> bool`, `OnStart`, `OnPlay`, `OnPause`, `OnEnd`, `OnStop`, `OnEndStop`, `OnResetEndStop`, `OnTimeScale(ts)`, `OnTimeSync(msg)`, `OnStepGrant(grant)`
 
-Fast-time: `runtime.IsFastTime`, `runtime.WaitForStepGrant(timeout=30)`, `runtime.CompleteStep(grant, failed, reason)`
+Fast-time: `runtime.IsFastTime`, `runtime.GetStepGrant(timeout=30)`, `runtime.CompleteStep(grant, failed, reason)`
 
-`WaitForStepGrant` uses `BlockingCollection` + `CancellationToken`; `ResetFastTime` (called on stop/end/reset) cancels the token to wake any blocked callers immediately.
+`GetStepGrant` uses `BlockingCollection` + `CancellationToken`; `ResetFastTime` (called on stop/end/reset) cancels the token to wake any blocked callers immediately.
 
-**Important**: In polling mode (`rti.Polling = true`), call `WaitForStepGrant(timeout: 0)` (non-blocking) for the same reason as the Python `main_loop=` case.
+**Important**: In polling mode (`rti.Polling = true`), call `GetStepGrant(timeout: 0)` (non-blocking) for the same reason as the Python `main_loop=` case.
 
 See `../cli/Inhumate.CLI/MockSim/MockSim.cs` for an example using the subclassing pattern with `stepFn`.
 
@@ -173,5 +173,5 @@ See `../cli/Inhumate.CLI/MockSim/MockSim.cs` for an example using the subclassin
 - Constructor auto-adds `runtime`, `scenario`, `timescale` capabilities (and `fasttimeworker` when fast-time is enabled)
 - Runtime control channel subscriptions (`rti/control`) are always `IMMEDIATE` so stop/end/reset messages are processed even while in `BUFFERED` dispatch mode during a fast-time step
 - On `Configure`: sends `Acknowledge`, switches client to `BUFFERED` dispatch mode
-- On `StepGrant`: calls `flush_buffers()` / `FlushBuffers()` to dispatch messages buffered since last step, then calls `stepFn` (auto-completing) or queues for `WaitForStepGrant`
+- On `StepGrant`: calls `flush_buffers()` / `FlushBuffers()` to dispatch messages buffered since last step, then calls `stepFn` (auto-completing) or queues for `GetStepGrant`
 - On stop/end/reset: calls `ResetFastTime` — drains grant queue, cancels waiters, restores `IMMEDIATE` dispatch mode

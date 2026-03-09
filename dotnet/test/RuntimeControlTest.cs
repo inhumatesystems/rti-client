@@ -306,7 +306,7 @@ namespace Inhumate.RTI {
         }
 
         [Test]
-        public void FastTime_WaitForStepGrant_ReturnsGrant() {
+        public void FastTime_GetStepGrant_ReturnsGrant() {
             var c = FreshClient("C# RC FT Wait Test");
             try {
                 var rt = new RTIRuntimeControl(c, fastTime: true);
@@ -314,7 +314,7 @@ namespace Inhumate.RTI {
                 ConfigureRun("run-wait", timeStep: 1.0);
                 Thread.Sleep(100);
                 SendGrant("run-wait", timeStep: 1.0);
-                var grant = rt.WaitForStepGrant(timeout: 2.0);
+                var grant = rt.GetStepGrant(timeout: 2.0);
                 Assert.IsNotNull(grant);
                 Assert.AreEqual(1.0, grant.TimeStep, 0.001);
                 Assert.AreEqual(0, grant.StepNumber);
@@ -341,19 +341,19 @@ namespace Inhumate.RTI {
         }
 
         [Test]
-        public void FastTime_WaitForStepGrant_ReturnsNull_OnStop() {
+        public void FastTime_GetStepGrant_ReturnsNull_OnStop() {
             var c = FreshClient("C# RC FT Null Test");
             try {
                 var rt = new RTIRuntimeControl(c, fastTime: true);
                 Thread.Sleep(100);
                 ConfigureRun("run-null");
                 Assert.IsTrue(WaitFor(() => rt.IsFastTime));
-                // Stop while waiting — WaitForStepGrant must unblock and return null
+                // Stop while waiting — GetStepGrant must unblock and return null
                 new Thread(() => {
                     Thread.Sleep(100);
                     controller.Publish(RTIChannel.Control, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
                 }) { IsBackground = true }.Start();
-                var grant = rt.WaitForStepGrant(timeout: 2.0);
+                var grant = rt.GetStepGrant(timeout: 2.0);
                 Assert.IsNull(grant);
             } finally {
                 c.Disconnect();

@@ -279,7 +279,7 @@ class RuntimeControlTest(unittest.TestCase):
             self.controller.unsubscribe(sub)
             rti.disconnect()
 
-    def test_fast_time_wait_for_step_grant(self):
+    def test_fast_time_get_step_grant(self):
         rti = self._fresh_client("python_rc_ft_wait_test")
         try:
             runtime = RTI.RuntimeControl(rti, fast_time=True)
@@ -287,7 +287,7 @@ class RuntimeControlTest(unittest.TestCase):
             self._configure_run("run-wait", time_step=1.0)
             time.sleep(0.1)
             self._send_grant("run-wait", time_step=1.0)
-            grant = runtime.wait_for_step_grant(timeout=2.0)
+            grant = runtime.get_step_grant(timeout=2.0)
             self.assertIsNotNone(grant)
             self.assertAlmostEqual(1.0, grant.time_step)
             self.assertEqual(0, grant.step_number)
@@ -311,14 +311,14 @@ class RuntimeControlTest(unittest.TestCase):
         finally:
             rti.disconnect()
 
-    def test_fast_time_wait_for_step_grant_returns_none_on_stop(self):
+    def test_fast_time_get_step_grant_returns_none_on_stop(self):
         rti = self._fresh_client("python_rc_ft_none_test")
         try:
             runtime = RTI.RuntimeControl(rti, fast_time=True)
             time.sleep(0.5)
             self._configure_run("run-none")
             wait_for(lambda: runtime.is_fast_time)
-            # Stop while waiting — WaitForStepGrant must unblock and return None
+            # Stop while waiting — GetStepGrant must unblock and return None
             def do_stop():
                 time.sleep(0.1)
                 msg = RTI.proto.RuntimeControl()
@@ -326,7 +326,7 @@ class RuntimeControlTest(unittest.TestCase):
                 self.controller.publish(RTI.channel.control, msg)
             import threading
             threading.Thread(target=do_stop, daemon=True).start()
-            grant = runtime.wait_for_step_grant(timeout=2.0)
+            grant = runtime.get_step_grant(timeout=2.0)
             self.assertIsNone(grant)
         finally:
             rti.disconnect()
