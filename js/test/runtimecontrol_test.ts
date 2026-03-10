@@ -232,7 +232,7 @@ test("subclass can override hooks", async () => {
 
 // --- Fast-time tests ---
 
-test("fast time configure switches to BUFFERED and sends acknowledge", async () => {
+test("fast time configure sends acknowledge and stays IMMEDIATE until first step", async () => {
     const rtiFt = new RTI.Client({ application: "typescript fasttime test" })
     rtiFt.on("error", () => {})
     const rtFt = new RTIRuntimeControl(rtiFt, true, true)
@@ -253,7 +253,60 @@ test("fast time configure switches to BUFFERED and sends acknowledge", async () 
     expect(ackReceived).toBe(true)
     expect(rtiFt.fastTimeMode).toBe(true)
     expect(rtFt.isFastTime).toBe(true)
+    // Dispatch mode should still be IMMEDIATE after configure — only switches on first step grant
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("first step grant switches dispatch mode to BUFFERED", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test 1b" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-1b"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        stepGrant: { runId, stepNumber: 1, startTime: 0.0, endTime: 0.1 }
+    })
+    const grant = await rtFt.getStepGrant(1000)
+    expect(grant).not.toBeNull()
     expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.BUFFERED)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("play during fast time resets fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test 1c" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-1c"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { play: {} })
+    count = 0
+    while (rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(false)
+    expect(rtiFt.fastTimeMode).toBe(false)
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
 
     rtiFt.kill()
     ;(rtiFt.socket as any)._destroy()
@@ -382,6 +435,63 @@ test("stepFn callback is called with grant", async () => {
     count = 0
     while (!stepCompleteReceived && count++ < 50) await sleep(10)
     expect(stepCompleteReceived).toBe(true)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("controller disconnect resets fast time when not running/paused", async () => {
+    const rtiCtrl = new RTI.Client({ application: "typescript fasttime ctrl test" })
+    rtiCtrl.on("error", () => {})
+    const rtiFt = new RTI.Client({ application: "typescript fasttime worker test" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while ((!rtiCtrl.isConnected || !rtiFt.isConnected) && count++ < 50) await sleep(100)
+
+    const runId = "test-run-ctrl-disc"
+    rtiCtrl.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configure: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    // Disconnect the controller while in non-running/paused state (INITIAL)
+    rtiCtrl.kill()
+    ;(rtiCtrl.socket as any)._destroy()
+    count = 0
+    while (rtFt.isFastTime && count++ < 100) await sleep(10)
+    expect(rtFt.isFastTime).toBe(false)
+    expect(rtiFt.fastTimeMode).toBe(false)
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("controller disconnect does not reset fast time when running", async () => {
+    const rtiCtrl = new RTI.Client({ application: "typescript fasttime ctrl running test" })
+    rtiCtrl.on("error", () => {})
+    const rtiFt = new RTI.Client({ application: "typescript fasttime worker running test" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while ((!rtiCtrl.isConnected || !rtiFt.isConnected) && count++ < 50) await sleep(100)
+
+    const runId = "test-run-ctrl-running"
+    rtiCtrl.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configure: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    rtiFt.state = RTI.proto.RuntimeState.RUNNING
+
+    rtiCtrl.kill()
+    ;(rtiCtrl.socket as any)._destroy()
+    await sleep(200)
+    // Fast time should still be active when disconnect happens during RUNNING
+    expect(rtFt.isFastTime).toBe(true)
 
     rtiFt.kill()
     ;(rtiFt.socket as any)._destroy()

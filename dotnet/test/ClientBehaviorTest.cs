@@ -82,7 +82,7 @@ namespace Inhumate.RTI {
             rti.Subscribe("test1", (channel, message) => {
                 throw new TestException();
             });
-            Thread.Sleep(100);
+            Thread.Sleep(250);
             rti.Publish("test1", "foo");
             int count = 0;
             while (!called && count++ < 300) Thread.Sleep(10);
@@ -179,6 +179,7 @@ namespace Inhumate.RTI {
         public void ChannelsRequest_KnowsChannels() {
             // Another RTI (rti2) subscribes to a custom channel. RTI (rti) should be able to request and know about it.
             rti2.Subscribe("foobar", (name, data) => { });
+            Thread.Sleep(250);
             rti.Publish(RTIChannel.Channels, new Channels {
                 RequestChannelUsage = new Google.Protobuf.WellKnownTypes.Empty()
             });
@@ -617,7 +618,7 @@ namespace Inhumate.RTI {
         public void Buffered_Dispatch_Not_Delivered_Until_Flush() {
             bool received = false;
             var listener = rti.Subscribe("buffered-test", (channel, data) => { received = true; }, dispatchMode: DispatchMode.Buffered);
-            Thread.Sleep(100); // ensure subscription is registered with broker before publishing
+            Thread.Sleep(250); // ensure subscription is registered with broker before publishing
             rti.Publish("buffered-test", "hello");
             // Wait for the message to arrive in the buffer
             int count = 0;
@@ -634,6 +635,7 @@ namespace Inhumate.RTI {
         public void Default_Dispatch_Is_Still_Immediate() {
             bool received = false;
             var listener = rti.Subscribe("immediate-test", (channel, data) => { received = true; });
+            Thread.Sleep(250);
             rti.Publish("immediate-test", "hello");
             for (int i = 0; i < 50 && !received; i++) Thread.Sleep(10);
             Assert.IsTrue(received);
@@ -646,6 +648,7 @@ namespace Inhumate.RTI {
             bool bufferedReceived = false;
             var l1 = rti.Subscribe("mixed-test", (channel, data) => { immediateReceived = true; }, dispatchMode: DispatchMode.Immediate);
             var l2 = rti.Subscribe("mixed-test", (channel, data) => { bufferedReceived = true; }, dispatchMode: DispatchMode.Buffered);
+            Thread.Sleep(250);
             rti.Publish("mixed-test", "hello");
             for (int i = 0; i < 50 && !immediateReceived; i++) Thread.Sleep(10);
             Assert.IsTrue(immediateReceived);

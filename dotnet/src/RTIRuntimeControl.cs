@@ -142,6 +142,7 @@ namespace Inhumate.RTI {
                 rti.Subscribe<RuntimeControl>(rti.OwnChannelPrefix + RTIChannel.Control, OnRuntimeControlMessage, dispatchMode: DispatchMode.Immediate);
                 if (fastTimeEnabled) {
                     rti.Subscribe<FastTimeControl>(RTIChannel.FastTimeControl, OnFastTimeControlMessage, dispatchMode: DispatchMode.Immediate);
+                    rti.Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnectMessage, false, dispatchMode: DispatchMode.Immediate);
                 }
                 subscribed = true;
             }
@@ -187,6 +188,13 @@ namespace Inhumate.RTI {
 
         private void OnRuntimeControlMessage(string channel, RuntimeControl message) => Receive(message);
         private void OnFastTimeControlMessage(string channel, FastTimeControl message) => ReceiveFastTime(message);
+        private void OnClientDisconnectMessage(string channel, object message) {
+            var clientId = message?.ToString();
+            if (clientId != null && clientId == fastTimeControllerClientId && IsFastTime &&
+                rti.State != RuntimeState.Running && rti.State != RuntimeState.Paused) {
+                ResetFastTime();
+            }
+        }
 
         private void PublishAndReceive(RuntimeControl message) {
             rti.Publish(RTIChannel.Control, message);
@@ -198,7 +206,7 @@ namespace Inhumate.RTI {
                 case FastTimeControl.ControlOneofCase.Configure:
                     fastTimeRunId = message.Configure.RunId;
                     fastTimeControllerClientId = message.Configure.ControllerClientId;
-                    rti.DefaultDispatchMode = DispatchMode.Buffered;
+                    // DefaultDispatchMode stays Immediate until the first step grant arrives
                     rti.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
                         Acknowledge = new FastTimeControl.Types.Acknowledge {
                             ClientId = rti.ClientId,
@@ -210,6 +218,7 @@ namespace Inhumate.RTI {
                 case FastTimeControl.ControlOneofCase.StepGrant:
                     if (message.StepGrant.RunId == fastTimeRunId) {
                         var grant = new StepGrant(message.StepGrant, fastTimeRunId);
+                        rti.DefaultDispatchMode = DispatchMode.Buffered; // switch to Buffered on first step
                         rti.FlushBuffers(); // dispatch messages buffered since last step
                         if (stepFn != null) {
                             try {
@@ -275,6 +284,7 @@ namespace Inhumate.RTI {
                 case RuntimeControl.ControlOneofCase.Play:
                     OnPlay();
                     rti.State = RuntimeState.Playback;
+                    if (fastTimeEnabled) ResetFastTime();
                     break;
                 case RuntimeControl.ControlOneofCase.Pause:
                     OnPause();

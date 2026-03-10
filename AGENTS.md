@@ -158,7 +158,7 @@ while (true) {
 }
 ```
 
-On stop/end/reset, `resetFastTime()` resolves all pending `getStepGrant()` promises with `null` immediately.
+On play/stop/end/reset, `resetFastTime()` resolves all pending `getStepGrant()` promises with `null` immediately.
 
 See `js/test/runtimecontrol_example.ts` and `js/test/fasttime_example.ts` for working examples.
 
@@ -200,6 +200,7 @@ See `../cli/Inhumate.CLI/MockSim/MockSim.cs` for an example using the subclassin
 
 - Constructor auto-adds `runtime`, `scenario`, `timescale` capabilities (and `fasttimeworker` when fast-time is enabled)
 - Runtime control channel subscriptions (`rti/control`) are always `IMMEDIATE` so stop/end/reset messages are processed even while in `BUFFERED` dispatch mode during a fast-time step
-- On `Configure`: sends `Acknowledge`, switches client to `BUFFERED` dispatch mode
-- On `StepGrant`: calls `flush_buffers()` / `FlushBuffers()` to dispatch messages buffered since last step, then calls `stepFn` (auto-completing) or queues for `GetStepGrant`
+- On `Configure`: sends `Acknowledge`; dispatch mode stays `IMMEDIATE` (clients can still exchange messages during LOADING/READY)
+- On `StepGrant`: switches client to `BUFFERED` dispatch mode (first step), calls `flush_buffers()` / `FlushBuffers()` to dispatch messages buffered since last step, then calls `stepFn` (auto-completing) or queues for `GetStepGrant`
+- On play: calls `ResetFastTime` — disables fast-time during playback (BUFFERED mode not needed)
 - On stop/end/reset: calls `ResetFastTime` — drains grant queue, cancels waiters, restores `IMMEDIATE` dispatch mode

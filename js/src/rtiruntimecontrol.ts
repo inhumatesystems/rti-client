@@ -160,6 +160,9 @@ export class RTIRuntimeControl {
                 this.rti.subscribe(RTIchannel.fastTimeControl, FastTimeControl,
                     (_ch: string, message: FastTimeControl) => this._receiveFastTime(message),
                     false, DispatchMode.IMMEDIATE)
+                this.rti.subscribeText(RTIchannel.clientDisconnect,
+                    (_ch: string, clientId: string) => this._onControllerDisconnect(clientId),
+                    false, DispatchMode.IMMEDIATE)
             }
             this._subscribed = true
         }
@@ -204,11 +207,18 @@ export class RTIRuntimeControl {
         if (!this.rti.isConnected || !this._subscribed) this._receive(RuntimeControl.fromPartial(message))
     }
 
+    private _onControllerDisconnect(clientId: string): void {
+        if (this._fastTimeControllerClientId === clientId && this.isFastTime &&
+            this.rti.state !== RuntimeState.RUNNING && this.rti.state !== RuntimeState.PAUSED) {
+            this._resetFastTime()
+        }
+    }
+
     private _receiveFastTime(message: FastTimeControl): void {
         if (message.configure) {
             this._fastTimeRunId = message.configure.runId
             this._fastTimeControllerClientId = message.configure.controllerClientId
-            this.rti.defaultDispatchMode = DispatchMode.BUFFERED
+            // defaultDispatchMode stays IMMEDIATE until the first step grant arrives
             this.rti.publish(RTIchannel.fastTimeControl, FastTimeControl, {
                 acknowledge: {
                     clientId: this.rti.clientId,
@@ -220,6 +230,7 @@ export class RTIRuntimeControl {
             this.rti.fastTimeMode = true
         } else if (message.stepGrant && message.stepGrant.runId === this._fastTimeRunId) {
             const grant = new StepGrant(message.stepGrant, this._fastTimeRunId!)
+            this.rti.defaultDispatchMode = DispatchMode.BUFFERED // switch to BUFFERED on first step
             this.rti.flushBuffers() // dispatch messages buffered since last step
             if (this._stepFn) {
                 Promise.resolve(this._stepFn(grant))
@@ -277,6 +288,7 @@ export class RTIRuntimeControl {
         } else if (message.play !== undefined) {
             this.onPlay()
             this.rti.state = RuntimeState.PLAYBACK
+            if (this._fastTimeEnabled) this._resetFastTime()
         } else if (message.pause !== undefined) {
             this.onPause()
             if (this.rti.state === RuntimeState.PLAYBACK || this.rti.state === RuntimeState.PLAYBACK_PAUSED)

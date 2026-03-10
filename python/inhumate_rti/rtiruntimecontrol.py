@@ -212,17 +212,25 @@ class RTIRuntimeControl:
                 def on_fast_time_control(channel, message):
                     self._receive_fast_time(message)
                 self.rti.subscribe(Channel.fast_time_control, Proto.FastTimeControl, on_fast_time_control, dispatch=DispatchMode.IMMEDIATE)
+                def on_client_disconnect(channel, client_id):
+                    self._on_controller_disconnect(client_id)
+                self.rti.subscribe_text(Channel.client_disconnect, on_client_disconnect, dispatch=DispatchMode.IMMEDIATE)
             self.subscribed = True
 
     def _publish_and_receive(self, message: Proto.RuntimeControl):
         self.rti.publish(Channel.control, message)
         if not self.rti.connected or not self.subscribed: self._receive(message)
 
+    def _on_controller_disconnect(self, client_id: str):
+        if (self._fast_time_controller_client_id == client_id and self.is_fast_time and
+                self.rti.state != Proto.RUNNING and self.rti.state != Proto.PAUSED):
+            self._reset_fast_time()
+
     def _receive_fast_time(self, message: Proto.FastTimeControl):
         if message.HasField("configure"):
             self._fast_time_run_id = message.configure.run_id
             self._fast_time_controller_client_id = message.configure.controller_client_id
-            self.rti.default_dispatch_mode = DispatchMode.BUFFERED
+            # default_dispatch_mode stays IMMEDIATE until the first step grant arrives
             ack = Proto.FastTimeControl()
             ack.acknowledge.client_id = self.rti.client_id
             ack.acknowledge.run_id = message.configure.run_id
@@ -230,6 +238,7 @@ class RTIRuntimeControl:
             self.rti.fast_time_mode = True
         elif message.HasField("step_grant") and message.step_grant.run_id == self._fast_time_run_id:
             grant = StepGrant(message.step_grant, self._fast_time_run_id)
+            self.rti.default_dispatch_mode = DispatchMode.BUFFERED  # switch to BUFFERED on first step
             self.rti.flush_buffers()  # dispatch messages buffered since last step
             if self._step_fn:
                 try:
@@ -287,6 +296,7 @@ class RTIRuntimeControl:
         elif message.HasField("play"):
             self.on_play()
             self.rti.state = Proto.PLAYBACK
+            if self._fast_time_enabled: self._reset_fast_time()
         elif message.HasField("pause"):
             self.on_pause()
             if self.rti.state == Proto.PLAYBACK or self.rti.state == Proto.PLAYBACK_PAUSED:

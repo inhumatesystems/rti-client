@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.Threading;
 using Inhumate.RTI.Proto;
@@ -239,7 +239,7 @@ namespace Inhumate.RTI {
             });
             try {
                 new RTIRuntimeControl(c, fastTime: true);
-                Thread.Sleep(100);
+                Thread.Sleep(250);
                 ConfigureRun("run-ack");
                 Assert.IsTrue(WaitFor(() => acked != null));
                 Assert.AreEqual(c.ClientId, acked.ClientId);
@@ -266,15 +266,36 @@ namespace Inhumate.RTI {
         }
 
         [Test]
-        public void FastTime_DispatchMode_Buffered_AfterConfigure() {
+        public void FastTime_DispatchMode_Immediate_AfterConfigure_Buffered_AfterStep() {
             var c = FreshClient("C# RC FT Dispatch Test");
             try {
-                new RTIRuntimeControl(c, fastTime: true);
+                var rt = new RTIRuntimeControl(c, fastTime: true);
                 Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
                 Thread.Sleep(100);
                 ConfigureRun("run-dispatch");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                // Still Immediate after configure — only switches on first step grant
+                Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
+                SendGrant("run-dispatch", timeStep: 1.0);
                 Assert.IsTrue(WaitFor(() => c.DefaultDispatchMode == DispatchMode.Buffered));
                 Assert.AreEqual(DispatchMode.Buffered, c.DefaultDispatchMode);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_Play_ResetsFastTime() {
+            var c = FreshClient("C# RC FT Play Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-play");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                controller.Publish(RTIChannel.Control, new RuntimeControl { Play = new Google.Protobuf.WellKnownTypes.Empty() });
+                Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
+                Assert.IsFalse(rt.IsFastTime);
+                Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
             } finally {
                 c.Disconnect();
             }
@@ -291,7 +312,7 @@ namespace Inhumate.RTI {
             });
             try {
                 new RTIRuntimeControl(c, stepFn: g => { receivedGrant = g; });
-                Thread.Sleep(100);
+                Thread.Sleep(250);
                 ConfigureRun("run-step-fn", timeStep: 0.5);
                 Thread.Sleep(100);
                 SendGrant("run-step-fn", timeStep: 0.5);
@@ -314,7 +335,7 @@ namespace Inhumate.RTI {
                 ConfigureRun("run-wait", timeStep: 1.0);
                 Thread.Sleep(100);
                 SendGrant("run-wait", timeStep: 1.0);
-                var grant = rt.GetStepGrant(timeout: 2.0);
+                var grant = rt.GetStepGrant(timeout: 2000);
                 Assert.IsNotNull(grant);
                 Assert.AreEqual(1.0, grant.TimeStep, 0.001);
                 Assert.AreEqual(0, grant.StepNumber);
@@ -353,8 +374,58 @@ namespace Inhumate.RTI {
                     Thread.Sleep(100);
                     controller.Publish(RTIChannel.Control, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
                 }) { IsBackground = true }.Start();
-                var grant = rt.GetStepGrant(timeout: 2.0);
+                var grant = rt.GetStepGrant(timeout: 2000);
                 Assert.IsNull(grant);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_ControllerDisconnect_ResetsFastTime() {
+            var ctrl = FreshClient("C# RC FT Ctrl Disc Test Ctrl");
+            var c = FreshClient("C# RC FT Ctrl Disc Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ctrl.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
+                    Configure = new FastTimeControl.Types.Configure {
+                        ControllerClientId = ctrl.ClientId,
+                        RunId = "run-ctrl-disc",
+                        TimeStep = 1.0
+                    }
+                });
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                // Disconnect controller while in non-running/paused state (Initial)
+                ctrl.Disconnect();
+                Assert.IsTrue(WaitFor(() => !rt.IsFastTime, timeoutMs: 3000));
+                Assert.IsFalse(rt.IsFastTime);
+                Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_ControllerDisconnect_DoesNotReset_WhenRunning() {
+            var ctrl = FreshClient("C# RC FT Ctrl Running Test Ctrl");
+            var c = FreshClient("C# RC FT Ctrl Running Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ctrl.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
+                    Configure = new FastTimeControl.Types.Configure {
+                        ControllerClientId = ctrl.ClientId,
+                        RunId = "run-ctrl-running",
+                        TimeStep = 1.0
+                    }
+                });
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                c.State = RuntimeState.Running;
+                ctrl.Disconnect();
+                Thread.Sleep(300);
+                // Fast time should still be active when disconnect happens during Running
+                Assert.IsTrue(rt.IsFastTime);
             } finally {
                 c.Disconnect();
             }

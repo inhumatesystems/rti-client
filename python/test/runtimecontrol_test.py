@@ -245,15 +245,36 @@ class RuntimeControlTest(unittest.TestCase):
         finally:
             rti.disconnect()
 
-    def test_fast_time_dispatch_mode_buffered_after_configure(self):
+    def test_fast_time_dispatch_mode_immediate_after_configure_buffered_after_step(self):
         rti = self._fresh_client("python_rc_ft_disp_test")
         try:
-            RTI.RuntimeControl(rti, fast_time=True)
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
             self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
             time.sleep(0.5)
             self._configure_run("run-dispatch")
+            wait_for(lambda: runtime.is_fast_time)
+            # Still IMMEDIATE after configure — only switches on first step grant
+            self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
+            self._send_grant("run-dispatch", time_step=1.0)
             wait_for(lambda: rti.default_dispatch_mode == RTI.DispatchMode.BUFFERED)
             self.assertEqual(RTI.DispatchMode.BUFFERED, rti.default_dispatch_mode)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_play_resets_fast_time(self):
+        rti = self._fresh_client("python_rc_ft_play_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-play")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            msg = RTI.proto.RuntimeControl()
+            msg.play.SetInParent()
+            self.controller.publish(RTI.channel.control, msg)
+            wait_for(lambda: not runtime.is_fast_time)
+            self.assertFalse(runtime.is_fast_time)
+            self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
         finally:
             rti.disconnect()
 
@@ -328,6 +349,48 @@ class RuntimeControlTest(unittest.TestCase):
             threading.Thread(target=do_stop, daemon=True).start()
             grant = runtime.get_step_grant(timeout=2.0)
             self.assertIsNone(grant)
+        finally:
+            rti.disconnect()
+
+
+    def test_fast_time_controller_disconnect_resets_fast_time(self):
+        ctrl = self._fresh_client("python_rc_ft_ctrl_disc_test_ctrl")
+        rti = self._fresh_client("python_rc_ft_ctrl_disc_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            msg = RTI.proto.FastTimeControl()
+            msg.configure.controller_client_id = ctrl.client_id
+            msg.configure.run_id = "run-ctrl-disc"
+            msg.configure.time_step = 1.0
+            ctrl.publish(RTI.channel.fast_time_control, msg)
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            # Disconnect controller while in non-running/paused state (INITIAL)
+            ctrl.disconnect()
+            wait_for(lambda: not runtime.is_fast_time, timeout=3.0)
+            self.assertFalse(runtime.is_fast_time)
+            self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_controller_disconnect_does_not_reset_when_running(self):
+        ctrl = self._fresh_client("python_rc_ft_ctrl_run_test_ctrl")
+        rti = self._fresh_client("python_rc_ft_ctrl_run_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            msg = RTI.proto.FastTimeControl()
+            msg.configure.controller_client_id = ctrl.client_id
+            msg.configure.run_id = "run-ctrl-running"
+            msg.configure.time_step = 1.0
+            ctrl.publish(RTI.channel.fast_time_control, msg)
+            wait_for(lambda: runtime.is_fast_time)
+            rti.state = RTI.proto.RUNNING
+            ctrl.disconnect()
+            time.sleep(0.3)
+            # Fast time should still be active when disconnect happens during RUNNING
+            self.assertTrue(runtime.is_fast_time)
         finally:
             rti.disconnect()
 
