@@ -6,7 +6,7 @@ export { useRtiStore }
 import RuntimeState from "./components/RuntimeState.vue"
 export { RuntimeState }
 import ImageSubscription from "./components/ImageSubscription.vue"
-export { ImageSubscription}
+export { ImageSubscription }
 import { version as vueVersion } from "vue"
 import constants from "./constants"
 export { constants }
@@ -26,5 +26,5 @@ export default {
         app.provide("rti-client", client)
         app.component("RtiRuntimeState", RuntimeState)
         app.component("RtiImageSubscription", ImageSubscription)
-    }
+    },
 }

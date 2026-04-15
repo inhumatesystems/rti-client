@@ -53,9 +53,13 @@ onUnmounted(() => {
 let subscription: any = undefined
 function subscribeToImage() {
     if (subscription) unsubscribe()
-    subscription = rti.client.subscribeText(props.channel, (data: string) => {
-        imageData.value = data
-    }, false)
+    subscription = rti.client.subscribeText(
+        props.channel,
+        (data: string) => {
+            imageData.value = data
+        },
+        false
+    )
 }
 
 function unsubscribe() {
