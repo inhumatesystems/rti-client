@@ -22,7 +22,7 @@ default:
 
 build js client:
   stage: build
-  image: node:20-slim
+  image: node:22-slim
   script:
     - apt-get update -qq
     - apt-get install -qq curl unzip
@@ -53,7 +53,7 @@ build vue client:
   stage: build
   needs:
     - build js client
-  image: node:20-slim
+  image: node:22-slim
   script:
     - cd vue
     - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json
@@ -220,7 +220,7 @@ build c++ ue5 client windows:
 
 test js client:
   stage: test
-  image: node:20-slim
+  image: node:22-slim
   needs:
     - build js client
   script:
@@ -314,7 +314,7 @@ test c++ client:
 
 package c++ static client:
   stage: package
-  image: node:20-slim
+  image: node:22-slim
   needs:
     - build c++ static client linux
     - build c++ static client windows
@@ -328,7 +328,7 @@ package c++ static client:
 
 package c++ ue5 client:
   stage: package
-  image: node:20-slim
+  image: node:22-slim
   needs:
     - build c++ ue5 client windows
     # - build c++ ue5 client linux
@@ -349,7 +349,7 @@ package c++ ue5 client:
 
 publish npm:
   stage: publish
-  image: node:20-slim
+  image: node:22-slim
   only:
     - tags
     - /.*publish$/
