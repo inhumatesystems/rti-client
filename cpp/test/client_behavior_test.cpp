@@ -93,6 +93,7 @@ TEST_CASE("connect_disconnect_events_called")
     POLL_CONDITION(500, !disconnectCalled);
     REQUIRE(!rti.connected());
     REQUIRE(disconnectCalled);
+    rti.OffDisconnected(disconnectListener);
     POLL(100);
 
     bool connectCalled = false;
@@ -101,6 +102,7 @@ TEST_CASE("connect_disconnect_events_called")
     POLL_CONDITION(5000, !rti.connected());
     REQUIRE(rti.connected());
     REQUIRE(connectCalled);
+    rti.OffConnected(connectListener);
 }
 
 TEST_CASE("subscribe_callbackerror_errorevent_called")
@@ -182,7 +184,7 @@ TEST_CASE("unsubscribe_two_listeners_works")
 TEST_CASE("publish_subscribe_proto_message_works")
 {
     bool received = false;
-    rti.Subscribe<RuntimeControl>("control-test", [&](const std::string &channel, const RuntimeControl &message) {
+    auto listener = rti.Subscribe<RuntimeControl>("control-test", [&](const std::string &channel, const RuntimeControl &message) {
         received = true;
     });
     POLL(100);
@@ -190,6 +192,7 @@ TEST_CASE("publish_subscribe_proto_message_works")
     message.set_allocated_pause(new Empty());
     rti.Publish("control-test", message);
     POLL_CONDITION(500, !received);
+    rti.Unsubscribe(listener);
     REQUIRE(received);
 }
 
@@ -208,7 +211,7 @@ TEST_CASE("responds_to_client_request")
 {
     // Another RTI client (rti2) requests clients. RTI client (rti) should respond.
     bool received = false;
-    rti2.Subscribe<Clients>(CLIENTS_CHANNEL, [&](const std::string &channel, const Clients &message) {
+    auto listener = rti2.Subscribe<Clients>(CLIENTS_CHANNEL, [&](const std::string &channel, const Clients &message) {
         if (message.which_case() == Clients::WhichCase::kClient &&
             message.client().id() == rti.client_id())
             received = true;
@@ -217,6 +220,7 @@ TEST_CASE("responds_to_client_request")
     message.set_allocated_request_clients(new Empty());
     rti2.Publish(CLIENTS_CHANNEL, message);
     POLL_CONDITION(500, !received);
+    rti2.Unsubscribe(listener);
     REQUIRE(received);
 }
 
@@ -224,7 +228,7 @@ TEST_CASE("responds_to_channels_request")
 {
     // Another RTI (rti2) requests channels. RTI (rti) should respond.
     bool received = false;
-    rti2.Subscribe<Channels>(CHANNELS_CHANNEL, [&](const std::string &channel, const Channels &message) {
+    auto listener = rti2.Subscribe<Channels>(CHANNELS_CHANNEL, [&](const std::string &channel, const Channels &message) {
         if (message.which_case() == Channels::WhichCase::kChannelUsage &&
             message.channel_usage().client_id() == rti.client_id())
             received = true;
@@ -233,6 +237,7 @@ TEST_CASE("responds_to_channels_request")
     message.set_allocated_request_channel_usage(new Empty());
     rti2.Publish(CHANNELS_CHANNEL, message);
     POLL_CONDITION(500, !received);
+    rti2.Unsubscribe(listener);
     REQUIRE(received);
 }
 
@@ -250,7 +255,7 @@ TEST_CASE("channels_request_knows_channel")
 TEST_CASE("set_state_publishes_client")
 {
     bool received = false;
-    rti.Subscribe<Clients>(CLIENTS_CHANNEL, [&](const std::string &channel, const Clients &message) {
+    auto listener = rti.Subscribe<Clients>(CLIENTS_CHANNEL, [&](const std::string &channel, const Clients &message) {
         if (message.which_case() == Clients::WhichCase::kClient &&
             message.client().id() == rti.client_id())
             received = true;
@@ -258,13 +263,14 @@ TEST_CASE("set_state_publishes_client")
     POLL(100);
     rti.set_state(RuntimeState::PLAYBACK);
     POLL_CONDITION(500, !received);
+    rti.Unsubscribe(listener);
     REQUIRE(received);
 }
 
 TEST_CASE("publish_error_works")
 {
     bool received = false;
-    rti.Subscribe<RuntimeControl>(CONTROL_CHANNEL, [&](const std::string &channel, const RuntimeControl &message) {
+    auto listener = rti.Subscribe<RuntimeControl>(CONTROL_CHANNEL, [&](const std::string &channel, const RuntimeControl &message) {
         if (message.control_case() == RuntimeControl::ControlCase::kError &&
             message.error().client_id() == rti.client_id())
             received = true;
@@ -272,6 +278,7 @@ TEST_CASE("publish_error_works")
     POLL(100);
     rti.PublishError("test");
     POLL_CONDITION(500, !received);
+    rti.Unsubscribe(listener);
     REQUIRE(received);
 }
 
