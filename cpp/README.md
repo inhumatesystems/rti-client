@@ -83,9 +83,7 @@ Static build:
 
 ```sh
 scripts/windows_static_build.sh
-# to run tests, make sure OpenSSL DLLs are available
-PATH="openssl-1.1/x64/bin:$PATH" build/Release/usage_example.exe
-
+build/Release/usage_example.exe
 ```
 
 UE5 build:

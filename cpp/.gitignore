@@ -2,5 +2,5 @@ build-*/
 protobuf/
 asio/
 websocketpp/
-openssl-1.1/
-openssl*.zip
+openssl*/
+openssl-*.zip
