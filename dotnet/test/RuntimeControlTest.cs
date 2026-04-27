@@ -1,25 +1,28 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Threading;
+using System.Diagnostics;
 using Inhumate.RTI.Proto;
 
 namespace Inhumate.RTI {
+    [NonParallelizable]
     public class RuntimeControlTest {
 
         protected static RTIClient rti;
         protected static RTIClient controller;
         protected static RTIRuntimeControl runtime;
 
+        private static int TestTimeoutMs =>
+            int.TryParse(Environment.GetEnvironmentVariable("RTI_TEST_TIMEOUT_MS"), out var timeoutMs)
+                ? timeoutMs
+                : Environment.GetEnvironmentVariable("GITLAB_CI") == "true" ? 60000 : 30000;
+
         [OneTimeSetUp]
         public static void Setup() {
-            rti = new RTIClient { Application = "C# RuntimeControlTest" };
-            rti.OnError += (channelName, exception) => Console.Error.WriteLine($"Error: {channelName}: {exception}");
-            rti.WaitUntilConnected();
+            rti = FreshClient("C# RuntimeControlTest");
 
             // Separate client that acts as the controller publishing control messages
-            controller = new RTIClient { Application = "C# RuntimeControlTest Controller" };
-            controller.OnError += (channelName, exception) => Console.Error.WriteLine($"Error: {channelName}: {exception}");
-            controller.WaitUntilConnected();
+            controller = FreshClient("C# RuntimeControlTest Controller");
 
             runtime = new RTIRuntimeControl(rti);
             Thread.Sleep(100);
@@ -42,10 +45,22 @@ namespace Inhumate.RTI {
             controller.Publish(RTIChannel.RuntimeControl, message);
 
         private static RTIClient FreshClient(string name = "C# RuntimeControlTest Fresh") {
-            var c = new RTIClient { Application = name };
-            c.OnError += (ch, ex) => Console.Error.WriteLine($"Error: {ch}: {ex}");
-            c.WaitUntilConnected();
-            return c;
+            Exception lastException = null;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < TestTimeoutMs) {
+                var c = new RTIClient(connect: false) { Application = name };
+                c.OnError += (ch, ex) => Console.Error.WriteLine($"Error: {ch}: {ex}");
+                try {
+                    c.Connect();
+                    c.WaitUntilConnected(Math.Max(1000, (int)Math.Min(5000, TestTimeoutMs - sw.ElapsedMilliseconds)));
+                    return c;
+                } catch (Exception ex) {
+                    lastException = ex;
+                    try { c.Disconnect(); } catch (Exception) { }
+                    Thread.Sleep(250);
+                }
+            }
+            throw new RTIConnectionFailure($"Could not connect {name} within {TestTimeoutMs} ms: {lastException?.Message}");
         }
 
         private void ConfigureRun(string runId, double timeStep = 1.0) =>
@@ -67,9 +82,10 @@ namespace Inhumate.RTI {
                 }
             });
 
-        private static bool WaitFor(Func<bool> condition, int timeoutMs = 2000) {
-            int count = 0;
-            while (!condition() && count++ < timeoutMs / 10) Thread.Sleep(10);
+        private static bool WaitFor(Func<bool> condition, int? timeoutMs = null) {
+            var timeout = timeoutMs ?? TestTimeoutMs;
+            var sw = Stopwatch.StartNew();
+            while (!condition() && sw.ElapsedMilliseconds < timeout) Thread.Sleep(10);
             return condition();
         }
 
@@ -311,10 +327,10 @@ namespace Inhumate.RTI {
                     completion = msg.StepComplete;
             });
             try {
-                new RTIRuntimeControl(c, stepFn: g => { receivedGrant = g; });
+                var rt = new RTIRuntimeControl(c, stepFn: g => { receivedGrant = g; });
                 Thread.Sleep(250);
                 ConfigureRun("run-step-fn", timeStep: 0.5);
-                Thread.Sleep(100);
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
                 SendGrant("run-step-fn", timeStep: 0.5);
                 Assert.IsTrue(WaitFor(() => receivedGrant != null && completion != null));
                 Assert.AreEqual(0.5, receivedGrant.TimeStep, 0.001);
@@ -333,9 +349,9 @@ namespace Inhumate.RTI {
                 var rt = new RTIRuntimeControl(c, fastTime: true);
                 Thread.Sleep(100);
                 ConfigureRun("run-wait", timeStep: 1.0);
-                Thread.Sleep(100);
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
                 SendGrant("run-wait", timeStep: 1.0);
-                var grant = rt.GetStepGrant(timeout: 2000);
+                var grant = rt.GetStepGrant(timeout: TestTimeoutMs);
                 Assert.IsNotNull(grant);
                 Assert.AreEqual(1.0, grant.TimeStep, 0.001);
                 Assert.AreEqual(0, grant.StepNumber);

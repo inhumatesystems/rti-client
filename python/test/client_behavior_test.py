@@ -552,6 +552,25 @@ class ClientBehaviorTest(unittest.TestCase):
         self.assertTrue(received)
         self.assertEqual(0, self.rti.buffer_depth)
 
+    def test_buffered_dispatch_drops_oldest_message_at_max_depth(self):
+        previous_max = self.rti.max_buffer_depth
+        self.rti.max_buffer_depth = 1
+        received = []
+        def on_message(msg): received.append(msg)
+        subscription = self.rti.subscribe_text("buffer-overflow-test", on_message, dispatch=RTI.DispatchMode.BUFFERED)
+        try:
+            self.rti.publish_text("buffer-overflow-test", "one")
+            self.rti.publish_text("buffer-overflow-test", "two")
+            count = 0
+            while count < 100 and self.rti.buffer_depth < 1: count += 1; time.sleep(0.01)
+            time.sleep(0.1)
+            self.assertEqual(1, self.rti.buffer_depth)
+            self.rti.flush_buffers()
+            self.assertEqual(["two"], received)
+        finally:
+            self.rti.unsubscribe(subscription)
+            self.rti.max_buffer_depth = previous_max
+
     def test_default_dispatch_is_still_immediate(self):
         received = False
         def on_message(msg): nonlocal received; received = True

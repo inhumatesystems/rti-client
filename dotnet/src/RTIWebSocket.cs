@@ -14,6 +14,8 @@ namespace Inhumate.RTI {
         public WebSocketState State => socket.State;
         public int QueueCount => outQueue.Count;
         public int PollCount => pollQueue.Count;
+        public int MaxPollQueueDepth { get; set; } = 10000;
+        public int MaxMessageSizeBytes { get; set; } = 16 * 1024 * 1024;
 
         public event ConnectedListener OnConnected;
         public event DisconnectedListener OnDisconnected;
@@ -35,6 +37,7 @@ namespace Inhumate.RTI {
 
         private bool disconnecting;
         private bool sendThreadDone;
+        private int connectedNotified;
 
 
         public RTIWebSocket(string url) {
@@ -58,42 +61,40 @@ namespace Inhumate.RTI {
                     }
                 });
 
-                return socket.State == WebSocketState.Open;
+                var connected = socket.State == WebSocketState.Open;
+                if (connected) NotifyConnected();
+                return connected;
             } catch (Exception ex) {
                 OnError?.Invoke(this, ex);
                 throw;
             }
         }
 
-        public async Task<bool> Send(string data) {
+        public Task<bool> Send(string data) {
             try {
-                if (State != WebSocketState.Open && QueueCount >= outQueueLimit || disconnecting) {
-                    return false;
+                if ((State != WebSocketState.Open && QueueCount >= outQueueLimit) || disconnecting) {
+                    return Task.FromResult(false);
                 }
 
-                await Task.Run(() => {
-                    var message = new QueuedMessage { Data = Encoding.UTF8.GetBytes(data) };
-                    outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, message));
-                }).ConfigureAwait(false);
+                var message = new QueuedMessage { Data = Encoding.UTF8.GetBytes(data) };
+                outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, message));
 
-                return true;
+                return Task.FromResult(true);
             } catch (Exception ex) {
                 OnError?.Invoke(this, ex);
                 throw;
             }
         }
 
-        public async Task<bool> SendRaw(byte[] data) {
+        public Task<bool> SendRaw(byte[] data) {
             try {
-                if (State != WebSocketState.Open && QueueCount >= outQueueLimit || disconnecting) {
-                    return false;
+                if ((State != WebSocketState.Open && QueueCount >= outQueueLimit) || disconnecting) {
+                    return Task.FromResult(false);
                 }
 
-                await Task.Run(() => {
-                    outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, new QueuedMessage { Data = data, IsBinary = true }));
-                }).ConfigureAwait(false);
+                outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, new QueuedMessage { Data = data, IsBinary = true }));
 
-                return true;
+                return Task.FromResult(true);
             } catch (Exception ex) {
                 OnError?.Invoke(this, ex);
                 throw;
@@ -114,6 +115,15 @@ namespace Inhumate.RTI {
             return count;
         }
 
+        private bool EnqueuePollMessage(QueuedMessage message) {
+            if (MaxPollQueueDepth <= 0 || pollQueue.Count >= MaxPollQueueDepth) {
+                OnError?.Invoke(this, new InvalidOperationException("RTI polling queue overflow"));
+                return false;
+            }
+            pollQueue.Enqueue(message);
+            return true;
+        }
+
         private void StartConnectionThread() {
             Task.Run(async () => {
                 try {
@@ -132,9 +142,7 @@ namespace Inhumate.RTI {
                             continue;
                         }
 
-                        if (State == WebSocketState.Open) {
-                            OnConnected?.Invoke(this);
-                        }
+                        if (State == WebSocketState.Open) NotifyConnected();
 
                         if (State == WebSocketState.Closed || State == WebSocketState.Aborted) {
                             OnDisconnected?.Invoke(this, socket.CloseStatus ?? WebSocketCloseStatus.Empty);
@@ -149,6 +157,10 @@ namespace Inhumate.RTI {
                     OnError?.Invoke(this, ex);
                 }
             });
+        }
+
+        private void NotifyConnected() {
+            if (Interlocked.Exchange(ref connectedNotified, 1) == 0) OnConnected?.Invoke(this);
         }
 
         private void StartReceiveThread() {
@@ -186,6 +198,11 @@ namespace Inhumate.RTI {
                                 return Task.CompletedTask;
                             }
                             if (res.MessageType == WebSocketMessageType.Text) {
+                                if (MaxMessageSizeBytes > 0 && message.Length + res.Count > MaxMessageSizeBytes) {
+                                    OnError?.Invoke(this, new InvalidOperationException("RTI message exceeded maximum size"));
+                                    socket.Abort();
+                                    return Task.CompletedTask;
+                                }
                                 if (!res.EndOfMessage) {
                                     message += Encoding.UTF8.GetString(buffer).TrimEnd('\0');
                                     done = false;
@@ -196,14 +213,19 @@ namespace Inhumate.RTI {
                                     _ = Send("pong");
                                 } else {
                                     if (Polling) {
-                                        pollQueue.Enqueue(new QueuedMessage { Data = Encoding.UTF8.GetBytes(message) });
+                                        EnqueuePollMessage(new QueuedMessage { Data = Encoding.UTF8.GetBytes(message) });
                                     } else {
-                                        Task.Run(() => OnMessage?.Invoke(this, message)).Wait(50);
+                                        OnMessage?.Invoke(this, message);
                                     }
                                 }
                             } else {
                                 var exactDataBuffer = new byte[res.Count];
                                 Array.Copy(buffer, 0, exactDataBuffer, 0, res.Count);
+                                if (MaxMessageSizeBytes > 0 && binary.Count + exactDataBuffer.Length > MaxMessageSizeBytes) {
+                                    OnError?.Invoke(this, new InvalidOperationException("RTI binary message exceeded maximum size"));
+                                    socket.Abort();
+                                    return Task.CompletedTask;
+                                }
                                 if (!res.EndOfMessage) {
                                     binary.AddRange(exactDataBuffer);
                                     done = false;
@@ -212,9 +234,9 @@ namespace Inhumate.RTI {
                                 binary.AddRange(exactDataBuffer);
                                 var binaryData = binary.ToArray();
                                 if (Polling) {
-                                    pollQueue.Enqueue(new QueuedMessage { Data = binaryData, IsBinary = true });
+                                    EnqueuePollMessage(new QueuedMessage { Data = binaryData, IsBinary = true });
                                 } else {
-                                    Task.Run(() => OnBinaryMessage?.Invoke(this, binaryData)).Wait(50);
+                                    OnBinaryMessage?.Invoke(this, binaryData);
                                 }
                             }
 

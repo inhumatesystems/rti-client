@@ -120,7 +120,7 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 message("OpenSSL: ${OPENSSL_INCLUDE_DIR} ${OPENSSL_LIBRARIES}")
 
 # Static
-add_library(inhumaterti STATIC inhumaterti.cpp ${PROTO_SRCS})
+add_library(inhumaterti STATIC inhumaterti.cpp rtiruntimecontrol.cpp ${PROTO_SRCS})
 target_compile_definitions(inhumaterti PRIVATE "INHUMATE_RTI_PROTOS_EXPORT=")
 
 file(GLOB TEST_SRCS test/*_test.cpp)
@@ -133,6 +133,12 @@ target_link_libraries(usage_example inhumaterti Threads::Threads ${PROTOBUF_LIBR
 add_executable(disableping_example test/disableping_example.cpp)
 target_link_libraries(disableping_example inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
 
+add_executable(runtimecontrol_example test/runtimecontrol_example.cpp)
+target_link_libraries(runtimecontrol_example inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
+
+add_executable(fasttime_example test/fasttime_example.cpp)
+target_link_libraries(fasttime_example inhumaterti Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${EXE_LIBRARIES})
+
 # Shared
 if (BUILD_SHARED)
     add_library(inhumaterti_shared_protos SHARED ${PROTO_SRCS})
@@ -143,7 +149,7 @@ if (BUILD_SHARED)
     endif()
     target_link_libraries(inhumaterti_shared_protos ${PROTOBUF_LIBRARIES})
 
-    add_library(inhumaterti_shared SHARED inhumaterti.cpp)
+    add_library(inhumaterti_shared SHARED inhumaterti.cpp rtiruntimecontrol.cpp)
     target_compile_definitions(inhumaterti_shared PRIVATE INHUMATE_RTI_SHARED=1)
     target_link_libraries(inhumaterti_shared inhumaterti_shared_protos Threads::Threads ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES})
 

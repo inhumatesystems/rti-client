@@ -101,6 +101,7 @@ This is the most important architectural difference between clients:
 
 **C++** (`cpp/`):
 - `inhumaterti.hpp` + `inhumaterti.cpp` — single header/impl pair
+- `rtiruntimecontrol.hpp` + `rtiruntimecontrol.cpp` — runtime control helper (see Runtime Control Helper section below)
 - Dependencies: websocketpp, asio (both header-only), protobuf, OpenSSL
 
 **.NET** (`dotnet/src/`):
@@ -132,7 +133,7 @@ Internal RTI channel subscriptions (`rti/clients`, `rti/channels`, `rti/measures
 
 ## Runtime Control Helper
 
-`RTIRuntimeControl` simplifies responding to runtime control messages (start, stop, reset, load scenario, time scale) and adds fast-time worker support. Implemented for **TypeScript/JavaScript**, **Python**, and **.NET**; C++ does not have this helper yet.
+`RTIRuntimeControl` simplifies responding to runtime control messages (start, stop, reset, load scenario, time scale) and adds fast-time worker support. Implemented for **TypeScript/JavaScript**, **Python**, **.NET**, and **C++**.
 
 ### TypeScript/JavaScript (`js/src/rtiruntimecontrol.ts`)
 
@@ -196,7 +197,32 @@ Fast-time: `runtime.IsFastTime`, `runtime.GetStepGrant(timeout=30)`, `runtime.Co
 
 See `../cli/Inhumate.CLI/MockSim/MockSim.cs` for an example using the subclassing pattern with `stepFn`.
 
-### Shared behaviour (all three languages)
+### C++ (`cpp/rtiruntimecontrol.hpp` + `cpp/rtiruntimecontrol.cpp`)
+
+```cpp
+RTIRuntimeControl runtime(rti);                                                  // real-time only
+RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);          // fast-time (GetStepGrant pattern)
+RTIRuntimeControl runtime(rti, true, false, [](const StepGrant& g) { /*...*/ }); // fast-time (callback pattern)
+```
+
+Subclass and override virtual methods: `OnReset`, `OnLoadScenario(msg, playback) -> bool`, `OnStart`, `OnPlay`, `OnPause`, `OnEnd`, `OnStop`, `OnEndStop`, `OnResetEndStop`, `OnTimeScale(ts)`, `OnTimeSync(msg)`, `OnStepGrant(grant)`
+
+Fast-time: `runtime.is_fast_time()`, `runtime.GetStepGrant()` (returns `std::unique_ptr<StepGrant>`, `nullptr` if none queued), `runtime.CompleteStep(grant, failed, reason)`
+
+**Important**: C++ is polling-only — `GetStepGrant()` is always non-blocking. Drive it from your main loop:
+```cpp
+while (running) {
+    rti.Poll();
+    if (auto grant = runtime.GetStepGrant()) {
+        // do simulation work
+        runtime.CompleteStep(*grant);
+    }
+}
+```
+
+`WaitForApplicationState` / `WaitForClientState` call `rti.Poll()` internally while waiting and throw `std::runtime_error` on timeout.
+
+### Shared behaviour (all four languages)
 
 - Constructor auto-adds `runtime`, `scenario`, `timescale` capabilities (and `fasttimeworker` when fast-time is enabled)
 - Runtime control channel subscriptions (`rti/control`) are always `IMMEDIATE` so stop/end/reset messages are processed even while in `BUFFERED` dispatch mode during a fast-time step

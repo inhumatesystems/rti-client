@@ -51,9 +51,34 @@ namespace Inhumate.RTI {
         public float MeasurementIntervalTimeScale { get; set; } = 1f;
 
         public DispatchMode DefaultDispatchMode { get; set; } = DispatchMode.Immediate;
+        public int MaxBufferDepth { get; set; } = 10000;
+        public int MaxPollQueueDepth {
+            get { return socket != null ? socket.MaxPollQueueDepth : maxPollQueueDepth; }
+            set { maxPollQueueDepth = value; if (socket != null) socket.MaxPollQueueDepth = value; }
+        }
+        public int MaxMessageSizeBytes {
+            get { return socket != null ? socket.MaxMessageSizeBytes : maxMessageSizeBytes; }
+            set { maxMessageSizeBytes = value; if (socket != null) socket.MaxMessageSizeBytes = value; }
+        }
         private ConcurrentQueue<(UntypedListener Listener, string Channel, object Data)> messageBuffer
             = new ConcurrentQueue<(UntypedListener, string, object)>();
         public int BufferDepth => messageBuffer.Count;
+        private int maxPollQueueDepth = 10000;
+        private int maxMessageSizeBytes = 16 * 1024 * 1024;
+        private void EnqueueBufferedMessage(UntypedListener listener, string channel, object data) {
+            if (MaxBufferDepth <= 0) {
+                OnError?.Invoke(channel, new InvalidOperationException("RTI buffered dispatch overflow"));
+                return;
+            }
+            var overflow = false;
+            while (messageBuffer.Count >= MaxBufferDepth && messageBuffer.TryDequeue(out _)) overflow = true;
+            if (messageBuffer.Count >= MaxBufferDepth) {
+                OnError?.Invoke(channel, new InvalidOperationException("RTI buffered dispatch overflow"));
+                return;
+            }
+            messageBuffer.Enqueue((listener, channel, data));
+            if (overflow) OnError?.Invoke(channel, new InvalidOperationException("RTI buffered dispatch overflow"));
+        }
         public void FlushBuffers() {
             var messages = new List<(UntypedListener, string, object)>();
             while (messageBuffer.TryDequeue(out var msg)) messages.Add(msg);
@@ -104,7 +129,7 @@ namespace Inhumate.RTI {
         private ConcurrentDictionary<string, Proto.Client> knownClients = new ConcurrentDictionary<string, Proto.Client>();
         public ICollection<Proto.Client> KnownClients { get { return new List<Proto.Client>(knownClients.Values); } }
         private ConcurrentDictionary<string, Measure> usedMeasures = new ConcurrentDictionary<string, Measure>();
-        public ICollection<Measure> UsedMeasures { get { return new List<Measure>(knownMeasures.Values); } }
+        public ICollection<Measure> UsedMeasures { get { return new List<Measure>(usedMeasures.Values); } }
         private ConcurrentDictionary<string, Measure> knownMeasures = new ConcurrentDictionary<string, Measure>();
         public ICollection<Measure> KnownMeasures { get { return new List<Measure>(knownMeasures.Values); } }
 
@@ -184,7 +209,9 @@ namespace Inhumate.RTI {
             connectionError = null;
             cid = 0;
             socket = new RTIWebSocket(Url) {
-                Polling = Polling
+                Polling = Polling,
+                MaxPollQueueDepth = maxPollQueueDepth,
+                MaxMessageSizeBytes = maxMessageSizeBytes
             };
             socket.OnConnected += (object sender) => {
                 shouldBeConnected = true;
@@ -206,7 +233,7 @@ namespace Inhumate.RTI {
             };
             var connect = socket.Connect();
             if (reconnectInitial) {
-                if (!reconnecting) StartReconnectThread();
+                if (!reconnecting) StartReconnectThread(30000);
             } else {
                 connect.Wait();
             }
@@ -248,13 +275,16 @@ namespace Inhumate.RTI {
                     var channel = eventData.ContainsKey("channel") ? eventData["channel"].ToString() : null;
                     if (!string.IsNullOrWhiteSpace(Federation)) channel = channel.Replace("//" + Federation + "/", "");
                     var data = eventData.ContainsKey("data") ? eventData["data"] : null;
-                    if (subscriptions.ContainsKey(channel)) {
+                    if (subscriptions.TryGetValue(channel, out var channelSubscriptions)) {
                         // Make a temp list to allow unsubscribing/subscribing from listeners
-                        var tempListeners = new List<(UntypedListener, DispatchMode?)>(subscriptions[channel]);
+                        List<(UntypedListener, DispatchMode?)> tempListeners;
+                        lock (channelSubscriptions) {
+                            tempListeners = new List<(UntypedListener, DispatchMode?)>(channelSubscriptions);
+                        }
                         foreach (var (listener, mode) in tempListeners) {
                             var effectiveMode = mode ?? DefaultDispatchMode;
                             if (effectiveMode == DispatchMode.Buffered) {
-                                messageBuffer.Enqueue((listener, channel, data));
+                                EnqueueBufferedMessage(listener, channel, data);
                             } else {
                                 try {
                                     listener.Invoke(channel, data);
@@ -273,8 +303,11 @@ namespace Inhumate.RTI {
                 } else if (dict.ContainsKey("event") && !dict["event"].ToString().StartsWith("#")) {
                     var eventName = dict["event"].ToString();
                     var data = dict.ContainsKey("data") ? dict["data"] : null;
-                    if (listeners.ContainsKey(eventName)) {
-                        var tempListeners = new List<UntypedListener>(listeners[eventName]);
+                    if (listeners.TryGetValue(eventName, out var eventListeners)) {
+                        List<UntypedListener> tempListeners;
+                        lock (eventListeners) {
+                            tempListeners = new List<UntypedListener>(eventListeners);
+                        }
                         foreach (var listener in tempListeners) {
                             try {
                                 listener.Invoke(eventName, data);
@@ -325,10 +358,10 @@ namespace Inhumate.RTI {
             return socket.Send(message);
         }
 
-        private void StartReconnectThread() {
+        private void StartReconnectThread(int initialDelayMs = 5000) {
             reconnecting = true;
             new Thread(() => {
-                Thread.Sleep(5000);
+                Thread.Sleep(initialDelayMs);
                 while ((socket == null || !IsConnected) && shouldBeConnected) {
                     if (socket != null) {
                         try {
@@ -345,19 +378,20 @@ namespace Inhumate.RTI {
             }).Start();
         }
 
-        public void WaitUntilConnected() {
+        public void WaitUntilConnected(int timeoutMs = 20000) {
+            if (IsConnected) return;
             bool connected = false;
             Action listener = () => {
                 connected = true;
             };
             OnConnected += listener;
             int count = 0;
-            while (count++ < 500 && !connected && connectionError == null) { 
+            while (count++ < timeoutMs / 10 && !connected && !IsConnected && connectionError == null) {
                 if (polling) Poll(1); 
                 Thread.Sleep(10);
             }
             OnConnected -= listener;
-            if (!connected) throw new RTIConnectionFailure(connectionError?.ToString());
+            if (!connected && !IsConnected) throw new RTIConnectionFailure(connectionError?.ToString());
         }
 
         public UntypedListener Subscribe(string channelName, UntypedListener callback, bool register = true, DispatchMode? dispatchMode = null) {
@@ -409,9 +443,12 @@ namespace Inhumate.RTI {
         }
 
         private UntypedListener DoSubscribe(string channelName, UntypedListener callback, DispatchMode? dispatchMode = null) {
-            if (IsConnected) Subscribe(channelName);
-            if (!subscriptions.ContainsKey(channelName)) subscriptions[channelName] = new List<(UntypedListener, DispatchMode?)>();
-            subscriptions[channelName].Add((callback, dispatchMode));
+            var entries = subscriptions.GetOrAdd(channelName, _ => new List<(UntypedListener, DispatchMode?)>());
+            lock (entries) {
+                var firstSubscription = entries.Count == 0;
+                entries.Add((callback, dispatchMode));
+                if (IsConnected && firstSubscription) Subscribe(channelName);
+            }
             return callback;
         }
 
@@ -439,12 +476,14 @@ namespace Inhumate.RTI {
             var channels = new List<string>();
             foreach (var pair in subscriptions) {
                 var entries = pair.Value;
-                var entry = entries.Find(e => e.Listener == listener);
-                if (entry.Listener != null) {
-                    if (entries.Count <= 1) {
-                        channels.Add(pair.Key);
-                    } else {
-                        entries.Remove(entry);
+                lock (entries) {
+                    var entry = entries.Find(e => e.Listener == listener);
+                    if (entry.Listener != null) {
+                        if (entries.Count <= 1) {
+                            channels.Add(pair.Key);
+                        } else {
+                            entries.Remove(entry);
+                        }
                     }
                 }
             }
@@ -482,8 +521,8 @@ namespace Inhumate.RTI {
         }
 
         public void On(string eventName, UntypedListener listener) {
-            if (!listeners.ContainsKey(eventName)) listeners[eventName] = new List<UntypedListener>();
-            listeners[eventName].Add(listener);
+            var eventListeners = listeners.GetOrAdd(eventName, _ => new List<UntypedListener>());
+            lock (eventListeners) eventListeners.Add(listener);
         }
 
         public void Off(string eventName) {
@@ -800,23 +839,33 @@ namespace Inhumate.RTI {
             });
         }
 
+        private readonly object pingTimeoutLock = new object();
         private void StartPingTimeoutThread() {
-            pingTimeoutTask = Task.Run(() => {
-                while (IsConnected && shouldBeConnected) {
-                    Thread.Sleep(1000);
-                    if (PingTimeout > 0 && (DateTime.Now - LastPing).TotalMilliseconds > PingTimeout) {
-                        OnError?.Invoke("connection", new RTIConnectionFailure("Ping timeout"));
-                        try {
-                            socket.Disconnect();
-                            socket.Dispose();
-                        } catch (Exception) { }
-                        Thread.Sleep(100);
-                        Connect();
-                        break;
+            lock (pingTimeoutLock) {
+                if (pingTimeoutTask != null) return;
+                pingTimeoutTask = Task.Run(() => {
+                    try {
+                        while (IsConnected && shouldBeConnected) {
+                            Thread.Sleep(1000);
+                            if (PingTimeout > 0 && (DateTime.Now - LastPing).TotalMilliseconds > PingTimeout) {
+                                OnError?.Invoke("connection", new RTIConnectionFailure("Ping timeout"));
+                                try {
+                                    socket.Disconnect();
+                                    socket.Dispose();
+                                } catch (Exception) { }
+                                lock (pingTimeoutLock) pingTimeoutTask = null;
+                                Thread.Sleep(100);
+                                Connect();
+                                return;
+                            }
+                        }
+                    } finally {
+                        lock (pingTimeoutLock) {
+                            if (pingTimeoutTask != null && pingTimeoutTask.Id == Task.CurrentId) pingTimeoutTask = null;
+                        }
                     }
-                }
-                pingTimeoutTask = null;
-            });
+                });
+            }
         }
 
         public void ResetPing() {

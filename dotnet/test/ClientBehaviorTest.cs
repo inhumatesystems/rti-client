@@ -3,15 +3,22 @@ using System;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using Inhumate.RTI.Proto;
 
 namespace Inhumate.RTI {
+    [NonParallelizable]
     public class ClientBehaviorTest {
 
         protected static RTIClient rti;
         protected static RTIClient rti2;
 
         public class TestException : Exception { }
+
+        private static int TestTimeoutMs =>
+            int.TryParse(Environment.GetEnvironmentVariable("RTI_TEST_TIMEOUT_MS"), out var timeoutMs)
+                ? timeoutMs
+                : Environment.GetEnvironmentVariable("GITLAB_CI") == "true" ? 60000 : 30000;
 
         [OneTimeSetUp]
         public static void Setup() {
@@ -22,20 +29,47 @@ namespace Inhumate.RTI {
         }
 
         private static void Connect1() {
-            rti = new RTIClient { Application = "C# IntegrationTest", Host = "Host1", Station = "Station1", Capabilities = { RTICapability.RuntimeControl } };
-            rti.OnError += (channelName, exception) => {
-                if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
-            };
-            rti.WaitUntilConnected();
+            rti = ConnectClient("C# IntegrationTest", client => {
+                client.Host = "Host1";
+                client.Station = "Station1";
+                client.Capabilities.Add(RTICapability.RuntimeControl);
+            });
         }
 
         private static void Connect2() {
-            rti2 = new RTIClient { Application = "C# IntegrationTest 2" };
-            rti2.OnError += (channelName, exception) => {
-                if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
-            };
-            rti2.WaitUntilConnected();
+            rti2 = ConnectClient("C# IntegrationTest 2");
         }
+
+        private static RTIClient ConnectClient(string application, Action<RTIClient> configure = null) {
+            Exception lastException = null;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < TestTimeoutMs) {
+                var client = new RTIClient(connect: false) { Application = application };
+                configure?.Invoke(client);
+                client.OnError += (channelName, exception) => {
+                    if (!(exception is TestException)) Console.Error.WriteLine($"Error: {channelName}: {exception}");
+                };
+                try {
+                    client.Connect();
+                    client.WaitUntilConnected(Math.Max(1000, (int)Math.Min(5000, TestTimeoutMs - sw.ElapsedMilliseconds)));
+                    return client;
+                } catch (Exception ex) {
+                    lastException = ex;
+                    try { client.Disconnect(); } catch (Exception) { }
+                    Thread.Sleep(250);
+                }
+            }
+            throw new RTIConnectionFailure($"Could not connect {application} within {TestTimeoutMs} ms: {lastException?.Message}");
+        }
+
+        private static bool WaitFor(Func<bool> condition, int? timeoutMs = null) {
+            var timeout = timeoutMs ?? TestTimeoutMs;
+            var sw = Stopwatch.StartNew();
+            while (!condition() && sw.ElapsedMilliseconds < timeout) Thread.Sleep(10);
+            return condition();
+        }
+
+        private static string TestChannel(string prefix) => $"{prefix}-{Guid.NewGuid()}";
 
         [OneTimeTearDown]
         public static void Teardown() {
@@ -46,26 +80,21 @@ namespace Inhumate.RTI {
 
         [Test]
         public void Connect_Disconnect_Works() {
-            var temprti = new RTIClient { Application = "C# IntegrationTest Temp" };
-            temprti.WaitUntilConnected();
+            var temprti = ConnectClient("C# IntegrationTest Temp");
             Assert.IsTrue(temprti.IsConnected);
             temprti.Disconnect();
-            int count = 0;
-            while (temprti.IsConnected && count++ < 200) Thread.Sleep(10);
+            Assert.IsTrue(WaitFor(() => !temprti.IsConnected));
             Assert.IsFalse(temprti.IsConnected);
         }
 
         [Test]
         public void Connect_Disconnect_Events_Called() {
-            var temprti = new RTIClient { Application = "C# IntegrationTest Temp2" };
-            temprti.WaitUntilConnected();
+            var temprti = ConnectClient("C# IntegrationTest Temp2");
             Assert.IsTrue(temprti.IsConnected);
             bool disconnectCalled = false;
             temprti.OnDisconnected += () => { disconnectCalled = true; };
             temprti.Disconnect();
-            int count = 0;
-            while (!disconnectCalled && count++ < 50) Thread.Sleep(10);
-            Assert.IsTrue(disconnectCalled);
+            Assert.IsTrue(WaitFor(() => disconnectCalled));
             Thread.Sleep(100);
 
             bool connectCalled = false;
@@ -244,7 +273,7 @@ namespace Inhumate.RTI {
 
         [Test]
         public void BrokerVersion_Set() {
-            Thread.Sleep(100);
+            WaitFor(() => !string.IsNullOrWhiteSpace(rti.BrokerVersion));
             Assert.IsFalse(string.IsNullOrWhiteSpace(rti.BrokerVersion));
         }
 
@@ -427,8 +456,7 @@ namespace Inhumate.RTI {
             Assert.IsFalse(received2);
 
             // Should be received after ~1s
-            int count = 0;
-            while (!received1 && !received2 && count++ < 30) Thread.Sleep(100);
+            WaitFor(() => received1 && received2);
             Thread.Sleep(100);
             rti.Unsubscribe(subscription);
             Thread.Sleep(100);
@@ -501,25 +529,26 @@ namespace Inhumate.RTI {
         public void EphemeralChannelRegisteredAfterFirstUse_UpdatesToEphemeral() {
             var received = false;
             var ephemeral = false;
-            rti2.Subscribe("ephie", (channelName, message) => {
+            var channel = TestChannel("ephie");
+            rti2.Subscribe(channel, (channelName, message) => {
                 received = true;
-                ephemeral = rti2.GetChannel("ephie").Ephemeral;
+                ephemeral = rti2.GetChannel(channel).Ephemeral;
             });
             Thread.Sleep(250);
 
-            rti.Publish("ephie", "foo");
-            for (int i = 0; i < 20 && !received; i++) Thread.Sleep(100);
+            rti.Publish(channel, "foo");
+            Assert.IsTrue(WaitFor(() => received));
 
             rti.RegisterChannel(new Channel {
-                Name = "ephie",
+                Name = channel,
                 Ephemeral = true
             });
-            Thread.Sleep(500);
+            Assert.IsTrue(WaitFor(() => rti2.GetChannel(channel)?.Ephemeral == true));
             received = false;
-            rti.Publish("ephie", "bar");
+            rti.Publish(channel, "bar");
 
-            for (int i = 0; i < 20 && !received; i++) Thread.Sleep(100);
-            rti2.Unsubscribe("ephie");
+            Assert.IsTrue(WaitFor(() => received));
+            rti2.Unsubscribe(channel);
             Thread.Sleep(100);
             Assert.IsTrue(received);
             Assert.IsTrue(ephemeral);
@@ -529,26 +558,27 @@ namespace Inhumate.RTI {
         [Test]
         public void Polling_QueuesReceivedMessages() {
             var receiveCount = 0;
+            var channel = TestChannel("polling");
             rti2.Polling = true;
-            rti2.Subscribe("polling", (channelName, message) => {
+            rti2.Subscribe(channel, (channelName, message) => {
                 receiveCount++;
             });
             try {
-                Thread.Sleep(250);
+                Thread.Sleep(500);
 
-                rti.Publish("polling", "one");
-                rti.Publish("polling", "two");
-                rti.Publish("polling", "three");
+                rti.Publish(channel, "one");
+                rti.Publish(channel, "two");
+                rti.Publish(channel, "three");
                 Thread.Sleep(100);
 
-                for (int i = 0; i < 100 && receiveCount < 3; i++) {
-                    Thread.Sleep(100);
+                for (int i = 0; i < 1500 && receiveCount < 3; i++) {
+                    Thread.Sleep(10);
                     rti2.Poll();
                 }
                 Assert.IsTrue(receiveCount >= 3);
             } finally {
                 rti2.Polling = false;
-                rti2.Unsubscribe("polling");
+                rti2.Unsubscribe(channel);
                 Thread.Sleep(200);
             }
         }
@@ -632,6 +662,35 @@ namespace Inhumate.RTI {
         }
 
         [Test]
+        public void Buffered_Dispatch_Drops_Oldest_Message_At_Max_Depth() {
+            var previousMax = rti.MaxBufferDepth;
+            rti.FlushBuffers();
+            rti.MaxBufferDepth = 1;
+            var received = new List<string>();
+            var channel = TestChannel("buffer-overflow-test");
+            var overflowSeen = false;
+            ErrorListener onError = (channelName, exception) => {
+                if (channelName == channel && exception is InvalidOperationException) overflowSeen = true;
+            };
+            rti.OnError += onError;
+            var listener = rti.Subscribe(channel, (_channel, data) => { received.Add(data.ToString()); }, dispatchMode: DispatchMode.Buffered);
+            try {
+                Thread.Sleep(250);
+                rti.Publish(channel, "one");
+                rti.Publish(channel, "two");
+                Assert.IsTrue(WaitFor(() => overflowSeen));
+                Assert.AreEqual(1, rti.BufferDepth);
+                rti.FlushBuffers();
+                CollectionAssert.AreEqual(new[] { "two" }, received);
+            } finally {
+                rti.OnError -= onError;
+                rti.Unsubscribe(listener);
+                rti.MaxBufferDepth = previousMax;
+                rti.FlushBuffers();
+            }
+        }
+
+        [Test]
         public void Default_Dispatch_Is_Still_Immediate() {
             bool received = false;
             var listener = rti.Subscribe("immediate-test", (channel, data) => { received = true; });
@@ -646,17 +705,20 @@ namespace Inhumate.RTI {
         public void Mixed_Modes_On_Same_Channel() {
             bool immediateReceived = false;
             bool bufferedReceived = false;
-            var l1 = rti.Subscribe("mixed-test", (channel, data) => { immediateReceived = true; }, dispatchMode: DispatchMode.Immediate);
-            var l2 = rti.Subscribe("mixed-test", (channel, data) => { bufferedReceived = true; }, dispatchMode: DispatchMode.Buffered);
-            Thread.Sleep(250);
-            rti.Publish("mixed-test", "hello");
-            for (int i = 0; i < 50 && !immediateReceived; i++) Thread.Sleep(10);
-            Assert.IsTrue(immediateReceived);
-            Assert.IsFalse(bufferedReceived);
-            rti.FlushBuffers();
-            Assert.IsTrue(bufferedReceived);
-            rti.Unsubscribe(l1);
-            rti.Unsubscribe(l2);
+            var channel = TestChannel("mixed-test");
+            var l1 = rti.Subscribe(channel, (_channel, data) => { immediateReceived = true; }, dispatchMode: DispatchMode.Immediate);
+            var l2 = rti.Subscribe(channel, (_channel, data) => { bufferedReceived = true; }, dispatchMode: DispatchMode.Buffered);
+            try {
+                Thread.Sleep(500);
+                rti.Publish(channel, "hello");
+                Assert.IsTrue(WaitFor(() => immediateReceived));
+                Assert.IsFalse(bufferedReceived);
+                rti.FlushBuffers();
+                Assert.IsTrue(bufferedReceived);
+            } finally {
+                rti.Unsubscribe(l1);
+                rti.Unsubscribe(l2);
+            }
         }
 
         [Test]

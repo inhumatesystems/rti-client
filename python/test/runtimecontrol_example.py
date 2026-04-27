@@ -21,7 +21,7 @@ def main_loop():
         real_time = time.time()
         dt = real_time - last_real_time
         last_real_time = real_time
-        sim_time += dt * (runtime.time_scale or 1.0) # TODO handle time scale
+        sim_time += dt * (runtime.time_scale or 1.0)
         update(dt)
     else:
         time.sleep(0.1) # idle
