@@ -8,7 +8,6 @@ option csharp_namespace = "Inhumate.RTI.Proto";
 
 import "google/protobuf/empty.proto";
 import "RuntimeState.proto";
-import "Logs.proto";
 
 message RuntimeControl {
 
@@ -26,19 +25,6 @@ message RuntimeControl {
         TimeSync time_sync = 12;
 
         Error error = 17;
-
-        google.protobuf.Empty new_log = 21;
-        google.protobuf.Empty request_current_log = 22;
-        Log current_log = 23;
-        string load_log = 24;   // log id
-        LogMark mark_log = 25;
-        string unmark_log = 26; // mark id
-
-        Launch launch = 31;
-        google.protobuf.Empty shutdown = 32;
-        string launch_item = 33;
-        string shutdown_item = 34;
-        string run_remote_action = 35;
 
         google.protobuf.Empty request_current_scenario = 36;
         LoadScenario current_scenario = 37;
@@ -69,10 +55,4 @@ message RuntimeControl {
         string master_client_id = 3;
     }
 
-    message Launch {
-        string configuration = 1;
-        map<string, string> parameter_values = 2;
-    }
-
 }
- 

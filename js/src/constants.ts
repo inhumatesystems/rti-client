@@ -7,7 +7,9 @@ export default {
 const internalPrefix = "rti/"
 export const channel = {
     internalPrefix,
-    control: internalPrefix + "control",
+    runtimeControl: internalPrefix + "control",
+    recorderControl: internalPrefix + "recordercontrol",
+    launchControl: internalPrefix + "launchcontrol",
     fastTimeControl: internalPrefix + "fasttimecontrol",
     channels: internalPrefix + "channels",
     clients: internalPrefix + "clients",
@@ -16,7 +18,7 @@ export const channel = {
     entity: internalPrefix + "entity",
     position: internalPrefix + "position",
     launchConfigurations: internalPrefix + "launchconfigurations",
-    launch: internalPrefix + "launch",
+    launchEvent: internalPrefix + "launch",
     logs: internalPrefix + "logs",
     brokerStats: internalPrefix + "brokerstats",
     brokerPings: internalPrefix + "brokerpings",

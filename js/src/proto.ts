@@ -12,12 +12,13 @@ export { Parameter } from "./generated/Parameter.js"
 export {
     RuntimeControl,
     RuntimeControl_Error,
-    RuntimeControl_Launch,
     RuntimeControl_LoadScenario,
     RuntimeControl_Seek,
     RuntimeControl_SetTimeScale,
     RuntimeControl_TimeSync,
 } from "./generated/RuntimeControl.js"
+export { RecorderControl } from "./generated/RecorderControl.js"
+export { LaunchControl, LaunchControl_Launch } from "./generated/LaunchControl.js"
 export { RuntimeState, runtimeStateFromJSON, runtimeStateToJSON } from "./generated/RuntimeState.js"
 export { LaunchConfigurations, LaunchConfiguration, RemoteAction } from "./generated/LaunchConfigurations.js"
 export {

@@ -6,7 +6,9 @@
     public static class RTIChannel
     {
         public const string InternalPrefix = "rti/";
-        public const string Control = InternalPrefix + "control";
+        public const string RuntimeControl = InternalPrefix + "control";
+        public const string RecorderControl = InternalPrefix + "recordercontrol";
+        public const string LaunchControl = InternalPrefix + "launchcontrol";
         public const string FastTimeControl = InternalPrefix + "fasttimecontrol";
         public const string Channels = InternalPrefix + "channels";
         public const string Clients = InternalPrefix + "clients";
@@ -15,7 +17,7 @@
         public const string Position = InternalPrefix + "position";
         public const string Scenarios = InternalPrefix + "scenarios";
         public const string LaunchConfigurations = InternalPrefix + "launchconfigurations";
-        public const string Launch = InternalPrefix + "launch";
+        public const string LaunchEvent = InternalPrefix + "launch";
         public const string Logs = InternalPrefix + "logs";
         public const string BrokerStats = InternalPrefix + "brokerstats";
         public const string BrokerPings = InternalPrefix + "brokerpings";

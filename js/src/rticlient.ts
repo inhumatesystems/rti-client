@@ -518,7 +518,7 @@ export class RTIClient extends EventEmitter {
 
     publishError(errorMessage: string, errorState?: RuntimeState) {
         this.publish(
-            RTIchannel.control,
+            RTIchannel.runtimeControl,
             RuntimeControl,
             {
                 error: {

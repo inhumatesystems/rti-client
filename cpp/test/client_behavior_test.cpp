@@ -270,7 +270,7 @@ TEST_CASE("set_state_publishes_client")
 TEST_CASE("publish_error_works")
 {
     bool received = false;
-    auto listener = rti.Subscribe<RuntimeControl>(CONTROL_CHANNEL, [&](const std::string &channel, const RuntimeControl &message) {
+    auto listener = rti.Subscribe<RuntimeControl>(RUNTIME_CONTROL_CHANNEL, [&](const std::string &channel, const RuntimeControl &message) {
         if (message.control_case() == RuntimeControl::ControlCase::kError &&
             message.error().client_id() == rti.client_id())
             received = true;

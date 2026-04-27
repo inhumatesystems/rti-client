@@ -28,14 +28,14 @@ rti.on("connect", () => {
         rti.publishText("text", "should not receive this at all")
     }, 2000)
 
-    rti.subscribe(RTI.channel.control, RTI.proto.RuntimeControl, (message: RTI.proto.RuntimeControl) => {
+    rti.subscribe(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, (message: RTI.proto.RuntimeControl) => {
         console.log("received control message", JSON.stringify(RTI.proto.RuntimeControl.toJSON(message)))
     })
 
     setTimeout(() => {
         console.log("publishing control message")
-        //rti.publishBytes(RTI.channel.control, RTI.proto.RuntimeControl.encode({ loadScenario: { name: "foo", parameterValues: {} } }))
-        rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { loadScenario: { name: "foo", parameterValues: {} } })
+        //rti.publishBytes(RTI.channel.runtimeControl, RTI.proto.RuntimeControl.encode({ loadScenario: { name: "foo", parameterValues: {} } }))
+        rti.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { loadScenario: { name: "foo", parameterValues: {} } })
     }, 1000)
 
     setTimeout(() => {

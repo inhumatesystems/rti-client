@@ -12,7 +12,7 @@ runtime = RTI.RuntimeControl(rti)
 
 def on_control(message: RTI.proto.RuntimeControl):
     print("Received a control message:", message.WhichOneof("control"))
-rti.subscribe(RTI.channel.control, RTI.proto.RuntimeControl, on_control)
+rti.subscribe(RTI.channel.runtime_control, RTI.proto.RuntimeControl, on_control)
 
 def on_text(text: str):
     print(f"Received text: {text}")

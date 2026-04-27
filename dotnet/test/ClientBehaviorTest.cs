@@ -223,7 +223,7 @@ namespace Inhumate.RTI {
         [Test]
         public void PublishError_Works() {
             bool received = false;
-            var subscription = rti.Subscribe<RuntimeControl>(RTIChannel.Control, (channel, message) => {
+            var subscription = rti.Subscribe<RuntimeControl>(RTIChannel.RuntimeControl, (channel, message) => {
                 switch (message.ControlCase) {
                     case RuntimeControl.ControlOneofCase.Error:
                         if (message.Error.ClientId == rti.ClientId) received = true;

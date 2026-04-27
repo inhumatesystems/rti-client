@@ -534,7 +534,7 @@ void RTIClient::PublishError(const std::string &content, const proto::RuntimeSta
     error->set_state(state);
     error->set_message(content);
     message.set_allocated_error(error);
-    if (connected()) Publish(CONTROL_CHANNEL, message);
+    if (connected()) Publish(RUNTIME_CONTROL_CHANNEL, message);
 }
 
 void RTIClient::PublishHeartbeat()

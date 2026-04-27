@@ -187,7 +187,7 @@ class ClientBehaviorTest(unittest.TestCase):
         def on_runtime_control(message):
             nonlocal received
             if message.HasField("error") and message.error.client_id == self.rti.client_id: received = True
-        self.rti.subscribe(RTI.channel.control, RTI.proto.RuntimeControl, on_runtime_control)
+        self.rti.subscribe(RTI.channel.runtime_control, RTI.proto.RuntimeControl, on_runtime_control)
         
         self.rti.publish_error("test")
 

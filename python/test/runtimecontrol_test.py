@@ -43,7 +43,7 @@ class RuntimeControlTest(unittest.TestCase):
         self.rti.state = RTI.proto.INITIAL
 
     def _publish(self, msg):
-        self.controller.publish(RTI.channel.control, msg)
+        self.controller.publish(RTI.channel.runtime_control, msg)
 
     def _fresh_client(self, name="python_rc_hook_test"):
         rti = RTI.Client(application=name)
@@ -164,7 +164,7 @@ class RuntimeControlTest(unittest.TestCase):
             TestRuntime(rti)
             msg = RTI.proto.RuntimeControl()
             msg.reset.SetInParent()
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: len(called) > 0)
             self.assertTrue(called)
         finally:
@@ -179,7 +179,7 @@ class RuntimeControlTest(unittest.TestCase):
             TestRuntime(rti)
             msg = RTI.proto.RuntimeControl()
             msg.start.SetInParent()
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: len(called) > 0)
             self.assertTrue(called)
         finally:
@@ -194,7 +194,7 @@ class RuntimeControlTest(unittest.TestCase):
             TestRuntime(rti)
             msg = RTI.proto.RuntimeControl()
             msg.stop.SetInParent()
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: len(called) > 0)
             self.assertTrue(called)
         finally:
@@ -208,7 +208,7 @@ class RuntimeControlTest(unittest.TestCase):
             TestRuntime(rti)
             msg = RTI.proto.RuntimeControl()
             msg.load_scenario.name = "Nope"
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: rti.state == RTI.proto.UNKNOWN)
             self.assertEqual(RTI.proto.UNKNOWN, rti.state)
         finally:
@@ -271,7 +271,7 @@ class RuntimeControlTest(unittest.TestCase):
             self.assertTrue(runtime.is_fast_time)
             msg = RTI.proto.RuntimeControl()
             msg.play.SetInParent()
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: not runtime.is_fast_time)
             self.assertFalse(runtime.is_fast_time)
             self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
@@ -326,7 +326,7 @@ class RuntimeControlTest(unittest.TestCase):
             self.assertTrue(runtime.is_fast_time)
             msg = RTI.proto.RuntimeControl()
             msg.stop.SetInParent()
-            self.controller.publish(RTI.channel.control, msg)
+            self.controller.publish(RTI.channel.runtime_control, msg)
             wait_for(lambda: not runtime.is_fast_time)
             self.assertFalse(runtime.is_fast_time)
         finally:
@@ -344,7 +344,7 @@ class RuntimeControlTest(unittest.TestCase):
                 time.sleep(0.1)
                 msg = RTI.proto.RuntimeControl()
                 msg.stop.SetInParent()
-                self.controller.publish(RTI.channel.control, msg)
+                self.controller.publish(RTI.channel.runtime_control, msg)
             import threading
             threading.Thread(target=do_stop, daemon=True).start()
             grant = runtime.get_step_grant(timeout=2.0)

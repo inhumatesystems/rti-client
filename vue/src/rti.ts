@@ -76,7 +76,7 @@ export const useRtiStore = defineStore("rti", () => {
             if (hadRecorder && !recorderClient.value) {
                 log.value = undefined
             } else if (!hadRecorder && recorderClient.value) {
-                rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { requestCurrentLog: {} })
+                rti.publish(RTI.channel.recorderControl, RTI.proto.RecorderControl, { requestCurrentLog: {} })
             }
         }
     })
@@ -84,12 +84,10 @@ export const useRtiStore = defineStore("rti", () => {
         clients.value = rti.knownClients.filter((client: RTI.proto.Client) => client.id != rti.clientId)
     })
     rti.subscribe(
-        RTI.channel.control,
+        RTI.channel.runtimeControl,
         RTI.proto.RuntimeControl,
         (message: RTI.proto.RuntimeControl) => {
-            if (message.currentLog) {
-                log.value = message.currentLog
-            } else if (message.timeSync) {
+            if (message.timeSync) {
                 time.value = message.timeSync.time
                 timeScale.value = message.timeSync.timeScale
                 timeSyncMasterClientId.value = message.timeSync.masterClientId
@@ -111,6 +109,16 @@ export const useRtiStore = defineStore("rti", () => {
                 time.value = 0
             } else if (message.error) {
                 errors.value.push(message.error)
+            }
+        },
+        false
+    )
+    rti.subscribe(
+        RTI.channel.recorderControl,
+        RTI.proto.RecorderControl,
+        (message: RTI.proto.RecorderControl) => {
+            if (message.currentLog) {
+                log.value = message.currentLog
             }
         },
         false
@@ -150,7 +158,7 @@ export const useRtiStore = defineStore("rti", () => {
     }
 
     function requestCurrentLog() {
-        rti.publish(RTI.channel.control, RTI.proto.RuntimeControl, { requestCurrentLog: {} })
+        rti.publish(RTI.channel.recorderControl, RTI.proto.RecorderControl, { requestCurrentLog: {} })
     }
 
     function requestClients() {

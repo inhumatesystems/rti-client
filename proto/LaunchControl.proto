@@ -1,0 +1,25 @@
+// RTI launch control messages definition.
+// This file defines the messages used to control the RTI launcher, including launching configurations,
+// shutting down launched items, and running remote actions.
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message LaunchControl {
+
+    oneof control {
+        Launch launch = 1;
+        string shutdown = 2;
+        string launch_item = 3;
+        string shutdown_item = 4;
+        string run_remote_action = 5;
+    }
+
+    message Launch {
+        string configuration = 1;
+        map<string, string> parameter_values = 2;
+    }
+
+}

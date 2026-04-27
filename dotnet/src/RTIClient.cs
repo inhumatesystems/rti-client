@@ -613,7 +613,7 @@ namespace Inhumate.RTI {
         }
 
         public void PublishError(string message, RuntimeState? errorState = null) {
-            Publish(RTIChannel.Control, new RuntimeControl {
+            Publish(RTIChannel.RuntimeControl, new RuntimeControl {
                 Error = new RuntimeControl.Types.Error {
                     ClientId = ClientId,
                     State = errorState.HasValue ? errorState.Value : state,

@@ -59,7 +59,7 @@ test("reset sets state to INITIAL and calls onReset", async () => {
     runtime.onReset = () => { onResetCalled = true }
     runtime.onResetEndStop = () => { onResetEndStopCalled = true }
     rti.state = RTI.proto.RuntimeState.RUNNING
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { reset: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { reset: {} })
     let count = 0
     while (rtiState() !== RTI.proto.RuntimeState.INITIAL && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.INITIAL)
@@ -72,7 +72,7 @@ test("reset sets state to INITIAL and calls onReset", async () => {
 test("load scenario sets state to READY and stores scenario", async () => {
     let loadScenarioCalled = false
     runtime.onLoadScenario = (ls, playback) => { loadScenarioCalled = true; return true }
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { loadScenario: { name: "test-scenario", parameterValues: {} } })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { loadScenario: { name: "test-scenario", parameterValues: {} } })
     let count = 0
     while (rti.state !== RTI.proto.RuntimeState.READY && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.READY)
@@ -83,7 +83,7 @@ test("load scenario sets state to READY and stores scenario", async () => {
 
 test("load scenario returning false sets state to UNKNOWN", async () => {
     runtime.onLoadScenario = () => false
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { loadScenario: { name: "fail-scenario", parameterValues: {} } })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { loadScenario: { name: "fail-scenario", parameterValues: {} } })
     let count = 0
     while (rti.state !== RTI.proto.RuntimeState.UNKNOWN && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.UNKNOWN)
@@ -94,7 +94,7 @@ test("load scenario returning false sets state to UNKNOWN", async () => {
 test("start sets state to RUNNING and calls onStart", async () => {
     let called = false
     runtime.onStart = () => { called = true }
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { start: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { start: {} })
     let count = 0
     while (rti.state !== RTI.proto.RuntimeState.RUNNING && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.RUNNING)
@@ -106,7 +106,7 @@ test("pause sets state to PAUSED and calls onPause", async () => {
     let called = false
     runtime.onPause = () => { called = true }
     rti.state = RTI.proto.RuntimeState.RUNNING
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { pause: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { pause: {} })
     let count = 0
     while (rtiState() !== RTI.proto.RuntimeState.PAUSED && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.PAUSED)
@@ -117,7 +117,7 @@ test("pause sets state to PAUSED and calls onPause", async () => {
 test("play sets state to PLAYBACK and calls onPlay", async () => {
     let called = false
     runtime.onPlay = () => { called = true }
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { play: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
     let count = 0
     while (rti.state !== RTI.proto.RuntimeState.PLAYBACK && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK)
@@ -131,7 +131,7 @@ test("end sets state to END and calls onEnd/onEndStop/onResetEndStop", async () 
     runtime.onEndStop = () => { endStopCalled = true }
     runtime.onResetEndStop = () => { resetEndStopCalled = true }
     rti.state = RTI.proto.RuntimeState.RUNNING
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { end: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { end: {} })
     let count = 0
     while (rtiState() !== RTI.proto.RuntimeState.END && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.END)
@@ -149,7 +149,7 @@ test("stop sets state to STOPPED and calls onStop/onEndStop/onResetEndStop", asy
     runtime.onEndStop = () => { endStopCalled = true }
     runtime.onResetEndStop = () => { resetEndStopCalled = true }
     rti.state = RTI.proto.RuntimeState.RUNNING
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { stop: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { stop: {} })
     let count = 0
     while (rtiState() !== RTI.proto.RuntimeState.STOPPED && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.STOPPED)
@@ -163,7 +163,7 @@ test("stop sets state to STOPPED and calls onStop/onEndStop/onResetEndStop", asy
 
 test("stop during playback sets state to PLAYBACK_STOPPED", async () => {
     rti.state = RTI.proto.RuntimeState.PLAYBACK
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { stop: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { stop: {} })
     let count = 0
     while (rtiState() !== RTI.proto.RuntimeState.PLAYBACK_STOPPED && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK_STOPPED)
@@ -172,7 +172,7 @@ test("stop during playback sets state to PLAYBACK_STOPPED", async () => {
 test("set time scale calls onTimeScale and stores value", async () => {
     let receivedScale: number | undefined
     runtime.onTimeScale = (ts) => { receivedScale = ts }
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { setTimeScale: { timeScale: 2.5 } })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { setTimeScale: { timeScale: 2.5 } })
     let count = 0
     while (receivedScale === undefined && count++ < 50) await sleep(10)
     expect(receivedScale).toBeCloseTo(2.5)
@@ -183,7 +183,7 @@ test("set time scale calls onTimeScale and stores value", async () => {
 test("time sync calls onTimeSync and stores timeScale", async () => {
     let received: RTI.proto.RuntimeControl_TimeSync | undefined
     runtime.onTimeSync = (ts) => { received = ts }
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { timeSync: { time: 10.0, timeScale: 1.5, masterClientId: "master" } })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { timeSync: { time: 10.0, timeScale: 1.5, masterClientId: "master" } })
     let count = 0
     while (received === undefined && count++ < 50) await sleep(10)
     expect(received!.timeScale).toBeCloseTo(1.5)
@@ -222,7 +222,7 @@ test("subclass can override hooks", async () => {
     const sim = new MySim(rti4)
     let count = 0
     while (!rti4.isConnected && count++ < 50) await sleep(100)
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { start: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { start: {} })
     count = 0
     while (!sim.startCalled && count++ < 50) await sleep(10)
     expect(sim.startCalled).toBe(true)
@@ -301,7 +301,7 @@ test("play during fast time resets fast time mode", async () => {
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
     expect(rtFt.isFastTime).toBe(true)
 
-    rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { play: {} })
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
     count = 0
     while (rtFt.isFastTime && count++ < 50) await sleep(10)
     expect(rtFt.isFastTime).toBe(false)
@@ -387,7 +387,7 @@ test("stop during fast time wakes getStepGrant with null", async () => {
 
     // After a short delay, send stop
     setTimeout(() => {
-        rti2.publish(RTI.channel.control, RTI.proto.RuntimeControl, { stop: {} })
+        rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { stop: {} })
     }, 50)
 
     const grant = await grantPromise

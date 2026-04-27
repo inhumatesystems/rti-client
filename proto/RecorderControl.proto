@@ -1,0 +1,26 @@
+// RTI recorder control messages definition.
+// This file defines the messages used to control the RTI recorder, including starting new logs,
+// marking logs, loading logs for playback, and loading reference logs.
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+import "google/protobuf/empty.proto";
+import "Logs.proto";
+
+message RecorderControl {
+
+    oneof control {
+        google.protobuf.Empty new_log = 1;
+        google.protobuf.Empty request_current_log = 2;
+        Log current_log = 3;
+        string load_log = 4;   // log id
+        LogMark mark_log = 5;
+        string unmark_log = 6; // mark id
+        string load_reference_log = 7; // log id
+        google.protobuf.Empty unload_reference_log = 8;
+    }
+
+}

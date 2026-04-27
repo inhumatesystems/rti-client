@@ -43,7 +43,6 @@ namespace Inhumate.RTI {
 
         public double? TimeScale { get; private set; }
         public RuntimeControl.Types.LoadScenario Scenario { get; private set; }
-        public Log CurrentLog { get; private set; }
         public bool PublishScenario { get; set; }
         public bool AsyncReady { get; set; }
 
@@ -133,13 +132,12 @@ namespace Inhumate.RTI {
         public void Stop() => PublishAndReceive(new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
         public void SetTimeScale(double timeScale) => PublishAndReceive(new RuntimeControl { SetTimeScale = new RuntimeControl.Types.SetTimeScale { TimeScale = timeScale } });
         public void Seek(double time) => PublishAndReceive(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = time } });
-        public void RequestCurrentLog() => PublishAndReceive(new RuntimeControl { RequestCurrentLog = new Google.Protobuf.WellKnownTypes.Empty() });
 
         public void Subscribe() {
             if (!subscribed) {
                 // Always IMMEDIATE so stop/end/reset pierce BUFFERED mode during fast-time steps
-                rti.Subscribe<RuntimeControl>(RTIChannel.Control, OnRuntimeControlMessage, dispatchMode: DispatchMode.Immediate);
-                rti.Subscribe<RuntimeControl>(rti.OwnChannelPrefix + RTIChannel.Control, OnRuntimeControlMessage, dispatchMode: DispatchMode.Immediate);
+                rti.Subscribe<RuntimeControl>(RTIChannel.RuntimeControl, OnRuntimeControlMessage, dispatchMode: DispatchMode.Immediate);
+                rti.Subscribe<RuntimeControl>(rti.OwnChannelPrefix + RTIChannel.RuntimeControl, OnRuntimeControlMessage, dispatchMode: DispatchMode.Immediate);
                 if (fastTimeEnabled) {
                     rti.Subscribe<FastTimeControl>(RTIChannel.FastTimeControl, OnFastTimeControlMessage, dispatchMode: DispatchMode.Immediate);
                     rti.Subscribe(RTIChannel.ClientDisconnect, OnClientDisconnectMessage, false, dispatchMode: DispatchMode.Immediate);
@@ -197,7 +195,7 @@ namespace Inhumate.RTI {
         }
 
         private void PublishAndReceive(RuntimeControl message) {
-            rti.Publish(RTIChannel.Control, message);
+            rti.Publish(RTIChannel.RuntimeControl, message);
             if (!rti.IsConnected || !subscribed) Receive(message);
         }
 
@@ -272,7 +270,7 @@ namespace Inhumate.RTI {
                     break;
                 case RuntimeControl.ControlOneofCase.RequestCurrentScenario:
                     if (PublishScenario && Scenario != null) {
-                        rti.Publish(RTIChannel.Control, new RuntimeControl {
+                        rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
                             CurrentScenario = new RuntimeControl.Types.LoadScenario { Name = Scenario.Name }
                         });
                     }
@@ -319,9 +317,6 @@ namespace Inhumate.RTI {
                 case RuntimeControl.ControlOneofCase.TimeSync:
                     TimeScale = message.TimeSync.TimeScale;
                     OnTimeSync(message.TimeSync);
-                    break;
-                case RuntimeControl.ControlOneofCase.CurrentLog:
-                    CurrentLog = message.CurrentLog;
                     break;
                 case RuntimeControl.ControlOneofCase.CurrentScenario:
                     Scenario = new RuntimeControl.Types.LoadScenario { Name = message.CurrentScenario.Name };

@@ -29,6 +29,7 @@ message MeasurementBundle {
         int32 offset = 12;
         bool reverse = 13;
         bool per_measure = 14; // if true, we want $limit measurements per measure, e.g. used to get "latest" measurement
+        bool reference = 15; // if true, we want reference data instead of current data
     }
 
     message Response {

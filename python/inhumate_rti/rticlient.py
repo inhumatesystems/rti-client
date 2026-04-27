@@ -423,7 +423,7 @@ class RTIClient(Emitter):
         message.error.message = str(error_message)
         if runtime_state is not None:
             message.error.state = runtime_state
-        self.publish(Channel.control, message)
+        self.publish(Channel.runtime_control, message)
 
     def publish_heartbeat(self) -> None:
         message = Proto.Clients()
