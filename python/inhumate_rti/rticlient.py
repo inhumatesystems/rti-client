@@ -74,6 +74,7 @@ class RTIClient(Emitter):
         self.used_measures = {}
         self.known_measures = {}
         self.default_dispatch_mode = DispatchMode.IMMEDIATE
+        self.max_buffer_depth = 10000
         self._message_buffer = []
         self._buffer_lock = Lock()
 
@@ -161,7 +162,12 @@ class RTIClient(Emitter):
                 self.known_clients[message.client.id] = message.client
             elif message.HasField("register_participant"):
                 reg = message.register_participant
-                if (reg.client_id == self.client_id or not reg.client_id) and (reg.host == self._host or not reg.host) and (reg.station == self._station or not reg.station) and (reg.participant != self.participant or reg.role != self.role):
+                if ((not reg.client_id or reg.client_id == self.client_id)
+                        and (not reg.host or reg.host == self._host)
+                        and (not reg.station or reg.station == self._station)
+                        and (reg.participant != self.participant
+                             or reg.role != self.role
+                             or reg.full_name != self.full_name)):
                     self.participant = reg.participant
                     self.role = reg.role
                     self.full_name = reg.full_name
@@ -291,6 +297,18 @@ class RTIClient(Emitter):
     def buffer_depth(self):
         with self._buffer_lock: return len(self._message_buffer)
 
+    def _buffer_message(self, message):
+        with self._buffer_lock:
+            if self.max_buffer_depth <= 0:
+                overflow = True
+            else:
+                overflow = len(self._message_buffer) >= self.max_buffer_depth
+                if overflow:
+                    self._message_buffer.pop(0)
+                self._message_buffer.append(message)
+        if overflow:
+            self.emit("error", "buffer", Exception("RTI buffered dispatch overflow"), None)
+
     def flush_buffers(self):
         with self._buffer_lock:
             messages = list(self._message_buffer)
@@ -366,8 +384,7 @@ class RTIClient(Emitter):
                 for listener, mode in listeners:
                     effective_mode = mode if mode is not None else self.default_dispatch_mode
                     if effective_mode == DispatchMode.BUFFERED:
-                        with self._buffer_lock:
-                            self._message_buffer.append((listener, channel_name, content))
+                        self._buffer_message((listener, channel_name, content))
                     else:
                         self._call_handler(listener, channel_name, content)
             self.socket.on_channel(socket_channel_name, handle_message)
@@ -377,7 +394,7 @@ class RTIClient(Emitter):
 
     def unsubscribe(self, channel_name_or_handler: Union[str, Callable[[str], None]]) -> None:
         with self.subscribe_lock:
-            if channel_name_or_handler is str:
+            if isinstance(channel_name_or_handler, str):
                 if self.federation:
                     channel_name_or_handler = "//" + self.federation + "/" + channel_name_or_handler
                 self.socket.unsubscribe(channel_name_or_handler)
@@ -401,21 +418,26 @@ class RTIClient(Emitter):
         if type(message) is str: return self.publish_text(channel_name, message, register)
         if register: self._register_channel_usage(channel_name, True, data_type=str(type(message)))
         content = base64.b64encode(message.SerializeToString()).decode("utf8")
-        if self.federation and not channel_name.startswith("@"):
-            channel_name = "//" + self.federation + "/" + channel_name
-        self.socket.publish(channel_name, content)
+        self._do_publish(channel_name, content)
 
     def publish_text(self, channel_name: str, content: str, register = True) -> None:
         if register: self._register_channel_usage(channel_name, True, data_type="text")
-        if self.federation and not channel_name.startswith("@"):
-            channel_name = "//" + self.federation + "/" + channel_name
-        self.socket.publish(channel_name, content)
+        self._do_publish(channel_name, content)
 
     def publish_json(self, channel_name: str, message: object, register = True) -> None:
         if register: self._register_channel_usage(channel_name, True, data_type="json")
+        self._do_publish(channel_name, json.dumps(message))
+
+    def _do_publish(self, channel_name: str, content: str) -> None:
+        if not channel_name:
+            print("RTI can't publish with empty channel name - message dropped", file=sys.stderr)
+            return
+        if not self.first_connected:
+            print("RTI can't publish before connected - message dropped", file=sys.stderr)
+            return
         if self.federation and not channel_name.startswith("@"):
             channel_name = "//" + self.federation + "/" + channel_name
-        self.socket.publish(channel_name, json.dumps(message))
+        self.socket.publish(channel_name, content)
 
     def publish_error(self, error_message: str, runtime_state: Proto.RuntimeState = None) -> None:
         message = Proto.RuntimeControl()
@@ -676,5 +698,4 @@ class RTIClient(Emitter):
             return response
         else:
             self.publish(channel, message)
-
 

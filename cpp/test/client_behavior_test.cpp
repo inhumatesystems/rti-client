@@ -560,6 +560,27 @@ TEST_CASE("buffered_dispatch_not_delivered_until_flush")
     rti.Unsubscribe(listener);
 }
 
+TEST_CASE("buffered_dispatch_drops_oldest_message_at_max_depth")
+{
+    auto previousMax = rti.maxBufferDepth;
+    rti.maxBufferDepth = 1;
+    std::vector<std::string> received;
+    auto listener = rti.Subscribe("buffer-overflow-test",
+        [&](const std::string &channel, const std::string &message) { received.push_back(message); },
+        true, DispatchMode::BUFFERED);
+    POLL(100);
+    rti.Publish("buffer-overflow-test", "one");
+    rti.Publish("buffer-overflow-test", "two");
+    POLL_CONDITION(500, rti.BufferDepth() < 1);
+    POLL(100);
+    REQUIRE(rti.BufferDepth() == 1);
+    rti.FlushBuffers();
+    REQUIRE(received.size() == 1);
+    REQUIRE(received[0] == "two");
+    rti.maxBufferDepth = previousMax;
+    rti.Unsubscribe(listener);
+}
+
 TEST_CASE("default_dispatch_is_still_immediate")
 {
     bool received = false;

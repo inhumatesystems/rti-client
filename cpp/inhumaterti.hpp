@@ -1,6 +1,6 @@
 //
 // Inhumate RTI C++ Client
-// Copyright 2025 Inhumate AB
+// Copyright 2026 Inhumate AB
 //
 
 // Style guide: https://google.github.io/styleguide/cppguide.html
@@ -167,7 +167,8 @@ class INHUMATE_RTI_EXPORT RTIClient
               const std::string &secret = "",
               const std::string &user = "",
               const std::string &password = "",
-              const std::string &clientId = "");
+              const std::string &clientId = "",
+              const bool insecureTls = false);
     RTIClient(const RTIClient &) = delete;
     RTIClient(RTIClient &&) = default;
     ~RTIClient();
@@ -225,6 +226,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     void Unsubscribe(messagecallback_p callback);
 
     DispatchMode defaultDispatchMode = DispatchMode::IMMEDIATE;
+    std::size_t maxBufferDepth = 10000;
     void FlushBuffers();
     std::size_t BufferDepth() const;
 
@@ -444,6 +446,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     private:
     struct BufferedMessage { messagecallback_p callback; std::string channel; std::string data; };
     std::vector<BufferedMessage> messageBuffer;
+    void BufferMessage(const BufferedMessage &message);
 
     std::unique_ptr<client> wsclient;
     std::unique_ptr<client_tls> wsclient_tls;
@@ -453,6 +456,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     std::string _url;
     std::string _federation;
     bool _incognito;
+    bool _insecureTls;
     std::string _host;
     std::string _station;
     std::string _participant;

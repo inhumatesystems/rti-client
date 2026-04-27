@@ -191,8 +191,20 @@ export class RTIClient extends EventEmitter {
     }
 
     public defaultDispatchMode: DispatchMode = DispatchMode.IMMEDIATE
+    public maxBufferDepth = 10000
     private _messageBuffer: BufferedMessage[] = []
     get bufferDepth(): number { return this._messageBuffer.length }
+    private bufferMessage(message: BufferedMessage): void {
+        if (this.maxBufferDepth <= 0) {
+            this.emit("error", new Error("RTI buffered dispatch overflow"))
+            return
+        }
+        if (this._messageBuffer.length >= this.maxBufferDepth) {
+            this._messageBuffer.shift()
+            this.emit("error", new Error("RTI buffered dispatch overflow"))
+        }
+        this._messageBuffer.push(message)
+    }
     flushBuffers(): void {
         const messages = this._messageBuffer.splice(0)
         for (const { wrappedHandler, channelName, handler, data } of messages) {
@@ -249,7 +261,7 @@ export class RTIClient extends EventEmitter {
         if (!this.federation && options && options.federation) this.federation = options.federation
         if (!this.federation) this.federation = env["RTI_FEDERATION"] || ""
         // slashes quietly not allowed in federation id
-        if (this.federation) this.federation = this.federation.replace("/", "_")
+        if (this.federation) this.federation = this.federation.replace(/\//g, "_")
         this.host = ""
         if (!this.host && options && options.host) this.host = options.host
         if (!this.host) this.host = env["RTI_HOST"] || ""
@@ -360,21 +372,6 @@ export class RTIClient extends EventEmitter {
             this._brokerVersion = content
             this.emit("broker-version", content)
         })
-        // below hack for backwards compatibility with geistt rti
-        if (this.socket.transport?.socket) {
-            const sockSocket = this.socket.transport?.socket as any
-            sockSocket.addEventListener("message", (message: MessageEvent) => {
-                if (message.data === "#1") {
-                    this.socket.send("#2")
-                    if (!this._compatibilityMode) {
-                        this._compatibilityMode = true
-                        this.emit("compatibility-mode", this._compatibilityMode)
-                        this.socket.transport!.pingTimeoutDisabled = true
-                        clearInterval((this.socket.transport as any)._pingTimeoutTicker)
-                    }
-                }
-            })
-        }
 
         this.subscribe(RTIchannel.clients, Clients, (m: Clients) => this.onClients(m), false, DispatchMode.IMMEDIATE)
         this.subscribe(RTIchannel.channels, Channels, (m: Channels) => this.onChannels(m), false, DispatchMode.IMMEDIATE)
@@ -470,16 +467,14 @@ export class RTIClient extends EventEmitter {
 
     onMeasures(message: Measures) {
         if (message.requestMeasures) {
-            if (!this.incognito) {
-                this.publishMeasures()
-            } else if (message.measure) {
-                this._knownMeasures[message.measure.id] = message.measure
-                this.emit("measure", message.measure)
-            } else if (message.logMeasure) {
-                if (!(message.logMeasure.id in this._knownMeasures)) {
-                    this._knownMeasures[message.logMeasure.id] = message.logMeasure
-                    this.emit("logmeasure", message.logMeasure)
-                }
+            if (!this.incognito) this.publishMeasures()
+        } else if (message.measure) {
+            this._knownMeasures[message.measure.id] = message.measure
+            this.emit("measure", message.measure)
+        } else if (message.logMeasure) {
+            if (!(message.logMeasure.id in this._knownMeasures)) {
+                this._knownMeasures[message.logMeasure.id] = message.logMeasure
+                this.emit("logmeasure", message.logMeasure)
             }
         }
     }
@@ -603,7 +598,7 @@ export class RTIClient extends EventEmitter {
             if (this._handlers[channelName].indexOf(handler) < 0) return false
             const effectiveMode = dispatchMode ?? this.defaultDispatchMode
             if (effectiveMode === DispatchMode.BUFFERED) {
-                this._messageBuffer.push({ wrappedHandler, channelName, data, handler })
+                this.bufferMessage({ wrappedHandler, channelName, data, handler })
             } else {
                 wrappedHandler(data)
             }

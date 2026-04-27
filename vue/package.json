@@ -31,7 +31,7 @@
   "dependencies": {
     "@protobufjs/inquire": "^1.1.0",
     "inhumate-rti": ">=0.0.1-dev-version",
-    "protobufjs": "^7.5.4"
+    "protobufjs": "^7.5.5"
   },
   "peerDependencies": {
     "pinia": ">=2.0.0",

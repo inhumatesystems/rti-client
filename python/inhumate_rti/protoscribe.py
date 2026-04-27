@@ -8,6 +8,7 @@ import sys
 import tempfile
 import pathlib
 import argparse
+import subprocess
 
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(__file__) + "/..")
@@ -35,7 +36,9 @@ def main():
 
     # Run protoc in a temporary directory and import files
     with tempfile.TemporaryDirectory() as tmpdir:
-        os.system(f"protoc --python_out={tmpdir} --proto_path={args.path} {' '.join(protofiles)}")
+        subprocess.run(
+            ["protoc", f"--python_out={tmpdir}", f"--proto_path={args.path}", *protofiles],
+            check=True)
         sys.path.insert(0, tmpdir)
         for file in os.listdir(tmpdir):
             if file.endswith(".py"):
@@ -78,4 +81,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

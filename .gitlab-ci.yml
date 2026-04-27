@@ -276,7 +276,7 @@ test dotnet client:
     - "curl --location --output artifacts.zip --header \"PRIVATE-TOKEN: ${PRIVATE_TOKEN}\" \"https://gitlab.com/api/v4/projects/${BROKER_PROJECT_ID}/jobs/artifacts/${BROKER_BRANCH}/download?job=build%20broker\" && unzip artifacts.zip && rm -f artifacts.zip"
     # Start broker
     - node broker/dist/broker.js &
-    - sleep 20
+    - sleep 10
     # Run tests
     - cd dotnet/test
     - dotnet test -v n --test-adapter-path:. --logger:"junit;LogFilePath=./test-result.xml;MethodFormat=Class;FailureBodyFormat=Verbose"

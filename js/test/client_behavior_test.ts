@@ -384,6 +384,26 @@ test("buffered dispatch not delivered until flush", async () => {
     expect(rti.bufferDepth).toBe(0)
 })
 
+test("buffered dispatch drops oldest message at max depth", async () => {
+    const previousMax = rti.maxBufferDepth
+    rti.maxBufferDepth = 1
+    const received: string[] = []
+    const subscription = rti.subscribeText("buffer-overflow-test", (message: string) => { received.push(message) }, true, RTI.DispatchMode.BUFFERED)
+    try {
+        rti.publishText("buffer-overflow-test", "one")
+        rti.publishText("buffer-overflow-test", "two")
+        let count = 0
+        while (rti.bufferDepth < 1 && count++ < 50) await sleep(10)
+        await sleep(100)
+        expect(rti.bufferDepth).toBe(1)
+        rti.flushBuffers()
+        expect(received).toEqual(["two"])
+    } finally {
+        rti.unsubscribe(subscription)
+        rti.maxBufferDepth = previousMax
+    }
+})
+
 test("default dispatch is still immediate", async () => {
     let received = false
     rti.subscribeText("immediate-test", () => { received = true })

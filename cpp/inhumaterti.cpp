@@ -25,6 +25,7 @@ typedef client::message_ptr message_ptr_t;
 
 #include <algorithm> //for std::generate_n
 #include <chrono>
+#include <cctype>
 #include <cstdint>
 #include <functional> //for std::function
 #include <iostream>
@@ -47,6 +48,8 @@ namespace rti
 // Forward declarations
 std::string random_string(size_t length);
 uint64_t timeSinceEpochMs();
+bool is_truthy_env(const char *value);
+std::string websocket_host(const std::string &url);
 
 RTIClient::RTIClient(const std::string &inApplication,
                      const bool autoConnect,
@@ -55,7 +58,8 @@ RTIClient::RTIClient(const std::string &inApplication,
                      const std::string &inSecret,
                      const std::string &inUser,
                      const std::string &inPassword,
-                     const std::string &inClientId)
+                     const std::string &inClientId,
+                     const bool insecureTls)
 {
     _url = inUrl;
     if (_url.empty()) {
@@ -71,6 +75,9 @@ RTIClient::RTIClient(const std::string &inApplication,
     }
 
     _application = inApplication;
+    _insecureTls = insecureTls;
+    char *envInsecureTls = std::getenv("RTI_INSECURE_TLS");
+    if (is_truthy_env(envInsecureTls)) _insecureTls = true;
 
     _federation = inFederation;
     if (_federation.empty()) {
@@ -108,17 +115,15 @@ RTIClient::RTIClient(const std::string &inApplication,
         host[0] = host[255] = '\0';
         gethostname(host, 255);
         _host = host;
-        if (_host.find(".") >= 0) _host = _host.substr(0, _host.find("."));
+        if (_host.find(".") != std::string::npos) _host = _host.substr(0, _host.find("."));
     }
 
     char *envStation = std::getenv("RTI_STATION");
     if (envStation) _station = envStation;
 
-    // TODO a better way to support both secure and non-secure sockets?
-    // https://github.com/zaphoyd/websocketpp/issues/706
-    // https://github.com/barsnick/websocketpp/pull/1/files
     websocketpp::lib::error_code ec;
     if (_url.rfind("wss://", 0) == 0) {
+        const auto tlsHost = websocket_host(_url);
         wsclient.reset();
         wsclient_tls = std::unique_ptr<client_tls>(new client_tls());
         wsclient_tls->set_access_channels(websocketpp::log::alevel::none);
@@ -126,18 +131,21 @@ RTIClient::RTIClient(const std::string &inApplication,
         wsclient_tls->init_asio(ec);
         wsclient_tls->set_open_handler(bind(&RTIClient::OnOpen, this, ::_1));
         wsclient_tls->set_message_handler(bind(&RTIClient::OnMessage, this, ::_1, ::_2));
-        wsclient_tls->set_tls_init_handler([](websocketpp::connection_hdl) {
+        wsclient_tls->set_tls_init_handler([this, tlsHost](websocketpp::connection_hdl) {
             context_ptr ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
             try {
                 ctx->set_options(asio::ssl::context::default_workarounds | asio::ssl::context::no_sslv2 |
                                  asio::ssl::context::no_sslv3 | asio::ssl::context::single_dh_use);
-                ctx->set_verify_mode(asio::ssl::verify_none);
-                // TODO proper certificate verification
-                // ctx->set_verify_mode(boost::asio::ssl::verify_peer);
-                // ctx->set_verify_callback(bind(&verify_certificate, hostname, ::_1, ::_2));
-                // ctx->load_verify_file("ca-chain.cert.pem");
+                if (_insecureTls) {
+                    ctx->set_verify_mode(asio::ssl::verify_none);
+                } else {
+                    ctx->set_verify_mode(asio::ssl::verify_peer);
+                    ctx->set_verify_callback(asio::ssl::rfc2818_verification(tlsHost));
+                    ctx->set_default_verify_paths();
+                }
             } catch (std::exception &e) {
-                std::cout << e.what() << std::endl;
+                for (auto callback : errorcallbacks)
+                    if (callback) (*callback)("tls", e.what());
             }
             return ctx;
         });
@@ -205,12 +213,20 @@ void RTIClient::Connect()
 
 void RTIClient::Disconnect()
 {
-    if (wsclient_tls) {
-        wsclient_tls->close(connection_hdl, websocketpp::close::status::normal, "");
-        wsclient_tls->poll();
-    } else {
-        wsclient->close(connection_hdl, websocketpp::close::status::normal, "");
-        wsclient->poll();
+    try {
+        if (wsclient_tls) {
+            wsclient_tls->close(connection_hdl, websocketpp::close::status::normal, "");
+            wsclient_tls->poll();
+        } else if (wsclient) {
+            wsclient->close(connection_hdl, websocketpp::close::status::normal, "");
+            wsclient->poll();
+        }
+    } catch (std::exception &e) {
+        for (auto callback : errorcallbacks)
+            if (callback) (*callback)("disconnect", e.what());
+    } catch (...) {
+        for (auto callback : errorcallbacks)
+            if (callback) (*callback)("disconnect", "caught something");
     }
     connection_hdl.reset();
     lastPingTime = 0;
@@ -383,6 +399,25 @@ void RTIClient::FlushBuffers()
             for (auto errorcb : errorcallbacks)
                 if (errorcb) (*errorcb)(msg.channel, "caught something");
         }
+    }
+}
+
+void RTIClient::BufferMessage(const BufferedMessage &message)
+{
+    if (maxBufferDepth == 0) {
+        for (auto errorcb : errorcallbacks)
+            if (errorcb) (*errorcb)(message.channel, "RTI buffered dispatch overflow");
+        return;
+    }
+    bool overflow = false;
+    while (messageBuffer.size() >= maxBufferDepth) {
+        messageBuffer.erase(messageBuffer.begin());
+        overflow = true;
+    }
+    messageBuffer.push_back(message);
+    if (overflow) {
+        for (auto errorcb : errorcallbacks)
+            if (errorcb) (*errorcb)(message.channel, "RTI buffered dispatch overflow");
     }
 }
 
@@ -721,104 +756,112 @@ void RTIClient::OnOpen(websocketpp::connection_hdl hdl)
 
 void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr msg)
 {
-    std::string message = msg->get_payload();
+    try {
+        std::string message = msg->get_payload();
 
-    if (message == "") {
-        Send("");
-        lastPingTime = timeSinceEpochMs();
-    } else if (message == "#1") {
-        Send("#2");
-        lastPingTime = timeSinceEpochMs();
-    } else if (message.rfind("{", 0) == 0) {
-        auto json_in = nlohmann::json::parse(message);
-        if (json_in.contains("rid") && json_in["rid"] == 1) {
-            SendAuthToken();
-            connectionPhase = ConnectionPhase::AUTHENTICATING;
-        } else if (json_in.contains("event") && json_in["event"] == "#setAuthToken") {
+        if (message == "") {
+            Send("");
             lastPingTime = timeSinceEpochMs();
-            if (connectionPhase != ConnectionPhase::CONNECTED) {
-                auto first = !firstConnected;
-                firstConnected = true;
-                connectionPhase = ConnectionPhase::CONNECTED;
-                if (first) {
-                    for (auto callback : firstconnectcallbacks)
+        } else if (message == "#1") {
+            Send("#2");
+            lastPingTime = timeSinceEpochMs();
+        } else if (message.rfind("{", 0) == 0) {
+            auto json_in = nlohmann::json::parse(message);
+            if (json_in.contains("rid") && json_in["rid"] == 1) {
+                SendAuthToken();
+                connectionPhase = ConnectionPhase::AUTHENTICATING;
+            } else if (json_in.contains("event") && json_in["event"] == "#setAuthToken") {
+                lastPingTime = timeSinceEpochMs();
+                if (connectionPhase != ConnectionPhase::CONNECTED) {
+                    auto first = !firstConnected;
+                    firstConnected = true;
+                    connectionPhase = ConnectionPhase::CONNECTED;
+                    if (first) {
+                        for (auto callback : firstconnectcallbacks)
+                            if (callback) (*callback)();
+                    }
+                    for (auto callback : connectcallbacks)
                         if (callback) (*callback)();
+                    if (!_incognito) {
+                        PublishClient();
+                        PublishMeasures();
+                    }
                 }
-                for (auto callback : connectcallbacks)
-                    if (callback) (*callback)();
-                if (!_incognito) {
-                    PublishClient();
-                    PublishMeasures();
-                }
-            }
-            for (auto kv : subscriptions)
-                if (kv.second.size() > 0) Subscribe(kv.first);
-        } else if (json_in.contains("event") && json_in["event"] == "#removeAuthToken") {
-            SendAuthToken();
-        } else if (json_in.contains("event") && json_in["event"] == "#publish") {
-            auto channel = json_in["data"]["channel"].get<std::string>();
-            if (!_federation.empty() && channel.rfind("//" + _federation + "/", 0) == 0)
-                channel = channel.substr(_federation.length() + 1);
-            auto data = json_in["data"]["data"].get<std::string>();
-            if (subscriptions.find(channel) != subscriptions.end()) {
-                auto &entries = subscriptions[channel];
-                for (auto &entry : entries) {
-                    DispatchMode mode = entry.dispatchMode == DispatchMode::DEFAULT
-                        ? defaultDispatchMode : entry.dispatchMode;
-                    if (mode == DispatchMode::BUFFERED) {
-                        messageBuffer.push_back({entry.callback, channel, data});
-                    } else {
-                        try {
-                            if (entry.callback) (*entry.callback)(channel, data);
-                        } catch (std::exception &e) {
-                            for (auto errorcb : errorcallbacks)
-                                if (errorcb) (*errorcb)(channel, e.what());
-                        } catch (...) {
-                            for (auto errorcb : errorcallbacks)
-                                if (errorcb) (*errorcb)(channel, "caught something");
+                for (auto kv : subscriptions)
+                    if (kv.second.size() > 0) Subscribe(kv.first);
+            } else if (json_in.contains("event") && json_in["event"] == "#removeAuthToken") {
+                SendAuthToken();
+            } else if (json_in.contains("event") && json_in["event"] == "#publish") {
+                auto channel = json_in["data"]["channel"].get<std::string>();
+                if (!_federation.empty() && channel.rfind("//" + _federation + "/", 0) == 0)
+                    channel = channel.substr(_federation.length() + 3);
+                auto data = json_in["data"]["data"].get<std::string>();
+                if (subscriptions.find(channel) != subscriptions.end()) {
+                    auto &entries = subscriptions[channel];
+                    for (auto &entry : entries) {
+                        DispatchMode mode = entry.dispatchMode == DispatchMode::DEFAULT
+                            ? defaultDispatchMode : entry.dispatchMode;
+                        if (mode == DispatchMode::BUFFERED) {
+                            BufferMessage({entry.callback, channel, data});
+                        } else {
+                            try {
+                                if (entry.callback) (*entry.callback)(channel, data);
+                            } catch (std::exception &e) {
+                                for (auto errorcb : errorcallbacks)
+                                    if (errorcb) (*errorcb)(channel, e.what());
+                            } catch (...) {
+                                for (auto errorcb : errorcallbacks)
+                                    if (errorcb) (*errorcb)(channel, "caught something");
+                            }
                         }
                     }
                 }
-            }
-        } else if (json_in.contains("event")) {
-            auto event = json_in["event"].get<std::string>();
-            auto data = json_in["data"];
-            if (event == "fail") {
-                shouldBeConnected = false;
-                for (auto errorcb : errorcallbacks)
-                    if (errorcb) (*errorcb)("fail", data);
-            } else if (event == "broker-version" && data.is_string()) {
-                brokerVersion = data.dump();
-            } else if (event == "ping") {
-                Transmit("pong", data.dump());
-            }
-        } else if (json_in.contains("rid")) {
-            auto rid = json_in["rid"].get<int>();
-            if (json_in.contains("error")) {
-                if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end()) {
-                    auto callback = rpcErrorCallbacks[rid];
-                    if (callback)
-                        (*callback)(json_in["error"].is_string() ? json_in["error"].get<std::string>() :
-                                                                   json_in["error"].dump());
-                } else {
+            } else if (json_in.contains("event")) {
+                auto event = json_in["event"].get<std::string>();
+                auto data = json_in["data"];
+                if (event == "fail") {
+                    shouldBeConnected = false;
                     for (auto errorcb : errorcallbacks)
-                        if (errorcb)
-                            (*errorcb)("rpc", json_in["error"].is_string() ?
-                                              json_in["error"].get<std::string>() :
-                                              json_in["error"].dump());
+                        if (errorcb) (*errorcb)("fail", data);
+                } else if (event == "broker-version" && data.is_string()) {
+                    brokerVersion = data.dump();
+                } else if (event == "ping") {
+                    Transmit("pong", data.dump());
                 }
-            } else {
-                if (rpcCallbacks.find(rid) != rpcCallbacks.end()) {
-                    auto callback = rpcCallbacks[rid];
-                    if (callback)
-                        (*callback)(json_in["data"].is_string() ? json_in["data"].get<std::string>() :
-                                                                  json_in["data"].dump());
+            } else if (json_in.contains("rid")) {
+                auto rid = json_in["rid"].get<int>();
+                if (json_in.contains("error")) {
+                    if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end()) {
+                        auto callback = rpcErrorCallbacks[rid];
+                        if (callback)
+                            (*callback)(json_in["error"].is_string() ? json_in["error"].get<std::string>() :
+                                                                       json_in["error"].dump());
+                    } else {
+                        for (auto errorcb : errorcallbacks)
+                            if (errorcb)
+                                (*errorcb)("rpc", json_in["error"].is_string() ?
+                                                  json_in["error"].get<std::string>() :
+                                                  json_in["error"].dump());
+                    }
+                } else {
+                    if (rpcCallbacks.find(rid) != rpcCallbacks.end()) {
+                        auto callback = rpcCallbacks[rid];
+                        if (callback)
+                            (*callback)(json_in["data"].is_string() ? json_in["data"].get<std::string>() :
+                                                                      json_in["data"].dump());
+                    }
                 }
+                if (rpcCallbacks.find(rid) != rpcCallbacks.end()) rpcCallbacks.erase(rid);
+                if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end())
+                    rpcErrorCallbacks.erase(rid);
             }
-            if (rpcCallbacks.find(rid) != rpcCallbacks.end()) rpcCallbacks.erase(rid);
-            if (rpcErrorCallbacks.find(rid) != rpcErrorCallbacks.end())
-                rpcErrorCallbacks.erase(rid);
         }
+    } catch (std::exception &e) {
+        for (auto errorcb : errorcallbacks)
+            if (errorcb) (*errorcb)("protocol", e.what());
+    } catch (...) {
+        for (auto errorcb : errorcallbacks)
+            if (errorcb) (*errorcb)("protocol", "caught something");
     }
 }
 
@@ -977,7 +1020,7 @@ void RTIClient::CollectMeasurements()
                     Publish(channel, measurement, false);
                 } else if (queue->size() > 1) {
                     auto window = new proto::Measurement_Window();
-                    window->set_max(std::numeric_limits<float>::min());
+                    window->set_max(std::numeric_limits<float>::lowest());
                     window->set_min(std::numeric_limits<float>::max());
                     while (!queue->empty()) {
                         auto value = queue->front();
@@ -1001,15 +1044,13 @@ void RTIClient::CollectMeasurements()
 // Instead of a proper UUID...
 std::string random_string(size_t length)
 {
-    auto randchar = []() -> char {
-        const char charset[] = "0123456789"
-                               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                               "abcdefghijklmnopqrstuvwxyz";
-        const size_t max_index = (sizeof(charset) - 1);
-        return charset[rand() % max_index];
-    };
+    static const char charset[] = "0123456789"
+                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                  "abcdefghijklmnopqrstuvwxyz";
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<size_t> dist(0, sizeof(charset) - 2);
     std::string str(length, 0);
-    std::generate_n(str.begin(), length, randchar);
+    std::generate_n(str.begin(), length, [&]() { return charset[dist(rng)]; });
     return str;
 }
 
@@ -1017,6 +1058,26 @@ uint64_t timeSinceEpochMs()
 {
     using namespace std::chrono;
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+bool is_truthy_env(const char *value)
+{
+    if (!value) return false;
+    std::string normalized = value;
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
+}
+
+std::string websocket_host(const std::string &url)
+{
+    auto start = url.find("://");
+    start = start == std::string::npos ? 0 : start + 3;
+    auto end = url.find_first_of("/:?", start);
+    auto host = url.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (host.size() > 2 && host.front() == '[' && host.back() == ']')
+        return host.substr(1, host.size() - 2);
+    return host;
 }
 
 } // namespace rti

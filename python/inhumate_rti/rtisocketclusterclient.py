@@ -65,12 +65,9 @@ class MainLoopDispatcher:
 
 
     def signal(self, a, b):
-        # print(f"signal {a} {b}")
-        # b()
         pass
 
     def abort(self):
-        print(f"abort")
         self.done = True
 
     def _timeout(self):
