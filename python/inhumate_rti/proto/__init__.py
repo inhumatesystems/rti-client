@@ -4,6 +4,8 @@ from ..generated.EntityOperation_pb2 import *
 from ..generated.Entity_pb2 import *
 from ..generated.EntityPosition_pb2 import *
 from ..generated.RuntimeControl_pb2 import *
+from ..generated.RecorderControl_pb2 import *
+from ..generated.LaunchControl_pb2 import *
 from ..generated.RuntimeState_pb2 import *
 from ..generated.Scenarios_pb2 import *
 from ..generated.EntityCategory_pb2 import *

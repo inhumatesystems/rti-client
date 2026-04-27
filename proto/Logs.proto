@@ -63,6 +63,7 @@ message Log {
     bool deletable = 25;
     bool locked = 26;
     bool continuous = 27;
+    string reference_log_id = 28;
 }
 
 message LogMark {

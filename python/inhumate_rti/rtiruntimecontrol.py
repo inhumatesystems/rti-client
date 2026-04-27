@@ -36,7 +36,6 @@ class RTIRuntimeControl:
         self.publish_scenario = False
         self.async_ready = False
         self.time_scale = None
-        self.current_log = None
         self.rti.state = Proto.INITIAL
 
         # Fast-time worker support
@@ -165,11 +164,6 @@ class RTIRuntimeControl:
         message.seek.time = time
         self._publish_and_receive(message)
 
-    def request_current_log(self):
-        message = Proto.RuntimeControl()
-        message.request_current_log.SetInParent()
-        self._publish_and_receive(message)
-
     def wait_for_application_state(self, application: str, states: Union[int, List[int]], timeout: float = 30):
         if not self.subscribed: raise Exception("Cannot wait for application state without being subscribed")
         if not type(states) is list:
@@ -206,8 +200,8 @@ class RTIRuntimeControl:
             def on_runtime_control(channel, message):
                 self._receive(message)
             # Always IMMEDIATE so stop/end/reset pierce BUFFERED mode during fast-time steps
-            self.rti.subscribe(Channel.control, Proto.RuntimeControl, on_runtime_control, dispatch=DispatchMode.IMMEDIATE)
-            self.rti.subscribe(self.rti.own_channel_prefix + Channel.control, Proto.RuntimeControl, on_runtime_control, dispatch=DispatchMode.IMMEDIATE)
+            self.rti.subscribe(Channel.runtime_control, Proto.RuntimeControl, on_runtime_control, dispatch=DispatchMode.IMMEDIATE)
+            self.rti.subscribe(self.rti.own_channel_prefix + Channel.runtime_control, Proto.RuntimeControl, on_runtime_control, dispatch=DispatchMode.IMMEDIATE)
             if self._fast_time_enabled:
                 def on_fast_time_control(channel, message):
                     self._receive_fast_time(message)
@@ -218,7 +212,7 @@ class RTIRuntimeControl:
             self.subscribed = True
 
     def _publish_and_receive(self, message: Proto.RuntimeControl):
-        self.rti.publish(Channel.control, message)
+        self.rti.publish(Channel.runtime_control, message)
         if not self.rti.connected or not self.subscribed: self._receive(message)
 
     def _on_controller_disconnect(self, client_id: str):
@@ -289,7 +283,7 @@ class RTIRuntimeControl:
             message = Proto.RuntimeControl()
             message.current_scenario.name = self.scenario.name
             message.current_scenario.parameter_values.update(self.scenario.parameter_values)
-            self.rti.publish(Channel.control, message)
+            self.rti.publish(Channel.runtime_control, message)
         elif message.HasField("start"):
             self.on_start()
             self.rti.state = Proto.RUNNING
@@ -324,7 +318,5 @@ class RTIRuntimeControl:
         elif message.HasField("time_sync"):
             self.time_scale = message.time_sync.time_scale
             self.on_time_sync(message.time_sync)
-        elif message.HasField("current_log"):
-            self.current_log = message.current_log
         elif message.HasField("current_scenario"):
             self.scenario = message.current_scenario

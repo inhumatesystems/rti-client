@@ -15,12 +15,13 @@ message LaunchEvent {
 
     message LaunchItemState {
         string launcher_client_id = 1;
-        string name = 2;
-        ProcessState process_state = 3;
-        string link_url = 4;
-        string link_title = 5;
-        string link_description = 6;
-        string error = 7;
+        string configuration = 2;
+        string name = 3;
+        ProcessState process_state = 4;
+        string link_url = 5;
+        string link_title = 6;
+        string link_description = 7;
+        string error = 8;
     }
 
     enum ProcessState {

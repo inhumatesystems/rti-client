@@ -39,7 +39,7 @@ namespace Inhumate.RTI {
         }
 
         private static void Publish(RuntimeControl message) =>
-            controller.Publish(RTIChannel.Control, message);
+            controller.Publish(RTIChannel.RuntimeControl, message);
 
         private static RTIClient FreshClient(string name = "C# RuntimeControlTest Fresh") {
             var c = new RTIClient { Application = name };
@@ -178,7 +178,7 @@ namespace Inhumate.RTI {
             try {
                 new TestRuntime(c, onReset: () => { called = true; });
                 Thread.Sleep(250);
-                controller.Publish(RTIChannel.Control, new RuntimeControl { Reset = new Google.Protobuf.WellKnownTypes.Empty() });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Reset = new Google.Protobuf.WellKnownTypes.Empty() });
                 Assert.IsTrue(WaitFor(() => called));
             } finally {
                 c.Disconnect();
@@ -192,7 +192,7 @@ namespace Inhumate.RTI {
             try {
                 new TestRuntime(c, onStart: () => { called = true; });
                 Thread.Sleep(250);
-                controller.Publish(RTIChannel.Control, new RuntimeControl { Start = new Google.Protobuf.WellKnownTypes.Empty() });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Start = new Google.Protobuf.WellKnownTypes.Empty() });
                 Assert.IsTrue(WaitFor(() => called));
             } finally {
                 c.Disconnect();
@@ -206,7 +206,7 @@ namespace Inhumate.RTI {
             try {
                 new TestRuntime(c, onStop: () => { called = true; });
                 Thread.Sleep(250);
-                controller.Publish(RTIChannel.Control, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
                 Assert.IsTrue(WaitFor(() => called));
             } finally {
                 c.Disconnect();
@@ -219,7 +219,7 @@ namespace Inhumate.RTI {
             try {
                 new TestRuntime(c, loadScenarioResult: false);
                 Thread.Sleep(250);
-                controller.Publish(RTIChannel.Control, new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = "Nope" } });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = "Nope" } });
                 Assert.IsTrue(WaitFor(() => c.State == RuntimeState.Unknown));
                 Assert.AreEqual(RuntimeState.Unknown, c.State);
             } finally {
@@ -292,7 +292,7 @@ namespace Inhumate.RTI {
                 Thread.Sleep(100);
                 ConfigureRun("run-play");
                 Assert.IsTrue(WaitFor(() => rt.IsFastTime));
-                controller.Publish(RTIChannel.Control, new RuntimeControl { Play = new Google.Protobuf.WellKnownTypes.Empty() });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Play = new Google.Protobuf.WellKnownTypes.Empty() });
                 Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
                 Assert.IsFalse(rt.IsFastTime);
                 Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
@@ -353,7 +353,7 @@ namespace Inhumate.RTI {
                 Thread.Sleep(100);
                 ConfigureRun("run-stop");
                 Assert.IsTrue(WaitFor(() => rt.IsFastTime));
-                controller.Publish(RTIChannel.Control, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
                 Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
                 Assert.IsFalse(rt.IsFastTime);
             } finally {
@@ -372,7 +372,7 @@ namespace Inhumate.RTI {
                 // Stop while waiting — GetStepGrant must unblock and return null
                 new Thread(() => {
                     Thread.Sleep(100);
-                    controller.Publish(RTIChannel.Control, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
+                    controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Stop = new Google.Protobuf.WellKnownTypes.Empty() });
                 }) { IsBackground = true }.Start();
                 var grant = rt.GetStepGrant(timeout: 2000);
                 Assert.IsNull(grant);

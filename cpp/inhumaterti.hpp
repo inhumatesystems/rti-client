@@ -81,7 +81,9 @@ namespace rti
 
 constexpr auto RTI_CLIENT_VERSION = "0.0.1-dev-version";
 constexpr auto RTI_DEFAULT_URL = "ws://127.0.0.1:8000/";
-constexpr auto CONTROL_CHANNEL = "rti/control";
+constexpr auto RUNTIME_CONTROL_CHANNEL = "rti/control";
+constexpr auto RECORDER_CONTROL_CHANNEL = "rti/recordercontrol";
+constexpr auto LAUNCH_CONTROL_CHANNEL = "rti/launchcontrol";
 constexpr auto FAST_TIME_CONTROL_CHANNEL = "rti/fasttimecontrol";
 constexpr auto CHANNELS_CHANNEL = "rti/channels";
 constexpr auto CLIENTS_CHANNEL = "rti/clients";
@@ -90,7 +92,7 @@ constexpr auto ENTITY_CHANNEL = "rti/entity";
 constexpr auto POSITION_CHANNEL = "rti/position";
 constexpr auto SCENARIOS_CHANNEL = "rti/scenarios";
 constexpr auto LAUNCH_CONFIGURATIONS_CHANNEL = "rti/launchconfigurations";
-constexpr auto LAUNCH_CHANNEL = "rti/launch";
+constexpr auto LAUNCH_EVENT_CHANNEL = "rti/launch";
 constexpr auto LOGS_CHANNEL = "rti/logs";
 constexpr auto BROKER_STATS_CHANNEL = "rti/brokerstats";
 constexpr auto BROKER_PINGS_CHANNEL = "rti/brokerpings";

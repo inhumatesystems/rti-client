@@ -8,7 +8,6 @@ import { RuntimeControl, RuntimeControl_LoadScenario, RuntimeControl_TimeSync } 
 import { FastTimeControl } from "./generated/FastTimeControl.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
 import { Clients } from "./generated/Clients.js"
-import { Log } from "./generated/Logs.js"
 
 export class StepGrant {
     readonly stepNumber: number
@@ -36,7 +35,6 @@ export class RTIRuntimeControl {
     publishScenario: boolean = false
     asyncReady: boolean = false
     timeScale: number | undefined = undefined
-    currentLog: Log | undefined = undefined
 
     private _subscribed: boolean = false
     private readonly _stepFn: ((grant: StepGrant) => void | Promise<void>) | undefined
@@ -143,16 +141,15 @@ export class RTIRuntimeControl {
     stop(): void { this._publishAndReceive({ stop: {} }) }
     setTimeScale(timeScale: number): void { this._publishAndReceive({ setTimeScale: { timeScale } }) }
     seek(time: number): void { this._publishAndReceive({ seek: { time } }) }
-    requestCurrentLog(): void { this._publishAndReceive({ requestCurrentLog: {} }) }
 
     subscribe(): void {
         if (!this._subscribed) {
             const onMsg = (_ch: string, message: RuntimeControl) => this._receive(message)
             // Always IMMEDIATE so stop/end/reset pierce BUFFERED mode during fast-time steps
-            this.rti.subscribe(RTIchannel.control, RuntimeControl, onMsg, false, DispatchMode.IMMEDIATE)
+            this.rti.subscribe(RTIchannel.runtimeControl, RuntimeControl, onMsg, false, DispatchMode.IMMEDIATE)
             // Subscribe to own (targeted) channel once clientId is known
             const subscribeOwn = () => {
-                this.rti.subscribe(this.rti.ownChannelPrefix + RTIchannel.control, RuntimeControl, onMsg, false, DispatchMode.IMMEDIATE)
+                this.rti.subscribe(this.rti.ownChannelPrefix + RTIchannel.runtimeControl, RuntimeControl, onMsg, false, DispatchMode.IMMEDIATE)
             }
             if (this.rti.clientId) subscribeOwn()
             else this.rti.once("firstconnect", subscribeOwn)
@@ -203,7 +200,7 @@ export class RTIRuntimeControl {
     }
 
     private _publishAndReceive(message: Partial<RuntimeControl>): void {
-        this.rti.publish(RTIchannel.control, RuntimeControl, message, false)
+        this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, message, false)
         if (!this.rti.isConnected || !this._subscribed) this._receive(RuntimeControl.fromPartial(message))
     }
 
@@ -279,7 +276,7 @@ export class RTIRuntimeControl {
             this.scenario = message.loadScenario
             this.rti.state = playback ? RuntimeState.PLAYBACK : RuntimeState.READY
         } else if (message.requestCurrentScenario !== undefined && this.publishScenario && this.scenario) {
-            this.rti.publish(RTIchannel.control, RuntimeControl, {
+            this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
                 currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
             }, false)
         } else if (message.start !== undefined) {
@@ -322,8 +319,6 @@ export class RTIRuntimeControl {
         } else if (message.timeSync !== undefined) {
             this.timeScale = message.timeSync.timeScale
             this.onTimeSync(message.timeSync)
-        } else if (message.currentLog !== undefined) {
-            this.currentLog = message.currentLog
         } else if (message.currentScenario !== undefined) {
             this.scenario = message.currentScenario
         }

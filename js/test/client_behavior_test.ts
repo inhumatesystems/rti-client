@@ -162,7 +162,7 @@ test("set state publishes client", async () => {
 
 test("publish error", async () => {
     let received = false
-    rti.subscribe(RTI.channel.control, RTI.proto.RuntimeControl, (message: RTI.proto.RuntimeControl) => {
+    rti.subscribe(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, (message: RTI.proto.RuntimeControl) => {
         if (message.error && message.error.clientId == rti.clientId) received = true
     })
 
