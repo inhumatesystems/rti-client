@@ -57,4 +57,6 @@ message EntityPosition {
 
     float horizontal_accuracy = 9;      // error radius in meters
     float vertical_accuracy = 10;       // linear error in meters
+
+    bool on_ground = 11;               // true if the entity is on the ground (e.g. for ground clamping)
 }

@@ -22,6 +22,7 @@ message LaunchEvent {
         string link_title = 6;
         string link_description = 7;
         string error = 8;
+        string abbreviation = 9;
     }
 
     enum ProcessState {

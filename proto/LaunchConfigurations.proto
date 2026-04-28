@@ -23,8 +23,8 @@ message LaunchConfiguration {
     string name = 1;
     string description = 2;
     repeated Parameter parameters = 3;
-    bool allow_concurrent = 4;
-    repeated string resources = 5;
+    bool concurrent = 4;
+    repeated string lock = 5;
 }
 
 message RemoteAction {
