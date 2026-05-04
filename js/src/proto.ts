@@ -12,7 +12,7 @@ export { Parameter } from "./generated/Parameter.js"
 export {
     RuntimeControl,
     RuntimeControl_Error,
-    RuntimeControl_LoadScenario,
+    RuntimeControl_ScenarioSpecification,
     RuntimeControl_Seek,
     RuntimeControl_SetTimeScale,
     RuntimeControl_TimeSync,
