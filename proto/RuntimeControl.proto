@@ -12,7 +12,7 @@ import "RuntimeState.proto";
 message RuntimeControl {
 
     oneof control {
-        LoadScenario load_scenario = 1;
+        ScenarioSpecification load_scenario = 1;
         google.protobuf.Empty start = 2;
         google.protobuf.Empty play = 3;
         google.protobuf.Empty pause = 4;
@@ -25,12 +25,13 @@ message RuntimeControl {
         TimeSync time_sync = 12;
 
         Error error = 17;
+        google.protobuf.Empty clear_errors = 18;
 
         google.protobuf.Empty request_current_scenario = 36;
-        LoadScenario current_scenario = 37;
+        ScenarioSpecification current_scenario = 37;
     }
 
-    message LoadScenario {
+    message ScenarioSpecification {
         string name = 1;
         map<string, string> parameter_values = 2;
     }

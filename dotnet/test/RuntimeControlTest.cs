@@ -157,14 +157,14 @@ namespace Inhumate.RTI {
 
         [Test]
         public void LoadScenario_SetsState_Ready() {
-            Publish(new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = "TestScene" } });
+            Publish(new RuntimeControl { LoadScenario = new RuntimeControl.Types.ScenarioSpecification { Name = "TestScene" } });
             Assert.IsTrue(WaitFor(() => rti.State == RuntimeState.Ready));
             Assert.AreEqual(RuntimeState.Ready, rti.State);
         }
 
         [Test]
         public void LoadScenario_StoresScenario() {
-            Publish(new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = "UniqueScene99" } });
+            Publish(new RuntimeControl { LoadScenario = new RuntimeControl.Types.ScenarioSpecification { Name = "UniqueScene99" } });
             // Wait for State==Ready (set after Scenario, and involves PublishClient memory barrier)
             // before reading Scenario to avoid ARM memory-ordering issues.
             Assert.IsTrue(WaitFor(() => rti.State == RuntimeState.Ready));
@@ -235,7 +235,7 @@ namespace Inhumate.RTI {
             try {
                 new TestRuntime(c, loadScenarioResult: false);
                 Thread.Sleep(250);
-                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = "Nope" } });
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { LoadScenario = new RuntimeControl.Types.ScenarioSpecification { Name = "Nope" } });
                 Assert.IsTrue(WaitFor(() => c.State == RuntimeState.Unknown));
                 Assert.AreEqual(RuntimeState.Unknown, c.State);
             } finally {
@@ -467,7 +467,7 @@ namespace Inhumate.RTI {
             public override void OnReset() => onResetAction?.Invoke();
             public override void OnStart() => onStartAction?.Invoke();
             public override void OnStop() => onStopAction?.Invoke();
-            public override bool OnLoadScenario(RuntimeControl.Types.LoadScenario ls, bool playback)
+            public override bool OnLoadScenario(RuntimeControl.Types.ScenarioSpecification ls, bool playback)
                 => loadScenarioResult ?? true;
         }
     }

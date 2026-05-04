@@ -338,11 +338,14 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         }
         _scenario = message.load_scenario();
         _hasScenario = true;
+        proto::RuntimeControl out;
+        out.mutable_current_scenario()->set_name(_scenario.name());
+        rti.Publish(RUNTIME_CONTROL_CHANNEL, out);
         rti.set_state(playback ? proto::RuntimeState::PLAYBACK : proto::RuntimeState::READY);
         break;
     }
     case proto::RuntimeControl::kRequestCurrentScenario: {
-        if (publish_scenario && _hasScenario) {
+        if (_hasScenario) {
             proto::RuntimeControl out;
             out.mutable_current_scenario()->set_name(_scenario.name());
             rti.Publish(RUNTIME_CONTROL_CHANNEL, out);

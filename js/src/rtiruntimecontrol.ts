@@ -4,7 +4,7 @@
 
 import { RTIClient, DispatchMode } from "./rticlient.js"
 import { channel as RTIchannel, capability as RTIcapability } from "./constants.js"
-import { RuntimeControl, RuntimeControl_LoadScenario, RuntimeControl_TimeSync } from "./generated/RuntimeControl.js"
+import { RuntimeControl, RuntimeControl_ScenarioSpecification, RuntimeControl_TimeSync } from "./generated/RuntimeControl.js"
 import { FastTimeControl } from "./generated/FastTimeControl.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
 import { Clients } from "./generated/Clients.js"
@@ -31,9 +31,7 @@ export class StepGrant {
 export class RTIRuntimeControl {
     protected readonly rti: RTIClient
 
-    scenario: RuntimeControl_LoadScenario | undefined = undefined
-    publishScenario: boolean = false
-    asyncReady: boolean = false
+    scenario: RuntimeControl_ScenarioSpecification | undefined = undefined
     timeScale: number | undefined = undefined
 
     private _subscribed: boolean = false
@@ -72,7 +70,7 @@ export class RTIRuntimeControl {
     // Override hooks — subclass and override to add custom behavior
 
     onReset(): void {}
-    onLoadScenario(loadScenario: RuntimeControl_LoadScenario, playback: boolean): boolean { return true }
+    onLoadScenario(loadScenario: RuntimeControl_ScenarioSpecification, playback: boolean): boolean { return true }
     onStart(): void {}
     onPlay(): void {}
     onPause(): void {}
@@ -274,8 +272,11 @@ export class RTIRuntimeControl {
                 return
             }
             this.scenario = message.loadScenario
+            this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
+                currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
+            }, false)
             this.rti.state = playback ? RuntimeState.PLAYBACK : RuntimeState.READY
-        } else if (message.requestCurrentScenario !== undefined && this.publishScenario && this.scenario) {
+        } else if (message.requestCurrentScenario !== undefined && this.scenario) {
             this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
                 currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
             }, false)

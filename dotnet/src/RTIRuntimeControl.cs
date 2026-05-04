@@ -42,9 +42,7 @@ namespace Inhumate.RTI {
         private CancellationTokenSource resetCts = new CancellationTokenSource();
 
         public double? TimeScale { get; private set; }
-        public RuntimeControl.Types.LoadScenario Scenario { get; private set; }
-        public bool PublishScenario { get; set; }
-        public bool AsyncReady { get; set; }
+        public RuntimeControl.Types.ScenarioSpecification Scenario { get; private set; }
 
         public bool IsFastTime => fastTimeRunId != null;
 
@@ -70,7 +68,7 @@ namespace Inhumate.RTI {
         // Virtual override hooks — override these in a subclass to add custom behavior.
 
         public virtual void OnReset() {}
-        public virtual bool OnLoadScenario(RuntimeControl.Types.LoadScenario loadScenario, bool playback) => true;
+        public virtual bool OnLoadScenario(RuntimeControl.Types.ScenarioSpecification loadScenario, bool playback) => true;
         public virtual void OnStart() {}
         public virtual void OnPlay() {}
         public virtual void OnPause() {}
@@ -124,7 +122,7 @@ namespace Inhumate.RTI {
         // Runtime control publish methods
 
         public void Reset() => PublishAndReceive(new RuntimeControl { Reset = new Google.Protobuf.WellKnownTypes.Empty() });
-        public void LoadScenario(string scenarioName) => PublishAndReceive(new RuntimeControl { LoadScenario = new RuntimeControl.Types.LoadScenario { Name = scenarioName } });
+        public void LoadScenario(string scenarioName) => PublishAndReceive(new RuntimeControl { LoadScenario = new RuntimeControl.Types.ScenarioSpecification { Name = scenarioName } });
         public void Start() => PublishAndReceive(new RuntimeControl { Start = new Google.Protobuf.WellKnownTypes.Empty() });
         public void Play() => PublishAndReceive(new RuntimeControl { Play = new Google.Protobuf.WellKnownTypes.Empty() });
         public void Pause() => PublishAndReceive(new RuntimeControl { Pause = new Google.Protobuf.WellKnownTypes.Empty() });
@@ -266,12 +264,15 @@ namespace Inhumate.RTI {
                         return;
                     }
                     Scenario = message.LoadScenario;
+                    rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
+                        CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
+                    });
                     rti.State = playback ? RuntimeState.Playback : RuntimeState.Ready;
                     break;
                 case RuntimeControl.ControlOneofCase.RequestCurrentScenario:
-                    if (PublishScenario && Scenario != null) {
+                    if (Scenario != null) {
                         rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
-                            CurrentScenario = new RuntimeControl.Types.LoadScenario { Name = Scenario.Name }
+                            CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
                         });
                     }
                     break;
@@ -319,7 +320,7 @@ namespace Inhumate.RTI {
                     OnTimeSync(message.TimeSync);
                     break;
                 case RuntimeControl.ControlOneofCase.CurrentScenario:
-                    Scenario = new RuntimeControl.Types.LoadScenario { Name = message.CurrentScenario.Name };
+                    Scenario = new RuntimeControl.Types.ScenarioSpecification { Name = message.CurrentScenario.Name };
                     break;
             }
         }

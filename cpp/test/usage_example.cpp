@@ -82,7 +82,7 @@ int main()
     poll_for_a_while(rti);
 
     std::cout << "publish" << std::endl;
-    RuntimeControl_LoadScenario *loadScenario = new RuntimeControl_LoadScenario();
+    RuntimeControl_ScenarioSpecification *loadScenario = new RuntimeControl_ScenarioSpecification();
     loadScenario->set_name("foo");
     RuntimeControl message;
     message.set_allocated_load_scenario(loadScenario);

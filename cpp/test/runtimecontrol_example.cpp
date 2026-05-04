@@ -19,7 +19,7 @@ class MyRuntime : public RTIRuntimeControl
     public:
     using RTIRuntimeControl::RTIRuntimeControl;
 
-    bool OnLoadScenario(const proto::RuntimeControl_LoadScenario &scenario, bool playback) override
+    bool OnLoadScenario(const proto::RuntimeControl_ScenarioSpecification &scenario, bool playback) override
     {
         std::cout << "Load scenario: " << scenario.name() << (playback ? " (playback)" : "") << std::endl;
         return true;

@@ -58,7 +58,7 @@ class INHUMATE_RTI_EXPORT RTIRuntimeControl
 
     // Override hooks — subclass and override to add custom behavior.
     virtual void OnReset() {}
-    virtual bool OnLoadScenario(const proto::RuntimeControl_LoadScenario &loadScenario, bool playback)
+    virtual bool OnLoadScenario(const proto::RuntimeControl_ScenarioSpecification &loadScenario, bool playback)
     {
         (void)loadScenario;
         (void)playback;
@@ -130,12 +130,10 @@ class INHUMATE_RTI_EXPORT RTIRuntimeControl
                             double timeoutSec = 30.0);
 
     // State exposed for callers.
-    bool publish_scenario = false;
-    bool async_ready = false;
     bool has_time_scale() const { return _hasTimeScale; }
     double time_scale() const { return _timeScale; }
     bool has_scenario() const { return _hasScenario; }
-    const proto::RuntimeControl_LoadScenario &scenario() const { return _scenario; }
+    const proto::RuntimeControl_ScenarioSpecification &scenario() const { return _scenario; }
 
     protected:
     RTIClient &rti;
@@ -151,7 +149,7 @@ class INHUMATE_RTI_EXPORT RTIRuntimeControl
     bool _hasTimeScale = false;
     double _timeScale = 1.0;
     bool _hasScenario = false;
-    proto::RuntimeControl_LoadScenario _scenario;
+    proto::RuntimeControl_ScenarioSpecification _scenario;
 
     messagecallback_p _runtimeControlSub;
     messagecallback_p _ownRuntimeControlSub;

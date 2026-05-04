@@ -33,8 +33,6 @@ class RTIRuntimeControl:
 
         self.subscribed = False
         self.scenario = None
-        self.publish_scenario = False
-        self.async_ready = False
         self.time_scale = None
         self.rti.state = Proto.INITIAL
 
@@ -54,7 +52,7 @@ class RTIRuntimeControl:
     def on_reset(self):
         pass
 
-    def on_load_scenario(self, load_scenario: Proto.RuntimeControl.LoadScenario, playback: bool):
+    def on_load_scenario(self, load_scenario: Proto.RuntimeControl.ScenarioSpecification, playback: bool):
         return True
 
     def on_start(self):
@@ -278,8 +276,12 @@ class RTIRuntimeControl:
                 self.rti.state = success
                 return
             self.scenario = message.load_scenario
+            message = Proto.RuntimeControl()
+            message.current_scenario.name = self.scenario.name
+            message.current_scenario.parameter_values.update(self.scenario.parameter_values)
+            self.rti.publish(Channel.runtime_control, message)
             self.rti.state = Proto.READY if not playback else Proto.PLAYBACK
-        elif message.HasField("request_current_scenario") and self.publish_scenario and self.scenario:
+        elif message.HasField("request_current_scenario") and self.scenario:
             message = Proto.RuntimeControl()
             message.current_scenario.name = self.scenario.name
             message.current_scenario.parameter_values.update(self.scenario.parameter_values)
