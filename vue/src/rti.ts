@@ -109,6 +109,8 @@ export const useRtiStore = defineStore("rti", () => {
                 time.value = 0
             } else if (message.error) {
                 errors.value.push(message.error)
+            } else if (message.clearErrors) {
+                errors.value = []
             }
         },
         false
