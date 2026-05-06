@@ -21,6 +21,7 @@ message RecorderControl {
         string unmark_log = 6; // mark id
         string load_reference_log = 7; // log id
         google.protobuf.Empty unload_reference_log = 8;
+        Log reference_log = 9;
     }
 
 }

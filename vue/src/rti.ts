@@ -55,6 +55,7 @@ export const useRtiStore = defineStore("rti", () => {
     const timeSyncMasterClientId = ref("")
 
     const log = ref(undefined as RTI.proto.Log | undefined)
+    const referenceLog = ref(undefined as RTI.proto.Log | undefined)
     const recorderClient = computed(() => connectedClients.value.find((c) => c.capabilities.includes(RTI.capability.log)))
     const myClient = ref(rti.myClient)
     const clients = ref(rti.knownClients)
@@ -75,6 +76,7 @@ export const useRtiStore = defineStore("rti", () => {
             }
             if (hadRecorder && !recorderClient.value) {
                 log.value = undefined
+                referenceLog.value = undefined
             } else if (!hadRecorder && recorderClient.value) {
                 rti.publish(RTI.channel.recorderControl, RTI.proto.RecorderControl, { requestCurrentLog: {} })
             }
@@ -121,6 +123,10 @@ export const useRtiStore = defineStore("rti", () => {
         (message: RTI.proto.RecorderControl) => {
             if (message.currentLog) {
                 log.value = message.currentLog
+            } else if (message.referenceLog) {
+                referenceLog.value = message.referenceLog
+            } else if (message.unloadReferenceLog) {
+                referenceLog.value = undefined
             }
         },
         false
@@ -153,6 +159,7 @@ export const useRtiStore = defineStore("rti", () => {
     function refresh() {
         rti.resetKnown()
         log.value = undefined
+        referenceLog.value = undefined
         clients.value = []
         connectedClients.value = []
         errors.value = []
@@ -187,6 +194,7 @@ export const useRtiStore = defineStore("rti", () => {
         lastTimeSyncTime: lastTimeSyncRealTime,
         timeSyncMasterClientId,
         log,
+        referenceLog,
         recorderClient,
         myClient,
         clients,
