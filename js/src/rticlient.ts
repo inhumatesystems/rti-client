@@ -580,7 +580,7 @@ export class RTIClient extends EventEmitter {
     private _handlers: any = {}
 
     private doSubscribe(channelName: string, handler: Function, dispatchMode?: DispatchMode): Subscription {
-        const channel = this.socket.subscribe((this.federation ? `//${this.federation}/` : "") + channelName)
+        const channel = this.socket.subscribe((this.federation ? `//${this.federation}/` : "") + channelName, { waitForAuth: true })
         const wrappedHandler = (data: any) => {
             try {
                 if (handler.length == 2) {
