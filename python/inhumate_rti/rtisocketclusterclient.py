@@ -86,10 +86,11 @@ class MainLoopDispatcher:
         self.main_loop()
 
 class RTISocketClusterClient:
-    def __init__(self, url, main_loop, idle_time):
+    def __init__(self, url, main_loop, idle_time, max_message_size_bytes=16 * 1024 * 1024):
         self.url = url
         self.main_loop = main_loop
         self.idle_time = idle_time
+        self.max_message_size_bytes = max_message_size_bytes
         self.map = {}
         self.map_ack = {}
         self.id = ""
@@ -156,9 +157,8 @@ class RTISocketClusterClient:
         # logging.info("Emit data is " + json.dumps(emit_obj, sort_keys=True))
 
     def sub(self, channel):
-        self.ws.send(
-            "{\"event\":\"#subscribe\",\"data\":{\"channel\":\"" + channel + "\"},\"cid\":" + str(
-                self.get_and_increment()) + "}")
+        sub_obj = {"event": "#subscribe", "data": {"channel": channel}, "cid": self.get_and_increment()}
+        self.ws.send(json.dumps(sub_obj, sort_keys=True))
 
     def subscribe(self, channel, ack=None):
         obj = {"channel": channel}
@@ -201,25 +201,52 @@ class RTISocketClusterClient:
         def __missing__(self, key):
             return ''
 
+    def _protocol_error(self, error):
+        if self.on_connect_error is not None:
+            self.on_connect_error(self, error)
+
+    def _message_size(self, message):
+        if isinstance(message, bytes):
+            return len(message)
+        return len(str(message).encode("utf8"))
+
     def on_message(self, ws, message):
-        if message == "#1":
-            self.ws.send("#2")
-        elif message == "":
-            self.ws.send("")
-        else:
-            main_obj = json.loads(message, object_hook=self.BlankDict)
-            data_obj = main_obj["data"]
-            rid = main_obj["rid"]
-            cid = main_obj["cid"]
-            event = main_obj["event"]
+        try:
+            if self.max_message_size_bytes > 0 and self._message_size(message) > self.max_message_size_bytes:
+                self._protocol_error(Exception("RTI message exceeded maximum size"))
+                try:
+                    ws.close(status=1009, reason="RTI message exceeded maximum size")
+                except TypeError:
+                    ws.close()
+                return
+
+            if message == "#1":
+                self.ws.send("#2")
+                return
+            elif message == "":
+                self.ws.send("")
+                return
+
+            main_obj = json.loads(message)
+            if not isinstance(main_obj, dict):
+                raise ValueError("RTI protocol message must be a JSON object")
+
+            data_obj = main_obj.get("data", {})
+            rid = main_obj.get("rid", "")
+            cid = main_obj.get("cid", "")
+            event = main_obj.get("event", "")
 
             result = self.parse2(rid, event)
             if result == EventEnum.AUTHENTICATED:
                 if self.on_auth is not None:
-                    self.id = data_obj["id"]
-                    self.on_auth(self, data_obj["isAuthenticated"])
+                    if not isinstance(data_obj, dict):
+                        raise ValueError("RTI authentication response data must be a JSON object")
+                    self.id = data_obj.get("id", "")
+                    self.on_auth(self, data_obj.get("isAuthenticated", False))
                 self.subscribe_channels()
             elif result == EventEnum.PUBLISH:
+                if not isinstance(data_obj, dict) or "channel" not in data_obj or "data" not in data_obj:
+                    raise ValueError("RTI publish message missing channel or data")
                 self.execute(data_obj["channel"], data_obj["data"])
             elif result == EventEnum.REMOVE_AUTH_TOKEN:
                 self.auth_token = None
@@ -227,6 +254,8 @@ class RTISocketClusterClient:
                     self.on_remove_auth(self)
             elif result == EventEnum.SET_AUTH_TOKEN:
                 if self.on_set_auth is not None:
+                    if not isinstance(data_obj, dict) or "token" not in data_obj:
+                        raise ValueError("RTI set-auth-token message missing token")
                     self.on_set_auth(self, data_obj["token"])
             elif result == EventEnum.EVENT_CID:
                 if self.has_event_ack(event):
@@ -235,10 +264,12 @@ class RTISocketClusterClient:
                     self.execute(event, data_obj)
             else:
                 if rid in self.acks:
-                    tup = self.acks[rid]
+                    tup = self.acks.pop(rid)
                     if tup is not None:
                         ack = tup[1]
-                        ack(tup[0], main_obj["error"], main_obj["data"])
+                        ack(tup[0], main_obj.get("error"), main_obj.get("data"))
+        except Exception as e:
+            self._protocol_error(e)
 
     def on_open(self, ws):
         self.reset_count()

@@ -635,3 +635,21 @@ TEST_CASE("flush_empty_buffer_is_noop")
     REQUIRE_NOTHROW(rti.FlushBuffers());
     REQUIRE(rti.BufferDepth() == 0);
 }
+
+TEST_CASE("publish_empty_channel_reports_error")
+{
+    bool errorSeen = false;
+    auto listener = rti.OnError([&](const std::string &channelName, const std::string &error) {
+        if (channelName == "publish" && error.find("channel name") != std::string::npos)
+            errorSeen = true;
+    });
+    rti.Publish("", "payload");
+    rti.OffError(listener);
+    REQUIRE(errorSeen);
+}
+
+TEST_CASE("parse_invalid_proto_throws")
+{
+    std::string invalidWire(1, static_cast<char>(0xff));
+    REQUIRE_THROWS_AS(RTIClient::Parse<RuntimeControl>(base64_encode(invalidWire)), std::runtime_error);
+}

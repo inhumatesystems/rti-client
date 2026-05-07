@@ -297,6 +297,11 @@ void RTIClient::OffError(errorcallback_p callback)
 
 void RTIClient::Publish(const std::string &channelName, const std::string &message, const bool registerChannel)
 {
+    if (channelName.empty()) {
+        for (auto callback : errorcallbacks)
+            if (callback) (*callback)("publish", "channel name cannot be empty");
+        return;
+    }
     if (registerChannel) RegisterChannelUsage(channelName, true);
     nlohmann::json json;
     json["event"] = "#publish";
@@ -317,7 +322,7 @@ void RTIClient::Publish(const std::string &channelName, const google::protobuf::
     if (buf) {
         if (message.SerializeToArray(buf, size)) {
             auto content = base64_encode(buf, size);
-            Publish(channelName, content);
+            Publish(channelName, content, registerChannel);
         } else {
             for (auto callback : errorcallbacks)
                 if (callback) (*callback)(channelName, "failed to serialize");
@@ -758,6 +763,11 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
 {
     try {
         std::string message = msg->get_payload();
+        if (maxMessageSizeBytes > 0 && message.size() > maxMessageSizeBytes) {
+            for (auto errorcb : errorcallbacks)
+                if (errorcb) (*errorcb)("protocol", "RTI message exceeded maximum size");
+            return;
+        }
 
         if (message == "") {
             Send("");

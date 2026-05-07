@@ -56,6 +56,10 @@ namespace Inhumate.RTI {
             get { return socket != null ? socket.MaxPollQueueDepth : maxPollQueueDepth; }
             set { maxPollQueueDepth = value; if (socket != null) socket.MaxPollQueueDepth = value; }
         }
+        public int MaxOutboundQueueDepth {
+            get { return socket != null ? socket.MaxOutboundQueueDepth : maxOutboundQueueDepth; }
+            set { maxOutboundQueueDepth = value; if (socket != null) socket.MaxOutboundQueueDepth = value; }
+        }
         public int MaxMessageSizeBytes {
             get { return socket != null ? socket.MaxMessageSizeBytes : maxMessageSizeBytes; }
             set { maxMessageSizeBytes = value; if (socket != null) socket.MaxMessageSizeBytes = value; }
@@ -64,6 +68,7 @@ namespace Inhumate.RTI {
             = new ConcurrentQueue<(UntypedListener, string, object)>();
         public int BufferDepth => messageBuffer.Count;
         private int maxPollQueueDepth = 10000;
+        private int maxOutboundQueueDepth = 10000;
         private int maxMessageSizeBytes = 16 * 1024 * 1024;
         private void EnqueueBufferedMessage(UntypedListener listener, string channel, object data) {
             if (MaxBufferDepth <= 0) {
@@ -211,6 +216,7 @@ namespace Inhumate.RTI {
             socket = new RTIWebSocket(Url) {
                 Polling = Polling,
                 MaxPollQueueDepth = maxPollQueueDepth,
+                MaxOutboundQueueDepth = maxOutboundQueueDepth,
                 MaxMessageSizeBytes = maxMessageSizeBytes
             };
             socket.OnConnected += (object sender) => {
@@ -240,94 +246,98 @@ namespace Inhumate.RTI {
         }
 
         private void OnMessage(string message) {
-            //Console.WriteLine($"RECV {message}");
-            if (message == "") {
-                Send("");
-                LastPing = DateTime.Now;
-                if (pingTimeoutTask == null) StartPingTimeoutThread();
-            } else if (message == "#1") {
-                Send("#2");
-                LastPing = DateTime.Now;
-                if (pingTimeoutTask == null) StartPingTimeoutThread();
-            } else if (message.StartsWith("{") && message.EndsWith("}")) {
-                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(message);
-                if (dict.ContainsKey("rid") && dict["rid"].ToString() == "1") {
-                    SendAuthToken();
-                } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#setAuthToken") {
-                    AuthToken = ((Dictionary<string, object>)dict["data"])["token"].ToString();
-                    foreach (var channelName in subscriptions.Keys) Subscribe(channelName);
-                    if (!IsConnected || reconnecting) {
-                        var first = !firstConnected;
-                        reconnecting = false;
-                        IsConnected = firstConnected = true;
-                        if (!Incognito) {
-                            PublishClient();
-                            PublishMeasures();
+            try {
+                //Console.WriteLine($"RECV {message}");
+                if (message == "") {
+                    Send("");
+                    LastPing = DateTime.Now;
+                    if (pingTimeoutTask == null) StartPingTimeoutThread();
+                } else if (message == "#1") {
+                    Send("#2");
+                    LastPing = DateTime.Now;
+                    if (pingTimeoutTask == null) StartPingTimeoutThread();
+                } else if (message.StartsWith("{") && message.EndsWith("}")) {
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(message);
+                    if (dict.ContainsKey("rid") && dict["rid"].ToString() == "1") {
+                        SendAuthToken();
+                    } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#setAuthToken") {
+                        AuthToken = ((Dictionary<string, object>)dict["data"])["token"].ToString();
+                        foreach (var channelName in subscriptions.Keys) Subscribe(channelName);
+                        if (!IsConnected || reconnecting) {
+                            var first = !firstConnected;
+                            reconnecting = false;
+                            IsConnected = firstConnected = true;
+                            if (!Incognito) {
+                                PublishClient();
+                                PublishMeasures();
+                            }
+                            if (first) OnFirstConnect?.Invoke();
+                            OnConnected?.Invoke();
                         }
-                        if (first) OnFirstConnect?.Invoke();
-                        OnConnected?.Invoke();
-                    }
-                } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#removeAuthToken") {
-                    AuthToken = null;
-                    SendAuthToken();
-                } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#publish" && dict.ContainsKey("data")) {
-                    var eventData = (Dictionary<string, object>)dict["data"];
-                    var channel = eventData.ContainsKey("channel") ? eventData["channel"].ToString() : null;
-                    if (!string.IsNullOrWhiteSpace(Federation)) channel = channel.Replace("//" + Federation + "/", "");
-                    var data = eventData.ContainsKey("data") ? eventData["data"] : null;
-                    if (subscriptions.TryGetValue(channel, out var channelSubscriptions)) {
-                        // Make a temp list to allow unsubscribing/subscribing from listeners
-                        List<(UntypedListener, DispatchMode?)> tempListeners;
-                        lock (channelSubscriptions) {
-                            tempListeners = new List<(UntypedListener, DispatchMode?)>(channelSubscriptions);
+                    } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#removeAuthToken") {
+                        AuthToken = null;
+                        SendAuthToken();
+                    } else if (dict.ContainsKey("event") && dict["event"].ToString() == "#publish" && dict.ContainsKey("data")) {
+                        var eventData = (Dictionary<string, object>)dict["data"];
+                        var channel = eventData.ContainsKey("channel") ? eventData["channel"].ToString() : null;
+                        if (!string.IsNullOrWhiteSpace(Federation)) channel = channel.Replace("//" + Federation + "/", "");
+                        var data = eventData.ContainsKey("data") ? eventData["data"] : null;
+                        if (subscriptions.TryGetValue(channel, out var channelSubscriptions)) {
+                            // Make a temp list to allow unsubscribing/subscribing from listeners
+                            List<(UntypedListener, DispatchMode?)> tempListeners;
+                            lock (channelSubscriptions) {
+                                tempListeners = new List<(UntypedListener, DispatchMode?)>(channelSubscriptions);
+                            }
+                            foreach (var (listener, mode) in tempListeners) {
+                                var effectiveMode = mode ?? DefaultDispatchMode;
+                                if (effectiveMode == DispatchMode.Buffered) {
+                                    EnqueueBufferedMessage(listener, channel, data);
+                                } else {
+                                    try {
+                                        listener.Invoke(channel, data);
+                                    } catch (Exception e) {
+                                        OnError?.Invoke(channel, e);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Unsubscribe when we have no listeners
+                            Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
+                                { "event", "#unsubscribe" },
+                                { "data", channel }
+                            }));
                         }
-                        foreach (var (listener, mode) in tempListeners) {
-                            var effectiveMode = mode ?? DefaultDispatchMode;
-                            if (effectiveMode == DispatchMode.Buffered) {
-                                EnqueueBufferedMessage(listener, channel, data);
-                            } else {
+                    } else if (dict.ContainsKey("event") && !dict["event"].ToString().StartsWith("#")) {
+                        var eventName = dict["event"].ToString();
+                        var data = dict.ContainsKey("data") ? dict["data"] : null;
+                        if (listeners.TryGetValue(eventName, out var eventListeners)) {
+                            List<UntypedListener> tempListeners;
+                            lock (eventListeners) {
+                                tempListeners = new List<UntypedListener>(eventListeners);
+                            }
+                            foreach (var listener in tempListeners) {
                                 try {
-                                    listener.Invoke(channel, data);
+                                    listener.Invoke(eventName, data);
                                 } catch (Exception e) {
-                                    OnError?.Invoke(channel, e);
+                                    OnError?.Invoke(eventName, e);
                                 }
                             }
                         }
-                    } else {
-                        // Unsubscribe when we have no listeners
-                        Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
-                            { "event", "#unsubscribe" },
-                            { "data", channel }
-                        }));
-                    }
-                } else if (dict.ContainsKey("event") && !dict["event"].ToString().StartsWith("#")) {
-                    var eventName = dict["event"].ToString();
-                    var data = dict.ContainsKey("data") ? dict["data"] : null;
-                    if (listeners.TryGetValue(eventName, out var eventListeners)) {
-                        List<UntypedListener> tempListeners;
-                        lock (eventListeners) {
-                            tempListeners = new List<UntypedListener>(eventListeners);
+                    } else if (dict.ContainsKey("rid") && int.TryParse($"{dict["rid"]}", out int rid)) {
+                        var data = dict.ContainsKey("data") ? dict["data"] : null;
+                        var error = dict.ContainsKey("error") ? dict["error"] : null;
+                        if (error != null) {
+                            if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners[rid].Invoke(error);
+                            else OnError?.Invoke("rpc", new Exception(error.ToString()));
+                        } else {
+                            if (rpcListeners.ContainsKey(rid)) rpcListeners[rid].Invoke(data);
                         }
-                        foreach (var listener in tempListeners) {
-                            try {
-                                listener.Invoke(eventName, data);
-                            } catch (Exception e) {
-                                OnError?.Invoke(eventName, e);
-                            }
-                        }
+                        if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners.TryRemove(rid, out _);
+                        if (rpcListeners.ContainsKey(rid)) rpcListeners.TryRemove(rid, out _);
                     }
-                } else if (dict.ContainsKey("rid") && int.TryParse($"{dict["rid"]}", out int rid)) {
-                    var data = dict.ContainsKey("data") ? dict["data"] : null;
-                    var error = dict.ContainsKey("error") ? dict["error"] : null;
-                    if (error != null) {
-                        if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners[rid].Invoke(error);
-                        else OnError?.Invoke("rpc", new Exception(error.ToString()));
-                    } else {
-                        if (rpcListeners.ContainsKey(rid)) rpcListeners[rid].Invoke(data);
-                    }
-                    if (rpcErrorListeners.ContainsKey(rid)) rpcErrorListeners.TryRemove(rid, out _);
-                    if (rpcListeners.ContainsKey(rid)) rpcListeners.TryRemove(rid, out _);
                 }
+            } catch (Exception e) {
+                OnError?.Invoke("protocol", e);
             }
         }
 

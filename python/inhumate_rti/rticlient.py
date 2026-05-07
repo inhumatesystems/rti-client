@@ -61,7 +61,8 @@ class RTIClient(Emitter):
                  secret: Optional[str] = None, user: Optional[str] = None, participant: Optional[str] = None,
                  role: Optional[str] = None, full_name: Optional[str] = None, capabilities: Optional[List[str]] = [],
                  password: Optional[str] = None, incognito: bool = False, connect: bool = True,
-                 wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.01):
+                 wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.01,
+                 max_message_size_bytes: int = 16 * 1024 * 1024):
         super().__init__()
         
         self.on(Emitter.ERROR, lambda exc_info: self.emit("error", "connection", exc_info[1], exc_info[0]))
@@ -75,6 +76,7 @@ class RTIClient(Emitter):
         self.known_measures = {}
         self.default_dispatch_mode = DispatchMode.IMMEDIATE
         self.max_buffer_depth = 10000
+        self.max_message_size_bytes = max_message_size_bytes
         self._message_buffer = []
         self._buffer_lock = Lock()
 
@@ -153,7 +155,7 @@ class RTIClient(Emitter):
             auth_token['federation'] = self.federation
         self._auth_token_data = auth_token
 
-        socket = RTISocketClusterClient(url, main_loop, main_loop_idle_time)
+        socket = RTISocketClusterClient(url, main_loop, main_loop_idle_time, self.max_message_size_bytes)
 
         def on_clients(message: Proto.Clients):
             if message.HasField("request_clients") and not self.incognito:
@@ -698,4 +700,3 @@ class RTIClient(Emitter):
             return response
         else:
             self.publish(channel, message)
-

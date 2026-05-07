@@ -15,6 +15,7 @@ namespace Inhumate.RTI {
         public int QueueCount => outQueue.Count;
         public int PollCount => pollQueue.Count;
         public int MaxPollQueueDepth { get; set; } = 10000;
+        public int MaxOutboundQueueDepth { get; set; } = 10000;
         public int MaxMessageSizeBytes { get; set; } = 16 * 1024 * 1024;
 
         public event ConnectedListener OnConnected;
@@ -26,8 +27,8 @@ namespace Inhumate.RTI {
         private readonly BlockingCollection<KeyValuePair<DateTime, QueuedMessage>> outQueue =
             new BlockingCollection<KeyValuePair<DateTime, QueuedMessage>>();
         private readonly ConcurrentQueue<QueuedMessage> pollQueue = new ConcurrentQueue<QueuedMessage>();
+        private int queuedOutMessages;
 
-        private const int outQueueLimit = 10000;
         private readonly TimeSpan sendTimeout = TimeSpan.FromSeconds(10);
 
         private readonly ClientWebSocket socket;
@@ -72,12 +73,17 @@ namespace Inhumate.RTI {
 
         public Task<bool> Send(string data) {
             try {
-                if ((State != WebSocketState.Open && QueueCount >= outQueueLimit) || disconnecting) {
+                if (!TryReserveOutboundSlot()) {
                     return Task.FromResult(false);
                 }
 
                 var message = new QueuedMessage { Data = Encoding.UTF8.GetBytes(data) };
-                outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, message));
+                try {
+                    outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, message));
+                } catch {
+                    ReleaseOutboundSlot();
+                    throw;
+                }
 
                 return Task.FromResult(true);
             } catch (Exception ex) {
@@ -88,17 +94,35 @@ namespace Inhumate.RTI {
 
         public Task<bool> SendRaw(byte[] data) {
             try {
-                if ((State != WebSocketState.Open && QueueCount >= outQueueLimit) || disconnecting) {
+                if (!TryReserveOutboundSlot()) {
                     return Task.FromResult(false);
                 }
 
-                outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, new QueuedMessage { Data = data, IsBinary = true }));
+                try {
+                    outQueue.Add(new KeyValuePair<DateTime, QueuedMessage>(DateTime.UtcNow, new QueuedMessage { Data = data, IsBinary = true }));
+                } catch {
+                    ReleaseOutboundSlot();
+                    throw;
+                }
 
                 return Task.FromResult(true);
             } catch (Exception ex) {
                 OnError?.Invoke(this, ex);
                 throw;
             }
+        }
+
+        private bool TryReserveOutboundSlot() {
+            if (disconnecting || MaxOutboundQueueDepth <= 0) return false;
+            while (true) {
+                var count = Volatile.Read(ref queuedOutMessages);
+                if (count >= MaxOutboundQueueDepth) return false;
+                if (Interlocked.CompareExchange(ref queuedOutMessages, count + 1, count) == count) return true;
+            }
+        }
+
+        private void ReleaseOutboundSlot() {
+            Interlocked.Decrement(ref queuedOutMessages);
         }
 
         public int Poll(int max = int.MaxValue) {
@@ -263,6 +287,7 @@ namespace Inhumate.RTI {
                     while (!_disposedValue && !disconnecting) {
                         KeyValuePair<DateTime, QueuedMessage> msg;
                         if (!outQueue.TryTake(out msg, 50, tokenSource.Token)) continue;
+                        ReleaseOutboundSlot();
                         // Re-check after TryTake in case Disconnect() ran while we waited.
                         if (disconnecting || socket.State != WebSocketState.Open) break;
                         if (msg.Key.Add(sendTimeout) < DateTime.UtcNow) continue;

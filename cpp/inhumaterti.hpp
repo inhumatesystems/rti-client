@@ -33,6 +33,7 @@
 #include <chrono>
 #include <functional>
 #include <queue>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -227,6 +228,7 @@ class INHUMATE_RTI_EXPORT RTIClient
 
     DispatchMode defaultDispatchMode = DispatchMode::IMMEDIATE;
     std::size_t maxBufferDepth = 10000;
+    std::size_t maxMessageSizeBytes = 16 * 1024 * 1024;
     void FlushBuffers();
     std::size_t BufferDepth() const;
 
@@ -237,7 +239,8 @@ class INHUMATE_RTI_EXPORT RTIClient
     template <typename Message> static Message Parse(const std::string &content)
     {
         Message message;
-        message.ParseFromString(base64_decode(content));
+        if (!message.ParseFromString(base64_decode(content)))
+            throw std::runtime_error("failed to parse RTI protobuf message");
         return message;
     }
 
