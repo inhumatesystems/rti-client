@@ -368,6 +368,7 @@ class RTIClient(Emitter):
         return self.subscribe_text(channel_name, handle_message, register, "json", dispatch=dispatch)
 
     def subscribe_text(self, channel_name: str, handler: Union[Callable[[str, str], None], Callable[[str], None]], register: bool = True, data_type: str = "text", dispatch=None):
+        if not channel_name: raise ValueError("Cannot subscribe with undefined/empty channel name")
         socket_channel_name = channel_name
         if self.federation:
             socket_channel_name = "//" + self.federation + "/" + channel_name
@@ -431,9 +432,7 @@ class RTIClient(Emitter):
         self._do_publish(channel_name, json.dumps(message))
 
     def _do_publish(self, channel_name: str, content: str) -> None:
-        if not channel_name:
-            print("RTI can't publish with empty channel name - message dropped", file=sys.stderr)
-            return
+        if not channel_name: raise ValueError("Cannot publish with undefined/empty channel name")
         if not self.first_connected:
             print("RTI can't publish before connected - message dropped", file=sys.stderr)
             return
@@ -523,6 +522,7 @@ class RTIClient(Emitter):
                 known.first_field_id = True
 
     def _register_channel_usage(self, channel_name, use_publish, data_type=None):
+        if not channel_name: raise ValueError(("Cannot publish" if use_publish else "Cannot subscribe") + " with undefined/empty channel name")
         if channel_name.startswith("@"):
             return
         channel = self.known_channels.get(channel_name)

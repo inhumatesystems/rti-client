@@ -747,5 +747,35 @@ namespace Inhumate.RTI {
             Assert.DoesNotThrow(() => rti.FlushBuffers());
             Assert.AreEqual(0, rti.BufferDepth);
         }
+
+        [Test]
+        public void Subscribe_Undefined_Channel_Name_Throws() {
+            string undef = null;
+            var ex1 = Assert.Throws<ArgumentException>(() => rti.Subscribe(undef, (c, d) => { }));
+            StringAssert.Contains("annot subscribe with undefined/empty channel name", ex1.Message);
+            var ex2 = Assert.Throws<ArgumentException>(() => rti.Subscribe<Clients>(undef, (string c, Clients msg) => { }));
+            StringAssert.Contains("annot subscribe with undefined/empty channel name", ex2.Message);
+            var ex3 = Assert.Throws<ArgumentException>(() => rti.SubscribeJson<TestDTO>(undef, (string c, TestDTO msg) => { }));
+            StringAssert.Contains("annot subscribe with undefined/empty channel name", ex3.Message);
+        }
+
+        [Test]
+        public void Publish_Undefined_Channel_Name_Throws() {
+            string undef = null;
+            var ex1 = Assert.Throws<ArgumentException>(() => rti.Publish(undef, "hi"));
+            StringAssert.Contains("annot publish with undefined/empty channel name", ex1.Message);
+            var ex2 = Assert.Throws<ArgumentException>(() => rti.Publish(undef, new Clients()));
+            StringAssert.Contains("annot publish with undefined/empty channel name", ex2.Message);
+            var ex3 = Assert.Throws<ArgumentException>(() => rti.PublishJson(undef, new TestDTO()));
+            StringAssert.Contains("annot publish with undefined/empty channel name", ex3.Message);
+        }
+
+        [Test]
+        public void Empty_Channel_Name_Throws() {
+            var ex1 = Assert.Throws<ArgumentException>(() => rti.Subscribe("", (c, d) => { }));
+            StringAssert.Contains("annot subscribe with undefined/empty channel name", ex1.Message);
+            var ex2 = Assert.Throws<ArgumentException>(() => rti.Publish("", "hi"));
+            StringAssert.Contains("annot publish with undefined/empty channel name", ex2.Message);
+        }
     }
 }

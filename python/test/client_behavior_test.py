@@ -613,3 +613,28 @@ class ClientBehaviorTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"flush_buffers raised an exception: {e}")
         self.assertEqual(0, self.rti.buffer_depth)
+
+    def test_subscribe_undefined_channel_name_raises(self):
+        undef = getattr(RTI.channel, "foo", None)  # non-existent constant
+        with self.assertRaisesRegex(ValueError, "annot subscribe with undefined/empty channel name"):
+            self.rti.subscribe_text(undef, lambda m: None)
+        with self.assertRaisesRegex(ValueError, "annot subscribe with undefined/empty channel name"):
+            self.rti.subscribe(undef, RTI.proto.Clients, lambda m: None)
+        with self.assertRaisesRegex(ValueError, "annot subscribe with undefined/empty channel name"):
+            self.rti.subscribe_json(undef, lambda m: None)
+
+    def test_publish_undefined_channel_name_raises(self):
+        undef = getattr(RTI.channel, "foo", None)
+        with self.assertRaisesRegex(ValueError, "annot publish with undefined/empty channel name"):
+            self.rti.publish_text(undef, "hi")
+        with self.assertRaisesRegex(ValueError, "annot publish with undefined/empty channel name"):
+            self.rti.publish_json(undef, {"a": 1})
+        msg = RTI.proto.Clients()
+        with self.assertRaisesRegex(ValueError, "annot publish with undefined/empty channel name"):
+            self.rti.publish(undef, msg)
+
+    def test_empty_channel_name_raises(self):
+        with self.assertRaisesRegex(ValueError, "annot subscribe with undefined/empty channel name"):
+            self.rti.subscribe_text("", lambda m: None)
+        with self.assertRaisesRegex(ValueError, "annot publish with undefined/empty channel name"):
+            self.rti.publish_text("", "hi")

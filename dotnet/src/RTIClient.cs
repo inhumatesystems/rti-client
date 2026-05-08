@@ -453,6 +453,7 @@ namespace Inhumate.RTI {
         }
 
         private UntypedListener DoSubscribe(string channelName, UntypedListener callback, DispatchMode? dispatchMode = null) {
+            if (string.IsNullOrEmpty(channelName)) throw new ArgumentException("Cannot subscribe with undefined/empty channel name");
             var entries = subscriptions.GetOrAdd(channelName, _ => new List<(UntypedListener, DispatchMode?)>());
             lock (entries) {
                 var firstSubscription = entries.Count == 0;
@@ -518,7 +519,7 @@ namespace Inhumate.RTI {
         }
 
         protected void DoPublish(string channelName, string data) {
-            if (string.IsNullOrEmpty(channelName)) throw new ArgumentException("Channel name cannot be empty");
+            if (string.IsNullOrEmpty(channelName)) throw new ArgumentException("Cannot publish with undefined/empty channel name");
             if (!firstConnected || socket == null) throw new InvalidOperationException("Cannot publish before connected");
             if (!string.IsNullOrWhiteSpace(Federation) && !channelName.StartsWith("@")) channelName = $"//{Federation}/{channelName}";
             Send(JsonSerializer.ToJsonString(new Dictionary<string, object> {
@@ -700,6 +701,7 @@ namespace Inhumate.RTI {
         }
 
         private void RegisterChannelUsage(string channelName, bool usePublish, string type = "") {
+            if (string.IsNullOrEmpty(channelName)) throw new ArgumentException((usePublish ? "Cannot publish" : "Cannot subscribe") + " with undefined/empty channel name");
             if (channelName.StartsWith("@")) return;
             Channel channel;
             if (knownChannels.ContainsKey(channelName)) {

@@ -544,7 +544,7 @@ export class RTIClient extends EventEmitter {
     }
 
     subscribe(channelName: string, type: any, handler: Function, register = true, dispatchMode?: DispatchMode): Subscription {
-        if (!type) throw new Error("cannot subscribe with undefined type")
+        if (!type) throw new Error("cannot subscribe with undefined/empty type")
         if (register) this.registerChannelUsage(channelName, false, type.name)
         return this.doSubscribe(channelName, (message: any) => {
             const data = RTIClient.parse(type, message)
@@ -580,6 +580,7 @@ export class RTIClient extends EventEmitter {
     private _handlers: any = {}
 
     private doSubscribe(channelName: string, handler: Function, dispatchMode?: DispatchMode): Subscription {
+        if (!channelName) throw new Error("cannot subscribe with undefined/empty channel name")
         const channel = this.socket.subscribe((this.federation ? `//${this.federation}/` : "") + channelName, { waitForAuth: true })
         const wrappedHandler = (data: any) => {
             try {
@@ -660,10 +661,7 @@ export class RTIClient extends EventEmitter {
     }
 
     private doPublish(channelName: string, message: string) {
-        if (!channelName) {
-            console.warn("RTI can't publish with empty channel name - message dropped")
-            return
-        }
+        if (!channelName) throw new Error("cannot publish with undefined/empty channel name")
         if (!this.firstConnected) {
             console.warn("RTI can't publish before connected - message dropped")
             return
@@ -707,6 +705,7 @@ export class RTIClient extends EventEmitter {
         } else {
             channel = channelName
         }
+        if (!channel) return
         if (type) channel.dataType = type
         if (channel.name.startsWith("@")) return
         let use = this._usedChannels[channel.name]

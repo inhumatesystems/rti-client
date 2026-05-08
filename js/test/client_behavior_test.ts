@@ -443,3 +443,23 @@ test("flush empty buffer is a no-op", async () => {
     expect(() => rti.flushBuffers()).not.toThrow()
     expect(rti.bufferDepth).toBe(0)
 })
+
+test("subscribe to undefined channel name throws clear error", () => {
+    const undef = (RTI.channel as any).foo  // typo / non-existent constant
+    expect(() => rti.subscribeText(undef, () => {})).toThrow(/annot subscribe/)
+    expect(() => rti.subscribe(undef, Object as any, () => {})).toThrow(/annot subscribe/)
+    expect(() => rti.subscribeJSON(undef, () => {})).toThrow(/annot subscribe/)
+})
+
+test("publish to undefined channel name throws clear error", () => {
+    const undef = (RTI.channel as any).foo
+    expect(() => rti.publishText(undef, "hi")).toThrow(/annot publish/)
+    expect(() => rti.publishJSON(undef, { a: 1 })).toThrow(/annot publish/)
+    expect(() => rti.publish(undef, { encode: () => new Uint8Array() }, {})).toThrow(/annot publish/)
+    expect(() => rti.publishBytes(undef, new Uint8Array())).toThrow(/annot publish/)
+})
+
+test("subscribe/publish to empty channel name throws clear error", () => {
+    expect(() => rti.subscribeText("", () => {})).toThrow(/annot subscribe/)
+    expect(() => rti.publishText("", "hi")).toThrow(/annot publish/)
+})
