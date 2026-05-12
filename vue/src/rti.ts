@@ -178,6 +178,11 @@ export const useRtiStore = defineStore("rti", () => {
         rti.publish(RTI.channel.channels, RTI.proto.Channels, { requestChannelUsage: {} })
     }
 
+    function clearErrors() {
+        errors.value = []
+        rti.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { clearErrors: {} })
+    }
+
     return {
         client: rti,
         connected,
@@ -208,5 +213,6 @@ export const useRtiStore = defineStore("rti", () => {
         requestCurrentLog,
         requestClients,
         requestChannels,
+        clearErrors,
     }
 })
