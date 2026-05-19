@@ -38,6 +38,9 @@ export const channel = {
     commands: internalPrefix + "commands",
     timelineEvent: internalPrefix + "timelineevent",
     entityEvent: internalPrefix + "entityevent",
+    uiSettings: internalPrefix + "settings/ui",
+    viewerSettings: internalPrefix + "settings/viewer",
+    recorderSettings: internalPrefix + "settings/recorder",
 }
 
 export const capability = {

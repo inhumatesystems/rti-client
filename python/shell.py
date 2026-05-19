@@ -19,5 +19,4 @@ def on_connect():
     rti.on("disconnect", on_disconnect)
 rti.on("connect", on_connect)
 
-if not rti.wait_until_connected(): 
-    print("not connected")
+rti.wait_until_connected()
