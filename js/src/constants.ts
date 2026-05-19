@@ -7,6 +7,7 @@ export default {
 const internalPrefix = "rti/"
 export const channel = {
     internalPrefix,
+    settingsPrefix: internalPrefix + "settings/",
     runtimeControl: internalPrefix + "control",
     recorderControl: internalPrefix + "recordercontrol",
     launchControl: internalPrefix + "launchcontrol",
@@ -38,9 +39,6 @@ export const channel = {
     commands: internalPrefix + "commands",
     timelineEvent: internalPrefix + "timelineevent",
     entityEvent: internalPrefix + "entityevent",
-    uiSettings: internalPrefix + "settings/ui",
-    viewerSettings: internalPrefix + "settings/viewer",
-    recorderSettings: internalPrefix + "settings/recorder",
 }
 
 export const capability = {

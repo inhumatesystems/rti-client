@@ -6,6 +6,7 @@
     public static class RTIChannel
     {
         public const string InternalPrefix = "rti/";
+        public const string SettingsPrefix = InternalPrefix + "settings/";
         public const string RuntimeControl = InternalPrefix + "control";
         public const string RecorderControl = InternalPrefix + "recordercontrol";
         public const string LaunchControl = InternalPrefix + "launchcontrol";
@@ -37,9 +38,6 @@
         public const string Commands = InternalPrefix + "commands";
         public const string TimelineEvent = InternalPrefix + "timelineevent";
         public const string EntityEvent = InternalPrefix + "entityevent";
-        public const string UISettings = InternalPrefix + "settings/ui";
-        public const string ViewerSettings = InternalPrefix + "settings/viewer";
-        public const string RecorderSettings = InternalPrefix + "settings/recorder";
     }
     public static class RTICapability {
         public const string RuntimeControl = "runtime";

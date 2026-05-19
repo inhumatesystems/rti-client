@@ -113,9 +113,6 @@ constexpr auto INJECTION_CHANNEL = "rti/injection";
 constexpr auto COMMANDS_CHANNEL = "rti/commands";
 constexpr auto TIMELINE_EVENT_CHANNEL = "rti/timelineevent";
 constexpr auto ENTITY_EVENT_CHANNEL = "rti/entityevent";
-constexpr auto UI_SETTINGS_CHANNEL = "rti/settings/ui";
-constexpr auto VIEWER_SETTINGS_CHANNEL = "rti/settings/viewer";
-constexpr auto RECORDER_SETTINGS_CHANNEL = "rti/settings/recorder";
 
 constexpr auto RUNTIME_CONTROL_CAPABILITY = "runtime";
 constexpr auto SCENARIO_CAPABILITY = "scenario";
