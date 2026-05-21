@@ -6,13 +6,18 @@ package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
 
 import "Color.proto";
+import "PropertyValue.proto";
 
 message EntityEvent {
 
     string id = 1; // entity id
-    string type = 2;
+    string type = 2; // event type
     string description = 3;
-    string data = 4;
     Color color = 5;
+
+    string template = 6;
+    map<string, PropertyValue> properties = 7;
+
+    repeated string entity_ids = 8; // other entities involved in the event, relation given by type
 
 }
