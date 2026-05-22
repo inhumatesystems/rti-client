@@ -1,12 +1,17 @@
 {
     "name": "inhumate-rti-clients",
     "private": true,
-    "scripts": {},
+    "scripts": {
+        "preinstall": "npx npm-force-resolutions"
+    },
     "workspaces": [
         "js",
         "vue"
     ],
     "dependencies": {
         "form-data": "^4.0.4"
+    },
+    "resolutions": {
+        "uuid": "14.0.0"
     }
 }
