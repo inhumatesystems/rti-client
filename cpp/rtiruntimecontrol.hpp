@@ -73,6 +73,7 @@ class INHUMATE_RTI_EXPORT RTIRuntimeControl
     virtual void OnResetEndStop() {}
     virtual void OnTimeScale(double timeScale) { (void)timeScale; }
     virtual void OnTimeSync(const proto::RuntimeControl_TimeSync &timeSync) { (void)timeSync; }
+    virtual void OnSeek(const proto::RuntimeControl_Seek &seek) { (void)seek; }
 
     // Called when a fast-time step grant is received. Override to add custom behavior.
     // Only called when using the GetStepGrant() pattern (no stepFn provided).

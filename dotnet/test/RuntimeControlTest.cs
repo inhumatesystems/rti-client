@@ -185,6 +185,61 @@ namespace Inhumate.RTI {
             Assert.AreEqual(4.0, runtime.TimeScale.Value, 0.001);
         }
 
+        [Test]
+        public void Seek_FromInitial_SetsPlaybackPaused() {
+            rti.State = RuntimeState.Initial;
+            Publish(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 12.5 } });
+            Assert.IsTrue(WaitFor(() => rti.State == RuntimeState.PlaybackPaused));
+            Assert.AreEqual(RuntimeState.PlaybackPaused, rti.State);
+        }
+
+        [Test]
+        public void Seek_DuringPlayback_LeavesStateUntouched() {
+            rti.State = RuntimeState.Playback;
+            Publish(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 1.0 } });
+            Thread.Sleep(100);
+            Assert.AreEqual(RuntimeState.Playback, rti.State);
+        }
+
+        [Test]
+        public void Seek_DuringRunning_LeavesStateUntouched() {
+            rti.State = RuntimeState.Running;
+            Publish(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 1.0 } });
+            Thread.Sleep(100);
+            Assert.AreEqual(RuntimeState.Running, rti.State);
+        }
+
+        [Test]
+        public void Seek_DuringPaused_LeavesStateUntouched() {
+            rti.State = RuntimeState.Paused;
+            Publish(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 1.0 } });
+            Thread.Sleep(100);
+            Assert.AreEqual(RuntimeState.Paused, rti.State);
+        }
+
+        [Test]
+        public void Seek_DuringPlaybackStopped_SetsPlaybackPaused() {
+            rti.State = RuntimeState.PlaybackStopped;
+            Publish(new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 1.0 } });
+            Assert.IsTrue(WaitFor(() => rti.State == RuntimeState.PlaybackPaused));
+            Assert.AreEqual(RuntimeState.PlaybackPaused, rti.State);
+        }
+
+        [Test]
+        public void OnSeek_Called() {
+            double receivedTime = -1;
+            var c = FreshClient("C# RC OnSeek Test");
+            try {
+                new TestRuntime(c, onSeek: s => { receivedTime = s.Time; });
+                Thread.Sleep(250);
+                controller.Publish(RTIChannel.RuntimeControl, new RuntimeControl { Seek = new RuntimeControl.Types.Seek { Time = 7.25 } });
+                Assert.IsTrue(WaitFor(() => receivedTime > 0));
+                Assert.AreEqual(7.25, receivedTime, 0.001);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
         // --- Override hooks (fresh client per test for isolation) ---
 
         [Test]
@@ -250,7 +305,7 @@ namespace Inhumate.RTI {
             var c = FreshClient("C# RC FT Ack Test");
             FastTimeControl.Types.Acknowledge acked = null;
             var sub = controller.Subscribe<FastTimeControl>(RTIChannel.FastTimeControl, (ch, msg) => {
-                if (msg.ControlCase == FastTimeControl.ControlOneofCase.Acknowledge && msg.Acknowledge.RunId == "run-ack")
+                if (msg.ControlCase == FastTimeControl.ControlOneofCase.Acknowledge && msg.Acknowledge.RunId == "run-ack" && msg.Acknowledge.ClientId == c.ClientId)
                     acked = msg.Acknowledge;
             });
             try {
@@ -258,7 +313,6 @@ namespace Inhumate.RTI {
                 Thread.Sleep(250);
                 ConfigureRun("run-ack");
                 Assert.IsTrue(WaitFor(() => acked != null));
-                Assert.AreEqual(c.ClientId, acked.ClientId);
                 Assert.AreEqual("run-ack", acked.RunId);
             } finally {
                 controller.Unsubscribe(sub);
@@ -452,21 +506,25 @@ namespace Inhumate.RTI {
             private readonly Action onResetAction;
             private readonly Action onStartAction;
             private readonly Action onStopAction;
+            private readonly Action<RuntimeControl.Types.Seek> onSeekAction;
             private readonly bool? loadScenarioResult;
 
             public TestRuntime(RTIClient rti,
                 Action onReset = null, Action onStart = null, Action onStop = null,
+                Action<RuntimeControl.Types.Seek> onSeek = null,
                 bool? loadScenarioResult = null)
                 : base(rti) {
                 this.onResetAction = onReset;
                 this.onStartAction = onStart;
                 this.onStopAction = onStop;
+                this.onSeekAction = onSeek;
                 this.loadScenarioResult = loadScenarioResult;
             }
 
             public override void OnReset() => onResetAction?.Invoke();
             public override void OnStart() => onStartAction?.Invoke();
             public override void OnStop() => onStopAction?.Invoke();
+            public override void OnSeek(RuntimeControl.Types.Seek seek) => onSeekAction?.Invoke(seek);
             public override bool OnLoadScenario(RuntimeControl.Types.ScenarioSpecification ls, bool playback)
                 => loadScenarioResult ?? true;
         }

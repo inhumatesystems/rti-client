@@ -191,6 +191,48 @@ test("time sync calls onTimeSync and stores timeScale", async () => {
     runtime.onTimeSync = () => {}
 })
 
+test("seek from INITIAL sets state to PLAYBACK_PAUSED and calls onSeek", async () => {
+    let received: RTI.proto.RuntimeControl_Seek | undefined
+    runtime.onSeek = (s) => { received = s }
+    rti.state = RTI.proto.RuntimeState.INITIAL
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { seek: { time: 12.5 } })
+    let count = 0
+    while (rtiState() !== RTI.proto.RuntimeState.PLAYBACK_PAUSED && count++ < 50) await sleep(10)
+    expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK_PAUSED)
+    expect(received).toBeDefined()
+    expect(received!.time).toBeCloseTo(12.5)
+    runtime.onSeek = () => {}
+})
+
+test("seek while PLAYBACK leaves state untouched", async () => {
+    rti.state = RTI.proto.RuntimeState.PLAYBACK
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { seek: { time: 1.0 } })
+    await sleep(50)
+    expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK)
+})
+
+test("seek while RUNNING leaves state untouched", async () => {
+    rti.state = RTI.proto.RuntimeState.RUNNING
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { seek: { time: 1.0 } })
+    await sleep(50)
+    expect(rti.state).toBe(RTI.proto.RuntimeState.RUNNING)
+})
+
+test("seek while PAUSED leaves state untouched", async () => {
+    rti.state = RTI.proto.RuntimeState.PAUSED
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { seek: { time: 1.0 } })
+    await sleep(50)
+    expect(rti.state).toBe(RTI.proto.RuntimeState.PAUSED)
+})
+
+test("seek while PLAYBACK_STOPPED sets state to PLAYBACK_PAUSED", async () => {
+    rti.state = RTI.proto.RuntimeState.PLAYBACK_STOPPED
+    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { seek: { time: 1.0 } })
+    let count = 0
+    while (rtiState() !== RTI.proto.RuntimeState.PLAYBACK_PAUSED && count++ < 50) await sleep(10)
+    expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK_PAUSED)
+})
+
 // --- RTIRuntimeControl publish methods ---
 
 test("runtime.start() publishes start and sets state to RUNNING", async () => {

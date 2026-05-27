@@ -153,6 +153,61 @@ class RuntimeControlTest(unittest.TestCase):
         wait_for(lambda: self.runtime.time_scale == 4.0)
         self.assertAlmostEqual(4.0, self.runtime.time_scale)
 
+    def test_seek_from_initial_sets_playback_paused(self):
+        self.rti.state = RTI.proto.INITIAL
+        msg = RTI.proto.RuntimeControl()
+        msg.seek.time = 12.5
+        self._publish(msg)
+        wait_for(lambda: self.rti.state == RTI.proto.PLAYBACK_PAUSED)
+        self.assertEqual(RTI.proto.PLAYBACK_PAUSED, self.rti.state)
+
+    def test_seek_while_playback_leaves_state(self):
+        self.rti.state = RTI.proto.PLAYBACK
+        msg = RTI.proto.RuntimeControl()
+        msg.seek.time = 1.0
+        self._publish(msg)
+        time.sleep(0.1)
+        self.assertEqual(RTI.proto.PLAYBACK, self.rti.state)
+
+    def test_seek_while_running_leaves_state(self):
+        self.rti.state = RTI.proto.RUNNING
+        msg = RTI.proto.RuntimeControl()
+        msg.seek.time = 1.0
+        self._publish(msg)
+        time.sleep(0.1)
+        self.assertEqual(RTI.proto.RUNNING, self.rti.state)
+
+    def test_seek_while_paused_leaves_state(self):
+        self.rti.state = RTI.proto.PAUSED
+        msg = RTI.proto.RuntimeControl()
+        msg.seek.time = 1.0
+        self._publish(msg)
+        time.sleep(0.1)
+        self.assertEqual(RTI.proto.PAUSED, self.rti.state)
+
+    def test_seek_while_playback_stopped_sets_playback_paused(self):
+        self.rti.state = RTI.proto.PLAYBACK_STOPPED
+        msg = RTI.proto.RuntimeControl()
+        msg.seek.time = 1.0
+        self._publish(msg)
+        wait_for(lambda: self.rti.state == RTI.proto.PLAYBACK_PAUSED)
+        self.assertEqual(RTI.proto.PLAYBACK_PAUSED, self.rti.state)
+
+    def test_on_seek_called(self):
+        rti = self._fresh_client()
+        try:
+            received = []
+            class TestRuntime(RTI.RuntimeControl):
+                def on_seek(self, seek): received.append(seek.time)
+            TestRuntime(rti)
+            msg = RTI.proto.RuntimeControl()
+            msg.seek.time = 7.25
+            self.controller.publish(RTI.channel.runtime_control, msg)
+            wait_for(lambda: len(received) > 0)
+            self.assertEqual([7.25], received)
+        finally:
+            rti.disconnect()
+
     # --- Override hooks (fresh client per test for isolation) ---
 
     def test_on_reset_called(self):

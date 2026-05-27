@@ -408,6 +408,14 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         _scenario.set_name(message.current_scenario().name());
         _hasScenario = true;
         break;
+    case proto::RuntimeControl::kSeek: {
+        auto prevState = rti.state();
+        OnSeek(message.seek());
+        if (prevState == rti.state() && rti.state() != proto::RuntimeState::PLAYBACK && rti.state() != proto::RuntimeState::RUNNING && rti.state() != proto::RuntimeState::PAUSED) {
+            rti.set_state(proto::RuntimeState::PLAYBACK_PAUSED);
+        }
+        break;
+    }
     default:
         break;
     }

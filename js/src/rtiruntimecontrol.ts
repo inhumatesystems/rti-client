@@ -4,7 +4,7 @@
 
 import { RTIClient, DispatchMode } from "./rticlient.js"
 import { channel as RTIchannel, capability as RTIcapability } from "./constants.js"
-import { RuntimeControl, RuntimeControl_ScenarioSpecification, RuntimeControl_TimeSync } from "./generated/RuntimeControl.js"
+import { RuntimeControl, RuntimeControl_ScenarioSpecification, RuntimeControl_TimeSync, RuntimeControl_Seek } from "./generated/RuntimeControl.js"
 import { FastTimeControl } from "./generated/FastTimeControl.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
 import { Clients } from "./generated/Clients.js"
@@ -80,6 +80,7 @@ export class RTIRuntimeControl {
     onResetEndStop(): void {}
     onTimeScale(timeScale: number): void {}
     onTimeSync(timeSync: RuntimeControl_TimeSync): void {}
+    onSeek(seek: RuntimeControl_Seek): void {}
 
     /** Called when a fast-time step grant is received. Override to add custom behavior.
      * Only called when using the getStepGrant() pattern (no stepFn provided). */
@@ -322,6 +323,12 @@ export class RTIRuntimeControl {
             this.onTimeSync(message.timeSync)
         } else if (message.currentScenario !== undefined) {
             this.scenario = message.currentScenario
+        } else if (message.seek !== undefined) {
+            const prevState = this.rti.state
+            this.onSeek(message.seek)
+            if (prevState === this.rti.state && this.rti.state !== RuntimeState.PLAYBACK && this.rti.state !== RuntimeState.RUNNING && this.rti.state !== RuntimeState.PAUSED) {
+                this.rti.state = RuntimeState.PLAYBACK_PAUSED
+            }
         }
     }
 }

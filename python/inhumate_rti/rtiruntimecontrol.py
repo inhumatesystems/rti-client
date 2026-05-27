@@ -82,6 +82,9 @@ class RTIRuntimeControl:
     def on_time_sync(self, time_sync: Proto.RuntimeControl.TimeSync):
         pass
 
+    def on_seek(self, seek: Proto.RuntimeControl.Seek):
+        pass
+
     def on_step_grant(self, grant: StepGrant):
         """Called when a fast-time step grant is received. Override to add custom behavior.
         Only called when using the get_step_grant() pattern (no step_fn provided)."""
@@ -322,3 +325,8 @@ class RTIRuntimeControl:
             self.on_time_sync(message.time_sync)
         elif message.HasField("current_scenario"):
             self.scenario = message.current_scenario
+        elif message.HasField("seek"):
+            prev_state = self.rti.state
+            self.on_seek(message.seek)
+            if (prev_state == self.rti.state and self.rti.state != Proto.PLAYBACK and self.rti.state != Proto.RUNNING and self.rti.state != Proto.PAUSED):
+                self.rti.state = Proto.PLAYBACK_PAUSED

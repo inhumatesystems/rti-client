@@ -78,6 +78,7 @@ namespace Inhumate.RTI {
         public virtual void OnResetEndStop() {}
         public virtual void OnTimeScale(double timeScale) {}
         public virtual void OnTimeSync(RuntimeControl.Types.TimeSync timeSync) {}
+        public virtual void OnSeek(RuntimeControl.Types.Seek seek) {}
 
         /// Called when a fast-time step grant is received. Override to add custom behavior.
         /// Only called when using the GetStepGrant() pattern (no stepFn provided).
@@ -321,6 +322,13 @@ namespace Inhumate.RTI {
                     break;
                 case RuntimeControl.ControlOneofCase.CurrentScenario:
                     Scenario = new RuntimeControl.Types.ScenarioSpecification { Name = message.CurrentScenario.Name };
+                    break;
+                case RuntimeControl.ControlOneofCase.Seek:
+                    var prevState = rti.State;
+                    OnSeek(message.Seek);
+                    if (prevState == rti.State && rti.State != RuntimeState.Playback && rti.State != RuntimeState.Running && rti.State != RuntimeState.Paused) {
+                        rti.State = RuntimeState.PlaybackPaused;
+                    }
                     break;
             }
         }
