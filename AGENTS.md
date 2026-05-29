@@ -27,6 +27,20 @@ npm run lint         # ESLint with auto-fix
 npm run format       # Prettier
 ```
 
+### npm dependency overrides (`js/` + `vue/`)
+
+The root `package.json` is an npm-workspaces root (`js`, `vue`) and pins a few transitive dependencies via `overrides`. After changing any of these, run a **clean** install (`rm -rf node_modules js/node_modules vue/node_modules package-lock.json && npm install`) — a partial install can place packages inconsistently across the root and workspace `node_modules` and break webpack resolution.
+
+| Override | Reason |
+|---|---|
+| `uuid: 11.1.1` | Transitive `uuid@8.3.2` (from `jest-junit` and `socketcluster-client`) was flagged by `npm audit` (GHSA-w5hq-g745-h8pq). `11.1.1` is the patched version and ships a **dual CJS/ESM** build — required because jest doesn't transform `node_modules`, so an ESM-only `uuid` (v12+) breaks the test run. `uuid@14` was tried and broke the build for exactly this reason. `uuid` is also a direct `js/` dependency (used in `src/rticlient.ts`); `@types/uuid` is intentionally absent since uuid@11 bundles its own types. |
+| `test-exclude: ^7.0.1` | `babel-plugin-istanbul` (in jest's transform chain) pins `test-exclude@6`, which pulls the deprecated `glob@7` and the leaky `inflight@1`. `test-exclude@7` uses `glob@10+`, eliminating both. |
+| `glob: ^13.0.6` | The `glob` maintainer deprecates every version below the latest as a nag (no actual vulnerability). Forcing the latest silences the warning across jest, `test-exclude`, and vue's `js-beautify`. This is aggressive (those packages request `glob@10`/`@11`) and may need re-bumping when a newer glob ships; dropping this line is safe and only re-introduces the harmless deprecation nag. |
+
+The jest toolchain in `js/` was upgraded to v30 (`jest`, `@types/jest@30`, `jest-junit@17`, `ts-jest@29.4.x` which supports jest 30) so jest's own internals no longer use `glob@7`/`inflight`.
+
+`js/jest.config.cjs` passes a ts-jest `tsconfig` override (`module: esnext`, `isolatedModules: true`). The library build uses `module: nodenext` (correct for dual CJS/ESM publishing), but that hybrid module kind triggers ts-jest warning TS151002 — ts-jest transpiles file-at-a-time and requires `isolatedModules`, which is only valid with a non-hybrid module kind. The override keeps `nodenext` for the actual build while giving ts-jest a plain ESM kind for transpilation. Do **not** set `isolatedModules` directly in `tsconfig.json`: combined with `module: nodenext` it makes ts-jest emit the wrong module format (`SyntaxError: Cannot use import statement outside a module`).
+
 ### Python (`python/`)
 ```sh
 python -m virtualenv .venv
