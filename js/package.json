@@ -23,11 +23,10 @@
     "lib"
   ],
   "devDependencies": {
-    "@types/jest": "^29.5.2",
-    "@types/uuid": "^9.0.2",
-    "jest": "^29.7.0",
-    "jest-junit": "^16.0.0",
-    "ts-jest": "^29.1.4",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
+    "jest-junit": "^17.0.0",
+    "ts-jest": "^29.4.11",
     "ts-loader": "^9.4.4",
     "ts-proto": "^1.176.1",
     "tsx": "^4.17.0",
@@ -42,6 +41,7 @@
     "events": "^3.3.0",
     "google-protobuf": "^3.21.2",
     "protobufjs": "^8.0.3",
-    "socketcluster-client": "^20.0.1"
+    "socketcluster-client": "^20.0.1",
+    "uuid": "^11.1.1"
   }
 }
