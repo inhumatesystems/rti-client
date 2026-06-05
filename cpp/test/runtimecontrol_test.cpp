@@ -35,6 +35,30 @@ static void publish_seek(double time)
     rti2.Publish(RUNTIME_CONTROL_CHANNEL, m);
 }
 
+static void publish_configure_run(const std::string &run_id, double time_step = 1.0)
+{
+    FastTimeControl m;
+    m.mutable_configure_run()->set_controller_client_id(rti2.client_id());
+    m.mutable_configure_run()->set_run_id(run_id);
+    m.mutable_configure_run()->set_time_step(time_step);
+    rti2.Publish(FAST_TIME_CONTROL_CHANNEL, m);
+}
+
+static void publish_abandon_run(const std::string &run_id)
+{
+    FastTimeControl m;
+    m.mutable_abandon_run()->set_run_id(run_id);
+    rti2.Publish(FAST_TIME_CONTROL_CHANNEL, m);
+}
+
+static void publish_configuration(FastTimeControl_ExecutionMode mode, double time_step = 1.0)
+{
+    FastTimeControl m;
+    m.mutable_configuration()->set_mode(mode);
+    m.mutable_configuration()->set_time_step(time_step);
+    rti2.Publish(FAST_TIME_CONTROL_CHANNEL, m);
+}
+
 TEST_CASE("seek_from_initial_sets_playback_paused")
 {
     RTIRuntimeControl runtime(rti);
@@ -102,4 +126,79 @@ TEST_CASE("seek_calls_on_seek_hook")
     POLL2_UNTIL(2000, runtime.called);
     REQUIRE(runtime.called);
     REQUIRE(runtime.received_time == Approx(7.25));
+}
+
+TEST_CASE("fast_time_abandon_run_resets_fast_time")
+{
+    RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);
+    POLL2(100);
+    rti.set_state(RuntimeState::INITIAL);
+    publish_configure_run("run-abandon");
+    POLL2_UNTIL(2000, runtime.is_fast_time());
+    REQUIRE(runtime.is_fast_time());
+    publish_abandon_run("run-abandon");
+    POLL2_UNTIL(2000, !runtime.is_fast_time());
+    REQUIRE(!runtime.is_fast_time());
+    REQUIRE(!rti.fast_time_mode());
+    REQUIRE(rti.defaultDispatchMode == DispatchMode::IMMEDIATE);
+}
+
+TEST_CASE("fast_time_abandon_other_run_does_not_reset")
+{
+    RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);
+    POLL2(100);
+    rti.set_state(RuntimeState::INITIAL);
+    publish_configure_run("run-abandon-mine");
+    POLL2_UNTIL(2000, runtime.is_fast_time());
+    REQUIRE(runtime.is_fast_time());
+    publish_abandon_run("run-abandon-other");
+    POLL2(300);
+    REQUIRE(runtime.is_fast_time());
+    // Clean up shared client state for subsequent tests
+    publish_abandon_run("run-abandon-mine");
+    POLL2_UNTIL(2000, !runtime.is_fast_time());
+}
+
+TEST_CASE("fast_time_realtime_configuration_resets_fast_time")
+{
+    RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);
+    POLL2(100);
+    rti.set_state(RuntimeState::INITIAL);
+    publish_configure_run("run-config-rt");
+    POLL2_UNTIL(2000, runtime.is_fast_time());
+    REQUIRE(runtime.is_fast_time());
+    publish_configuration(FastTimeControl_ExecutionMode_REAL_TIME);
+    POLL2_UNTIL(2000, !runtime.is_fast_time());
+    REQUIRE(!runtime.is_fast_time());
+    REQUIRE(!rti.fast_time_mode());
+    REQUIRE(rti.defaultDispatchMode == DispatchMode::IMMEDIATE);
+}
+
+TEST_CASE("fast_time_unknown_mode_configuration_resets_fast_time")
+{
+    RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);
+    POLL2(100);
+    rti.set_state(RuntimeState::INITIAL);
+    publish_configure_run("run-config-unknown");
+    POLL2_UNTIL(2000, runtime.is_fast_time());
+    REQUIRE(runtime.is_fast_time());
+    publish_configuration(FastTimeControl_ExecutionMode_UNKNOWN_MODE);
+    POLL2_UNTIL(2000, !runtime.is_fast_time());
+    REQUIRE(!runtime.is_fast_time());
+}
+
+TEST_CASE("fast_time_fixed_step_configuration_does_not_reset")
+{
+    RTIRuntimeControl runtime(rti, /*subscribe=*/true, /*fastTime=*/true);
+    POLL2(100);
+    rti.set_state(RuntimeState::INITIAL);
+    publish_configure_run("run-config-fixed");
+    POLL2_UNTIL(2000, runtime.is_fast_time());
+    REQUIRE(runtime.is_fast_time());
+    publish_configuration(FastTimeControl_ExecutionMode_FIXED_STEP);
+    POLL2(300);
+    REQUIRE(runtime.is_fast_time());
+    // Clean up shared client state for subsequent tests
+    publish_abandon_run("run-config-fixed");
+    POLL2_UNTIL(2000, !runtime.is_fast_time());
 }

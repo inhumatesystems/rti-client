@@ -53,9 +53,9 @@ class RuntimeControlTest(unittest.TestCase):
 
     def _configure_run(self, run_id, time_step=1.0):
         msg = RTI.proto.FastTimeControl()
-        msg.configure.controller_client_id = self.controller.client_id
-        msg.configure.run_id = run_id
-        msg.configure.time_step = time_step
+        msg.configure_run.controller_client_id = self.controller.client_id
+        msg.configure_run.run_id = run_id
+        msg.configure_run.time_step = time_step
         self.controller.publish(RTI.channel.fast_time_control, msg)
 
     def _send_grant(self, run_id, step_number=0, start_time=0.0, time_step=1.0):
@@ -64,6 +64,17 @@ class RuntimeControlTest(unittest.TestCase):
         msg.step_grant.step_number = step_number
         msg.step_grant.start_time = start_time
         msg.step_grant.end_time = start_time + time_step
+        self.controller.publish(RTI.channel.fast_time_control, msg)
+
+    def _abandon_run(self, run_id):
+        msg = RTI.proto.FastTimeControl()
+        msg.abandon_run.run_id = run_id
+        self.controller.publish(RTI.channel.fast_time_control, msg)
+
+    def _send_configuration(self, mode, time_step=1.0):
+        msg = RTI.proto.FastTimeControl()
+        msg.configuration.mode = mode
+        msg.configuration.time_step = time_step
         self.controller.publish(RTI.channel.fast_time_control, msg)
 
     # --- Capabilities ---
@@ -275,7 +286,7 @@ class RuntimeControlTest(unittest.TestCase):
         rti = self._fresh_client("python_rc_ft_ack_test")
         acked = []
         sub = self.controller.subscribe(RTI.channel.fast_time_control, RTI.proto.FastTimeControl,
-            lambda c, m: acked.append(m.acknowledge) if m.HasField("acknowledge") else None)
+            lambda c, m: acked.append(m.acknowledge_run) if m.HasField("acknowledge_run") else None)
         try:
             RTI.RuntimeControl(rti, fast_time=True)
             time.sleep(0.5)
@@ -330,6 +341,78 @@ class RuntimeControlTest(unittest.TestCase):
             wait_for(lambda: not runtime.is_fast_time)
             self.assertFalse(runtime.is_fast_time)
             self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_abandon_run_resets_fast_time(self):
+        rti = self._fresh_client("python_rc_ft_abandon_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-abandon")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            self._abandon_run("run-abandon")
+            wait_for(lambda: not runtime.is_fast_time)
+            self.assertFalse(runtime.is_fast_time)
+            self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_abandon_other_run_does_not_reset(self):
+        rti = self._fresh_client("python_rc_ft_abandon_other_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-abandon-mine")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            self._abandon_run("run-abandon-other")
+            time.sleep(0.3)
+            self.assertTrue(runtime.is_fast_time)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_realtime_configuration_resets_fast_time(self):
+        rti = self._fresh_client("python_rc_ft_config_rt_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-config-rt")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            self._send_configuration(RTI.proto.FastTimeControl.REAL_TIME)
+            wait_for(lambda: not runtime.is_fast_time)
+            self.assertFalse(runtime.is_fast_time)
+            self.assertEqual(RTI.DispatchMode.IMMEDIATE, rti.default_dispatch_mode)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_unknown_mode_configuration_resets_fast_time(self):
+        rti = self._fresh_client("python_rc_ft_config_unknown_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-config-unknown")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            self._send_configuration(RTI.proto.FastTimeControl.UNKNOWN_MODE)
+            wait_for(lambda: not runtime.is_fast_time)
+            self.assertFalse(runtime.is_fast_time)
+        finally:
+            rti.disconnect()
+
+    def test_fast_time_fixed_step_configuration_does_not_reset(self):
+        rti = self._fresh_client("python_rc_ft_config_fixed_test")
+        try:
+            runtime = RTI.RuntimeControl(rti, fast_time=True)
+            time.sleep(0.5)
+            self._configure_run("run-config-fixed")
+            wait_for(lambda: runtime.is_fast_time)
+            self.assertTrue(runtime.is_fast_time)
+            self._send_configuration(RTI.proto.FastTimeControl.FIXED_STEP)
+            time.sleep(0.3)
+            self.assertTrue(runtime.is_fast_time)
         finally:
             rti.disconnect()
 
@@ -415,9 +498,9 @@ class RuntimeControlTest(unittest.TestCase):
             runtime = RTI.RuntimeControl(rti, fast_time=True)
             time.sleep(0.5)
             msg = RTI.proto.FastTimeControl()
-            msg.configure.controller_client_id = ctrl.client_id
-            msg.configure.run_id = "run-ctrl-disc"
-            msg.configure.time_step = 1.0
+            msg.configure_run.controller_client_id = ctrl.client_id
+            msg.configure_run.run_id = "run-ctrl-disc"
+            msg.configure_run.time_step = 1.0
             ctrl.publish(RTI.channel.fast_time_control, msg)
             wait_for(lambda: runtime.is_fast_time)
             self.assertTrue(runtime.is_fast_time)
@@ -436,9 +519,9 @@ class RuntimeControlTest(unittest.TestCase):
             runtime = RTI.RuntimeControl(rti, fast_time=True)
             time.sleep(0.5)
             msg = RTI.proto.FastTimeControl()
-            msg.configure.controller_client_id = ctrl.client_id
-            msg.configure.run_id = "run-ctrl-running"
-            msg.configure.time_step = 1.0
+            msg.configure_run.controller_client_id = ctrl.client_id
+            msg.configure_run.run_id = "run-ctrl-running"
+            msg.configure_run.time_step = 1.0
             ctrl.publish(RTI.channel.fast_time_control, msg)
             wait_for(lambda: runtime.is_fast_time)
             rti.state = RTI.proto.RUNNING

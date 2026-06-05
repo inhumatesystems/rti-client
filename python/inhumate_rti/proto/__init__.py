@@ -31,3 +31,4 @@ from ..generated.Event_pb2 import *
 from ..generated.EntityEvent_pb2 import *
 from ..generated.Color_pb2 import *
 from ..generated.FastTimeControl_pb2 import *
+from ..generated.FastTimeClientStats_pb2 import *

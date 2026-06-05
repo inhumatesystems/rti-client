@@ -14,7 +14,7 @@ import json
 import re
 import sys
 from inspect import signature
-from typing import List, Optional, Type, Union, Callable
+from typing import List, Optional, Set, Type, Union, Callable
 
 
 class DispatchMode:
@@ -59,7 +59,7 @@ class RTIClient(Emitter):
                  integration_version: Optional[str] = None, client_id: Optional[str] = None,
                  federation: Optional[str] = None, host: Optional[str] = None, station: Optional[str] = None,
                  secret: Optional[str] = None, user: Optional[str] = None, participant: Optional[str] = None,
-                 role: Optional[str] = None, full_name: Optional[str] = None, capabilities: Optional[List[str]] = [],
+                 role: Optional[str] = None, full_name: Optional[str] = None, capabilities: Optional[Set[str]] = None,
                  password: Optional[str] = None, incognito: bool = False, connect: bool = True,
                  wait: bool = False, main_loop: Callable = None, main_loop_idle_time: float = 0.01,
                  max_message_size_bytes: int = 16 * 1024 * 1024):
@@ -136,7 +136,7 @@ class RTIClient(Emitter):
         self.participant = participant
         self.role = role
         self.full_name = full_name
-        self.capabilities = capabilities
+        self.capabilities = set(capabilities) if capabilities else set()
 
         self.incognito = incognito
 

@@ -1,0 +1,16 @@
+// Statistics for fast-time mode.
+
+syntax = "proto3";
+
+package inhumate.rti.proto;
+option csharp_namespace = "Inhumate.RTI.Proto";
+
+message FastTimeClientStats {
+    string client_id = 1;
+    int64 step_count = 3;
+    int32 step_min_duration = 4; // ms
+    int32 step_max_duration = 5; // ms
+    int64 step_sum_duration = 6; // ms
+    int64 slow_step_count = 7;
+    int64 slow_duration = 8; // ms
+}

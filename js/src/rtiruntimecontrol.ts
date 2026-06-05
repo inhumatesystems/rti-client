@@ -5,7 +5,7 @@
 import { RTIClient, DispatchMode } from "./rticlient.js"
 import { channel as RTIchannel, capability as RTIcapability } from "./constants.js"
 import { RuntimeControl, RuntimeControl_ScenarioSpecification, RuntimeControl_TimeSync, RuntimeControl_Seek } from "./generated/RuntimeControl.js"
-import { FastTimeControl } from "./generated/FastTimeControl.js"
+import { FastTimeControl, FastTimeControl_ExecutionMode } from "./generated/FastTimeControl.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
 import { Clients } from "./generated/Clients.js"
 
@@ -53,16 +53,13 @@ export class RTIRuntimeControl {
         this._stepFn = stepFn
         this._fastTimeEnabled = fastTime || stepFn !== undefined
 
-        if (!rti.capabilities.includes(RTIcapability.runtimeControl)) rti.capabilities.push(RTIcapability.runtimeControl)
-        if (!rti.capabilities.includes(RTIcapability.scenario)) rti.capabilities.push(RTIcapability.scenario)
-        if (!rti.capabilities.includes(RTIcapability.timeScale)) rti.capabilities.push(RTIcapability.timeScale)
+        rti.capabilities.add(RTIcapability.runtimeControl)
+        rti.capabilities.add(RTIcapability.scenario)
+        rti.capabilities.add(RTIcapability.timeScale)
 
         rti.state = RuntimeState.INITIAL
 
-        if (this._fastTimeEnabled) {
-            if (!rti.capabilities.includes(RTIcapability.fastTimeWorker))
-                rti.capabilities.push(RTIcapability.fastTimeWorker)
-        }
+        if (this._fastTimeEnabled) rti.capabilities.add(RTIcapability.fastTimeWorker)
 
         if (subscribe) this.subscribe()
     }
@@ -211,19 +208,30 @@ export class RTIRuntimeControl {
     }
 
     private _receiveFastTime(message: FastTimeControl): void {
-        if (message.configure) {
-            this._fastTimeRunId = message.configure.runId
-            this._fastTimeControllerClientId = message.configure.controllerClientId
+        if (message.configureRun) {
+            this._fastTimeRunId = message.configureRun.runId
+            this._fastTimeControllerClientId = message.configureRun.controllerClientId
             // defaultDispatchMode stays IMMEDIATE until the first step grant arrives
             this.rti.publish(RTIchannel.fastTimeControl, FastTimeControl, {
-                acknowledge: {
+                acknowledgeRun: {
                     clientId: this.rti.clientId,
-                    runId: message.configure.runId,
+                    runId: message.configureRun.runId,
                     failed: false,
                     reason: "",
                 }
             }, false)
             this.rti.fastTimeMode = true
+        } else if (message.configuration) {
+            // A configuration with real-time (or unknown) mode means this run is not
+            // fast-time stepped — leave fast-time mode and clear the run id.
+            if (message.configuration.mode <= FastTimeControl_ExecutionMode.REAL_TIME) {
+                this._resetFastTime()
+            }
+        } else if (message.abandonRun) {
+            // The controller abandoned the run we're configured for — leave fast-time mode.
+            if (message.abandonRun.runId === this._fastTimeRunId) {
+                this._resetFastTime()
+            }
         } else if (message.stepGrant && message.stepGrant.runId === this._fastTimeRunId) {
             const grant = new StepGrant(message.stepGrant, this._fastTimeRunId!)
             this.rti.defaultDispatchMode = DispatchMode.BUFFERED // switch to BUFFERED on first step

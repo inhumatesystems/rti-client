@@ -37,7 +37,7 @@ namespace Inhumate.RTI {
         private string password;
         public string AuthToken { get; private set; }
         public string ClientUrl { get; set; }
-        public List<string> Capabilities { get; set; } = new List<string>();
+        public HashSet<string> Capabilities { get; set; } = new HashSet<string>();
 
         private int cid;
 
@@ -652,7 +652,7 @@ namespace Inhumate.RTI {
                 Url = ClientUrl ?? "",
                 FastTimeMode = FastTimeMode
             };
-            if (Capabilities != null) myClient.Capabilities.AddRange(Capabilities);
+            if (Capabilities != null) foreach (var capability in Capabilities) myClient.Capabilities.Add(capability);
             Publish(RTIChannel.Clients, new Clients { Client = myClient });
         }
 

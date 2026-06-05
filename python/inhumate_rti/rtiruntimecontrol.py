@@ -27,9 +27,9 @@ class RTIRuntimeControl:
 
     def __init__(self, rti: RTIClient, subscribe=True, fast_time=False, step_fn=None):
         self.rti = rti
-        if Capability.runtime_control not in rti.capabilities: rti.capabilities.append(Capability.runtime_control)
-        if Capability.scenario not in rti.capabilities: rti.capabilities.append(Capability.scenario)
-        if Capability.time_scale not in rti.capabilities: rti.capabilities.append(Capability.time_scale)
+        rti.capabilities.add(Capability.runtime_control)
+        rti.capabilities.add(Capability.scenario)
+        rti.capabilities.add(Capability.time_scale)
 
         self.subscribed = False
         self.scenario = None
@@ -44,8 +44,7 @@ class RTIRuntimeControl:
         self._grant_queue = Queue()
 
         if self._fast_time_enabled:
-            if Capability.fast_time_worker not in rti.capabilities:
-                rti.capabilities.append(Capability.fast_time_worker)
+            rti.capabilities.add(Capability.fast_time_worker)
 
         if subscribe: self.subscribe()
 
@@ -222,15 +221,24 @@ class RTIRuntimeControl:
             self._reset_fast_time()
 
     def _receive_fast_time(self, message: Proto.FastTimeControl):
-        if message.HasField("configure"):
-            self._fast_time_run_id = message.configure.run_id
-            self._fast_time_controller_client_id = message.configure.controller_client_id
+        if message.HasField("configure_run"):
+            self._fast_time_run_id = message.configure_run.run_id
+            self._fast_time_controller_client_id = message.configure_run.controller_client_id
             # default_dispatch_mode stays IMMEDIATE until the first step grant arrives
             ack = Proto.FastTimeControl()
-            ack.acknowledge.client_id = self.rti.client_id
-            ack.acknowledge.run_id = message.configure.run_id
+            ack.acknowledge_run.client_id = self.rti.client_id
+            ack.acknowledge_run.run_id = message.configure_run.run_id
             self.rti.publish(Channel.fast_time_control, ack)
             self.rti.fast_time_mode = True
+        elif message.HasField("configuration"):
+            # A configuration with real-time (or unknown) mode means this run is not
+            # fast-time stepped — leave fast-time mode and clear the run id.
+            if message.configuration.mode <= Proto.FastTimeControl.REAL_TIME:
+                self._reset_fast_time()
+        elif message.HasField("abandon_run"):
+            # The controller abandoned the run we're configured for — leave fast-time mode.
+            if message.abandon_run.run_id == self._fast_time_run_id:
+                self._reset_fast_time()
         elif message.HasField("step_grant") and message.step_grant.run_id == self._fast_time_run_id:
             grant = StepGrant(message.step_grant, self._fast_time_run_id)
             self.rti.default_dispatch_mode = DispatchMode.BUFFERED  # switch to BUFFERED on first step

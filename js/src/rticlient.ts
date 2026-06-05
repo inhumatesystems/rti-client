@@ -114,8 +114,8 @@ export class RTIClient extends EventEmitter {
     public get fullName(): string | undefined {
         return this._fullName
     }
-    private _capabilities: string[] = []
-    public get capabilities(): string[] {
+    private _capabilities: Set<string> = new Set()
+    public get capabilities(): Set<string> {
         return this._capabilities
     }
     readonly incognito: boolean = false
@@ -273,7 +273,7 @@ export class RTIClient extends EventEmitter {
         if (!this._participant && options && options.participant) this._participant = options.participant
         if (!this._role && options && options.role) this._role = options.role
         if (!this._fullName && options && options.fullName) this._fullName = options.fullName
-        if (options && options.capabilities) this._capabilities = options.capabilities
+        if (options && options.capabilities) options.capabilities.forEach(c => this._capabilities.add(c))
 
         let secret = env["RTI_SECRET"]
         if (!secret && options && options.secret) secret = options.secret
@@ -506,7 +506,7 @@ export class RTIClient extends EventEmitter {
             engineVersion:
                 !this.engineVersion && typeof process !== "undefined" && process.version ? `Node ${process.version}` : this.engineVersion,
             userAgent: typeof navigator !== "undefined" && navigator.userAgent ? navigator.userAgent : "",
-            capabilities: this.capabilities,
+            capabilities: [...this.capabilities],
             fastTimeMode: this.fastTimeMode,
         })
     }

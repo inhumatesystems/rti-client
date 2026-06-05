@@ -31,19 +31,14 @@ RTIRuntimeControl::RTIRuntimeControl(RTIClient &rti_, bool subscribe, bool fastT
 {
     _fastTimeEnabled = fastTime || (bool)_stepFn;
 
-    const auto &caps = rti.capabilities();
-    if (std::find(caps.begin(), caps.end(), RUNTIME_CONTROL_CAPABILITY) == caps.end())
-        rti.add_capability(RUNTIME_CONTROL_CAPABILITY);
-    if (std::find(caps.begin(), caps.end(), SCENARIO_CAPABILITY) == caps.end())
-        rti.add_capability(SCENARIO_CAPABILITY);
-    if (std::find(caps.begin(), caps.end(), TIME_SCALE_CAPABILITY) == caps.end())
-        rti.add_capability(TIME_SCALE_CAPABILITY);
+    rti.add_capability(RUNTIME_CONTROL_CAPABILITY);
+    rti.add_capability(SCENARIO_CAPABILITY);
+    rti.add_capability(TIME_SCALE_CAPABILITY);
 
     rti.set_state(proto::RuntimeState::INITIAL);
 
     if (_fastTimeEnabled) {
-        if (std::find(caps.begin(), caps.end(), FAST_TIME_WORKER_CAPABILITY) == caps.end())
-            rti.add_capability(FAST_TIME_WORKER_CAPABILITY);
+        rti.add_capability(FAST_TIME_WORKER_CAPABILITY);
     }
 
     if (subscribe) Subscribe();
@@ -270,16 +265,31 @@ void RTIRuntimeControl::OnControllerDisconnect(const std::string &clientId)
 void RTIRuntimeControl::ReceiveFastTime(const proto::FastTimeControl &message)
 {
     switch (message.control_case()) {
-    case proto::FastTimeControl::kConfigure: {
-        _fastTimeRunId = message.configure().run_id();
-        _fastTimeControllerClientId = message.configure().controller_client_id();
+    case proto::FastTimeControl::kConfigureRun: {
+        _fastTimeRunId = message.configure_run().run_id();
+        _fastTimeControllerClientId = message.configure_run().controller_client_id();
         // defaultDispatchMode stays IMMEDIATE until the first step grant arrives.
         proto::FastTimeControl ack;
-        auto *a = ack.mutable_acknowledge();
+        auto *a = ack.mutable_acknowledge_run();
         a->set_client_id(rti.client_id());
-        a->set_run_id(message.configure().run_id());
+        a->set_run_id(message.configure_run().run_id());
         rti.Publish(FAST_TIME_CONTROL_CHANNEL, ack);
         rti.set_fast_time_mode(true);
+        break;
+    }
+    case proto::FastTimeControl::kConfiguration: {
+        // A configuration with real-time (or unknown) mode means this run is not
+        // fast-time stepped — leave fast-time mode and clear the run id.
+        if (message.configuration().mode() <= proto::FastTimeControl_ExecutionMode_REAL_TIME) {
+            ResetFastTime();
+        }
+        break;
+    }
+    case proto::FastTimeControl::kAbandonRun: {
+        // The controller abandoned the run we're configured for — leave fast-time mode.
+        if (message.abandon_run().run_id() == _fastTimeRunId) {
+            ResetFastTime();
+        }
         break;
     }
     case proto::FastTimeControl::kStepGrant: {
