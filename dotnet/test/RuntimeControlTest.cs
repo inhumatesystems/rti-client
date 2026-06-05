@@ -65,7 +65,7 @@ namespace Inhumate.RTI {
 
         private void ConfigureRun(string runId, double timeStep = 1.0) =>
             controller.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
-                Configure = new FastTimeControl.Types.Configure {
+                ConfigureRun = new FastTimeControl.Types.ConfigureRun {
                     ControllerClientId = controller.ClientId,
                     RunId = runId,
                     TimeStep = timeStep
@@ -79,6 +79,21 @@ namespace Inhumate.RTI {
                     StepNumber = stepNumber,
                     StartTime = startTime,
                     EndTime = startTime + timeStep
+                }
+            });
+
+        private void AbandonRun(string runId) =>
+            controller.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
+                AbandonRun = new FastTimeControl.Types.AbandonRun {
+                    RunId = runId
+                }
+            });
+
+        private void SendConfiguration(FastTimeControl.Types.ExecutionMode mode, double timeStep = 1.0) =>
+            controller.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
+                Configuration = new FastTimeControl.Types.Configuration {
+                    Mode = mode,
+                    TimeStep = timeStep
                 }
             });
 
@@ -303,10 +318,10 @@ namespace Inhumate.RTI {
         [Test]
         public void FastTime_Configure_SendsAcknowledge() {
             var c = FreshClient("C# RC FT Ack Test");
-            FastTimeControl.Types.Acknowledge acked = null;
+            FastTimeControl.Types.AcknowledgeRun acked = null;
             var sub = controller.Subscribe<FastTimeControl>(RTIChannel.FastTimeControl, (ch, msg) => {
-                if (msg.ControlCase == FastTimeControl.ControlOneofCase.Acknowledge && msg.Acknowledge.RunId == "run-ack" && msg.Acknowledge.ClientId == c.ClientId)
-                    acked = msg.Acknowledge;
+                if (msg.ControlCase == FastTimeControl.ControlOneofCase.AcknowledgeRun && msg.AcknowledgeRun.RunId == "run-ack" && msg.AcknowledgeRun.ClientId == c.ClientId)
+                    acked = msg.AcknowledgeRun;
             });
             try {
                 new RTIRuntimeControl(c, fastTime: true);
@@ -366,6 +381,88 @@ namespace Inhumate.RTI {
                 Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
                 Assert.IsFalse(rt.IsFastTime);
                 Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_AbandonRun_ResetsFastTime() {
+            var c = FreshClient("C# RC FT Abandon Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-abandon");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                AbandonRun("run-abandon");
+                Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
+                Assert.IsFalse(rt.IsFastTime);
+                Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_AbandonRun_OtherRun_DoesNotReset() {
+            var c = FreshClient("C# RC FT Abandon Other Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-abandon-mine");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                AbandonRun("run-abandon-other");
+                Thread.Sleep(300);
+                Assert.IsTrue(rt.IsFastTime);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_Configuration_RealTime_ResetsFastTime() {
+            var c = FreshClient("C# RC FT Config RT Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-config-rt");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                SendConfiguration(FastTimeControl.Types.ExecutionMode.RealTime);
+                Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
+                Assert.IsFalse(rt.IsFastTime);
+                Assert.AreEqual(DispatchMode.Immediate, c.DefaultDispatchMode);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_Configuration_UnknownMode_ResetsFastTime() {
+            var c = FreshClient("C# RC FT Config Unknown Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-config-unknown");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                SendConfiguration(FastTimeControl.Types.ExecutionMode.UnknownMode);
+                Assert.IsTrue(WaitFor(() => !rt.IsFastTime));
+                Assert.IsFalse(rt.IsFastTime);
+            } finally {
+                c.Disconnect();
+            }
+        }
+
+        [Test]
+        public void FastTime_Configuration_FixedStep_DoesNotReset() {
+            var c = FreshClient("C# RC FT Config Fixed Test");
+            try {
+                var rt = new RTIRuntimeControl(c, fastTime: true);
+                Thread.Sleep(100);
+                ConfigureRun("run-config-fixed");
+                Assert.IsTrue(WaitFor(() => rt.IsFastTime));
+                SendConfiguration(FastTimeControl.Types.ExecutionMode.FixedStep);
+                Thread.Sleep(300);
+                Assert.IsTrue(rt.IsFastTime);
             } finally {
                 c.Disconnect();
             }
@@ -459,7 +556,7 @@ namespace Inhumate.RTI {
                 var rt = new RTIRuntimeControl(c, fastTime: true);
                 Thread.Sleep(100);
                 ctrl.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
-                    Configure = new FastTimeControl.Types.Configure {
+                    ConfigureRun = new FastTimeControl.Types.ConfigureRun {
                         ControllerClientId = ctrl.ClientId,
                         RunId = "run-ctrl-disc",
                         TimeStep = 1.0
@@ -484,7 +581,7 @@ namespace Inhumate.RTI {
                 var rt = new RTIRuntimeControl(c, fastTime: true);
                 Thread.Sleep(100);
                 ctrl.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
-                    Configure = new FastTimeControl.Types.Configure {
+                    ConfigureRun = new FastTimeControl.Types.ConfigureRun {
                         ControllerClientId = ctrl.ClientId,
                         RunId = "run-ctrl-running",
                         TimeStep = 1.0

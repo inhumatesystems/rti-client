@@ -12,6 +12,7 @@ export const channel = {
     recorderControl: internalPrefix + "recordercontrol",
     launchControl: internalPrefix + "launchcontrol",
     fastTimeControl: internalPrefix + "fasttimecontrol",
+    fastTimeClientStats: internalPrefix + "fasttimeclientstats",
     channels: internalPrefix + "channels",
     clients: internalPrefix + "clients",
     scenarios: internalPrefix + "scenarios",

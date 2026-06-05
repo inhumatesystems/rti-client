@@ -33,6 +33,7 @@
 #include <chrono>
 #include <functional>
 #include <queue>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -86,6 +87,7 @@ constexpr auto RUNTIME_CONTROL_CHANNEL = "rti/control";
 constexpr auto RECORDER_CONTROL_CHANNEL = "rti/recordercontrol";
 constexpr auto LAUNCH_CONTROL_CHANNEL = "rti/launchcontrol";
 constexpr auto FAST_TIME_CONTROL_CHANNEL = "rti/fasttimecontrol";
+constexpr auto FAST_TIME_CLIENT_STATS_CHANNEL = "rti/fasttimeclientstats";
 constexpr auto CHANNELS_CHANNEL = "rti/channels";
 constexpr auto CLIENTS_CHANNEL = "rti/clients";
 constexpr auto ENTITY_OPERATION_CHANNEL = "rti/entities";
@@ -361,13 +363,13 @@ class INHUMATE_RTI_EXPORT RTIClient
     {
         integrationVersion = version;
     }
-    const std::vector<std::string> &capabilities()
+    const std::set<std::string> &capabilities()
     {
         return _capabilities;
     }
     void add_capability(const std::string &capability)
     {
-        _capabilities.push_back(capability);
+        _capabilities.insert(capability);
     }
     const float measurement_interval_time_scale()
     {
@@ -473,7 +475,7 @@ class INHUMATE_RTI_EXPORT RTIClient
     std::string secret;
     std::string _user;
     std::string _password;
-    std::vector<std::string> _capabilities;
+    std::set<std::string> _capabilities;
     std::string brokerVersion;
     subscriptionmap_t subscriptions;
     std::vector<connectcallback_p> connectcallbacks;

@@ -283,12 +283,12 @@ test("fast time configure sends acknowledge and stays IMMEDIATE until first step
 
     let ackReceived = false
     rti2.subscribe(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, (msg: RTI.proto.FastTimeControl) => {
-        if (msg.acknowledge && msg.acknowledge.clientId === rtiFt.clientId) ackReceived = true
+        if (msg.acknowledgeRun && msg.acknowledgeRun.clientId === rtiFt.clientId) ackReceived = true
     })
 
     const runId = "test-run-1"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!ackReceived && count++ < 50) await sleep(10)
@@ -311,7 +311,7 @@ test("first step grant switches dispatch mode to BUFFERED", async () => {
 
     const runId = "test-run-1b"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -337,7 +337,7 @@ test("play during fast time resets fast time mode", async () => {
 
     const runId = "test-run-1c"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -354,6 +354,138 @@ test("play during fast time resets fast time mode", async () => {
     ;(rtiFt.socket as any)._destroy()
 })
 
+test("abandon run during fast time resets fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test abandon" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-abandon"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        abandonRun: { runId }
+    })
+    count = 0
+    while (rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(false)
+    expect(rtiFt.fastTimeMode).toBe(false)
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("abandon run for a different run does not reset fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test abandon other" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-abandon-mine"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        abandonRun: { runId: "test-run-abandon-other" }
+    })
+    await sleep(300)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("real-time configuration during fast time resets fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test config rt" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-config-rt"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configuration: { mode: RTI.proto.FastTimeControl_ExecutionMode.REAL_TIME, timeStep: 0.1 }
+    })
+    count = 0
+    while (rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(false)
+    expect(rtiFt.fastTimeMode).toBe(false)
+    expect(rtiFt.defaultDispatchMode).toBe(RTI.DispatchMode.IMMEDIATE)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("unknown-mode configuration during fast time resets fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test config unknown" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-config-unknown"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configuration: { mode: RTI.proto.FastTimeControl_ExecutionMode.UNKNOWN_MODE, timeStep: 0.1 }
+    })
+    count = 0
+    while (rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(false)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
+test("fixed-step configuration during fast time does not reset fast time mode", async () => {
+    const rtiFt = new RTI.Client({ application: "typescript fasttime test config fixed" })
+    rtiFt.on("error", () => {})
+    const rtFt = new RTIRuntimeControl(rtiFt, true, true)
+    let count = 0
+    while (!rtiFt.isConnected && count++ < 50) await sleep(100)
+
+    const runId = "test-run-config-fixed"
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+    })
+    count = 0
+    while (!rtFt.isFastTime && count++ < 50) await sleep(10)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
+        configuration: { mode: RTI.proto.FastTimeControl_ExecutionMode.FIXED_STEP, timeStep: 0.1 }
+    })
+    await sleep(300)
+    expect(rtFt.isFastTime).toBe(true)
+
+    rtiFt.kill()
+    ;(rtiFt.socket as any)._destroy()
+})
+
 test("getStepGrant returns grant and completeStep sends StepComplete", async () => {
     const rtiFt = new RTI.Client({ application: "typescript fasttime test 2" })
     rtiFt.on("error", () => {})
@@ -363,7 +495,7 @@ test("getStepGrant returns grant and completeStep sends StepComplete", async () 
 
     const runId = "test-run-2"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -419,7 +551,7 @@ test("stop during fast time wakes getStepGrant with null", async () => {
 
     const runId = "test-run-stop"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -456,7 +588,7 @@ test("stepFn callback is called with grant", async () => {
 
     const runId = "test-run-stepfn"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.05 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.05 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -493,7 +625,7 @@ test("controller disconnect resets fast time when not running/paused", async () 
 
     const runId = "test-run-ctrl-disc"
     rtiCtrl.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -523,7 +655,7 @@ test("controller disconnect does not reset fast time when running", async () => 
 
     const runId = "test-run-ctrl-running"
     rtiCtrl.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rtiCtrl.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
@@ -557,7 +689,7 @@ test("onStepGrant hook is called in getStepGrant pattern", async () => {
 
     const runId = "test-run-hook"
     rti2.publish(RTI.channel.fastTimeControl, RTI.proto.FastTimeControl, {
-        configure: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
+        configureRun: { controllerClientId: rti2.clientId, runId, timeStep: 0.1 }
     })
     count = 0
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)

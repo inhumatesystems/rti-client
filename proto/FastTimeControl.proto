@@ -6,23 +6,28 @@ syntax = "proto3";
 package inhumate.rti.proto;
 option csharp_namespace = "Inhumate.RTI.Proto";
 
+import "google/protobuf/empty.proto";
+
 message FastTimeControl {
 
     oneof control {
-        Configure configure = 1;
-        Acknowledge acknowledge = 2;
+        ConfigureRun configure_run = 1;
+        AcknowledgeRun acknowledge_run = 2;
         StepGrant step_grant = 3;
         StepComplete step_complete = 4;
+        AbandonRun abandon_run = 5;
+        google.protobuf.Empty request_configuration = 7;
+        Configuration configuration = 8;
     }
 
-    message Configure {
+    message ConfigureRun {
         string controller_client_id = 1;
         string run_id = 2;
         double time_step = 3; // seconds (sim time)
         // TODO maybe later start_time, stop_condition, mode (fixed_step/event_driven), seed
     }
 
-    message Acknowledge {
+    message AcknowledgeRun {
         string client_id = 1;
         string run_id = 2;
         bool failed = 3;
@@ -44,6 +49,24 @@ message FastTimeControl {
         bool failed = 5;
         string reason = 7; // if failed
         // TODO common performance metrics like messages processed, etc.
+    }
+
+    message AbandonRun {
+        string run_id = 1;
+    }
+
+    message Configuration {
+        ExecutionMode mode = 1;
+        double time_step = 2;
+        double max_time = 3;
+        double max_real_time = 4;
+        double step_timeout = 5;
+    }
+
+    enum ExecutionMode {
+        UNKNOWN_MODE = 0;
+        REAL_TIME = 1;
+        FIXED_STEP = 2;
     }
 
     // Later, add TAR (Time Advance Request) / NER (Next Event Request) style messages without breaking v1:

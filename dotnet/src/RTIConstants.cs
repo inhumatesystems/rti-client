@@ -11,6 +11,7 @@
         public const string RecorderControl = InternalPrefix + "recordercontrol";
         public const string LaunchControl = InternalPrefix + "launchcontrol";
         public const string FastTimeControl = InternalPrefix + "fasttimecontrol";
+        public const string FastTimeClientStats = InternalPrefix + "fasttimeclientstats";
         public const string Channels = InternalPrefix + "channels";
         public const string Clients = InternalPrefix + "clients";
         public const string EntityOperation = InternalPrefix + "entities";

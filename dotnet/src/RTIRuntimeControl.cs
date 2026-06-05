@@ -51,16 +51,12 @@ namespace Inhumate.RTI {
             this.stepFn = stepFn;
             this.fastTimeEnabled = fastTime || stepFn != null;
 
-            if (!rti.Capabilities.Contains(RTICapability.RuntimeControl)) rti.Capabilities.Add(RTICapability.RuntimeControl);
-            if (!rti.Capabilities.Contains(RTICapability.Scenario)) rti.Capabilities.Add(RTICapability.Scenario);
-            if (!rti.Capabilities.Contains(RTICapability.TimeScale)) rti.Capabilities.Add(RTICapability.TimeScale);
+            rti.Capabilities.Add(RTICapability.RuntimeControl);
+            rti.Capabilities.Add(RTICapability.Scenario);
+            rti.Capabilities.Add(RTICapability.TimeScale);
 
             rti.State = RuntimeState.Initial;
-
-            if (fastTimeEnabled) {
-                if (!rti.Capabilities.Contains(RTICapability.FastTimeWorker))
-                    rti.Capabilities.Add(RTICapability.FastTimeWorker);
-            }
+            if (fastTimeEnabled) rti.Capabilities.Add(RTICapability.FastTimeWorker);
 
             if (subscribe) Subscribe();
         }
@@ -200,17 +196,30 @@ namespace Inhumate.RTI {
 
         private void ReceiveFastTime(FastTimeControl message) {
             switch (message.ControlCase) {
-                case FastTimeControl.ControlOneofCase.Configure:
-                    fastTimeRunId = message.Configure.RunId;
-                    fastTimeControllerClientId = message.Configure.ControllerClientId;
+                case FastTimeControl.ControlOneofCase.ConfigureRun:
+                    fastTimeRunId = message.ConfigureRun.RunId;
+                    fastTimeControllerClientId = message.ConfigureRun.ControllerClientId;
                     // DefaultDispatchMode stays Immediate until the first step grant arrives
                     rti.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
-                        Acknowledge = new FastTimeControl.Types.Acknowledge {
+                        AcknowledgeRun = new FastTimeControl.Types.AcknowledgeRun {
                             ClientId = rti.ClientId,
-                            RunId = message.Configure.RunId,
+                            RunId = message.ConfigureRun.RunId,
                         }
                     });
                     rti.FastTimeMode = true;
+                    break;
+                case FastTimeControl.ControlOneofCase.Configuration:
+                    // A configuration with real-time (or unknown) mode means this run is not
+                    // fast-time stepped — leave fast-time mode and clear the run id.
+                    if (message.Configuration.Mode <= FastTimeControl.Types.ExecutionMode.RealTime) {
+                        ResetFastTime();
+                    }
+                    break;
+                case FastTimeControl.ControlOneofCase.AbandonRun:
+                    // The controller abandoned the run we're configured for — leave fast-time mode.
+                    if (message.AbandonRun.RunId == fastTimeRunId) {
+                        ResetFastTime();
+                    }
                     break;
                 case FastTimeControl.ControlOneofCase.StepGrant:
                     if (message.StepGrant.RunId == fastTimeRunId) {
