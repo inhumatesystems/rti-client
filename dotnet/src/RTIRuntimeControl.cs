@@ -265,6 +265,9 @@ namespace Inhumate.RTI {
                     if (fastTimeEnabled) ResetFastTime();
                     break;
                 case RuntimeControl.ControlOneofCase.LoadScenario:
+                    if (rti.State == RuntimeState.Running || rti.State == RuntimeState.Paused) {
+                        throw new InvalidOperationException("Cannot load scenario while running or paused");
+                    }
                     Scenario = null;
                     var playback = rti.State == RuntimeState.Playback;
                     rti.State = RuntimeState.Loading;

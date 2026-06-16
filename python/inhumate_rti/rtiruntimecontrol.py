@@ -275,6 +275,8 @@ class RTIRuntimeControl:
             self.rti.state = Proto.INITIAL
             if self._fast_time_enabled: self._reset_fast_time()
         elif message.HasField("load_scenario"):
+            if self.rti.state == Proto.RUNNING or self.rti.state == Proto.PAUSED:
+                raise RuntimeError("Cannot load scenario while running or paused")
             self.scenario = None
             playback = self.rti.state == Proto.PLAYBACK
             self.rti.state = Proto.LOADING

@@ -117,7 +117,7 @@ test("pause sets state to PAUSED and calls onPause", async () => {
 test("play sets state to PLAYBACK and calls onPlay", async () => {
     let called = false
     runtime.onPlay = () => { called = true }
-    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
+    rti2.publish(rti.ownChannelPrefix + RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
     let count = 0
     while (rti.state !== RTI.proto.RuntimeState.PLAYBACK && count++ < 50) await sleep(10)
     expect(rti.state).toBe(RTI.proto.RuntimeState.PLAYBACK)
@@ -343,7 +343,7 @@ test("play during fast time resets fast time mode", async () => {
     while (!rtFt.isFastTime && count++ < 50) await sleep(10)
     expect(rtFt.isFastTime).toBe(true)
 
-    rti2.publish(RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
+    rti2.publish(rtiFt.ownChannelPrefix + RTI.channel.runtimeControl, RTI.proto.RuntimeControl, { play: {} })
     count = 0
     while (rtFt.isFastTime && count++ < 50) await sleep(10)
     expect(rtFt.isFastTime).toBe(false)

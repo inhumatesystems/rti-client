@@ -272,6 +272,9 @@ export class RTIRuntimeControl {
             this.rti.state = RuntimeState.INITIAL
             if (this._fastTimeEnabled) this._resetFastTime()
         } else if (message.loadScenario !== undefined) {
+            if (this.rti.state === RuntimeState.RUNNING || this.rti.state === RuntimeState.PAUSED) {
+                throw new Error("Cannot load scenario while running or paused")
+            }
             this.scenario = undefined
             const playback = this.rti.state === RuntimeState.PLAYBACK
             this.rti.state = RuntimeState.LOADING

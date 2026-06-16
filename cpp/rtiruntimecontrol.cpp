@@ -338,6 +338,9 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         if (_fastTimeEnabled) ResetFastTime();
         break;
     case proto::RuntimeControl::kLoadScenario: {
+        if (rti.state() == proto::RuntimeState::RUNNING || rti.state() == proto::RuntimeState::PAUSED) {
+            throw std::runtime_error("Cannot load scenario while running or paused");
+        }
         _hasScenario = false;
         bool playback = rti.state() == proto::RuntimeState::PLAYBACK;
         rti.set_state(proto::RuntimeState::LOADING);
