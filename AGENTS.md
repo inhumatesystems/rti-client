@@ -42,6 +42,8 @@ The jest toolchain in `js/` was upgraded to v30 (`jest`, `@types/jest@30`, `jest
 
 `js/jest.config.cjs` passes a ts-jest `tsconfig` override (`module: esnext`, `isolatedModules: true`). The library build uses `module: nodenext` (correct for dual CJS/ESM publishing), but that hybrid module kind triggers ts-jest warning TS151002 — ts-jest transpiles file-at-a-time and requires `isolatedModules`, which is only valid with a non-hybrid module kind. The override keeps `nodenext` for the actual build while giving ts-jest a plain ESM kind for transpilation. Do **not** set `isolatedModules` directly in `tsconfig.json`: combined with `module: nodenext` it makes ts-jest emit the wrong module format (`SyntaxError: Cannot use import statement outside a module`).
 
+`vue/` lists `@vue/language-core` as a direct `devDependency` even though nothing in `vue/src` imports it. `vite-plugin-dts@5` (the `.d.ts` emitter for the library build) delegates to `unplugin-dts`, which imports `@vue/language-core` to handle `.vue` SFCs but declares it only as an **optional** peer — so npm won't install a hoisted copy. The single copy that exists is nested under `node_modules/vue-tsc/node_modules` (vue-tsc pins it exactly), which `unplugin-dts` can't resolve, so `npm run build` fails with `Cannot find package '@vue/language-core'`. Declaring it directly hoists a resolvable copy. Keep its range aligned with `vue-tsc` (both `^3.3.5`) so the tree dedupes to one version; do **not** drop to `unplugin-dts`'s `~3.1.5` peer range, which would split the tree into two language-core versions.
+
 ### Python (`python/`)
 ```sh
 python -m virtualenv .venv
