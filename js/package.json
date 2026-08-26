@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/inhumatesystems/rti-client.git",
+    "url": "https://gitlab.com/inhumate/rti-client.git",
     "directory": "js"
   },
   "type": "module",
