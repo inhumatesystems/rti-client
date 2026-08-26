@@ -1,4 +1,5 @@
 stages:
+  - generate
   - build
   - test
   - build-2
@@ -18,24 +19,46 @@ default:
     - export DEBIAN_FRONTEND=noninteractive
 
 
+# GENERATE
+
+# All protobuf code and constants for every client, from the RTI contract via inhumate-contract.yml.
+generate:
+  stage: generate
+  image: node:22
+  script:
+    - npx --yes inhumate-contract
+  artifacts:
+    paths:
+      - js/src/generated
+      - python/inhumate_rti/generated
+      - dotnet/src/generated
+      - cpp/generated
+      # The protobuf C++ source the cpp jobs build their runtime from, at the version the cpp job
+      # pins its protoc to. Fetched here so exactly one job decides that version.
+      - cpp/protobuf
+    expire_in: 1 week
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - node_modules
+
+
 # BUILD
 
 build js client:
   stage: build
+  needs:
+    - generate
   image: node:22-slim
   script:
-    - apt-get update -qq
-    - apt-get install -qq curl unzip
-    - scripts/get_protobuf.sh
     - cd js
-    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json src/constants.ts webpack.config.cjs
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" package.json src/rticlient.ts webpack.config.cjs
     - npm install
-    - ./generate.sh
     - npm run build
     - npm pack
   artifacts:
     paths:
-      - js/src/constants.ts
+      - js/src/rticlient.ts
       - js/src/generated
       - js/package.json
       - js/lib
@@ -45,7 +68,6 @@ build js client:
   cache:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
-      - protobuf
       - node_modules
       - js/node_modules
 
@@ -69,18 +91,16 @@ build vue client:
   cache:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
-      - protobuf
       - node_modules
       - vue/node_modules
 
 build python client:
   stage: build
+  needs:
+    - generate
   image: python:3.10-slim
   script:
-    - apt-get -qq update && apt-get install -qq curl unzip
-    - scripts/get_protobuf.sh
     - cd python
-    - bash inhumate_rti/generate.sh
     - sed -i "s/0.0.1-dev-version/${VERSION}/g" setup.py inhumate_rti/__init__.py
     - pip install build
     - python -m build
@@ -91,36 +111,29 @@ build python client:
       - python/inhumate_rti/generated
       - python/dist
     expire_in: 1 week
-  cache:
-    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - protobuf
 
 build dotnet client:
   stage: build
+  needs:
+    - generate
   image: mcr.microsoft.com/dotnet/sdk:8.0
   script:
-    - apt-get update -qq && apt-get install -qq curl unzip
-    - scripts/get_protobuf.sh
     - cd dotnet/src
-    - ./generate.sh
-    - sed -i "s/0.0.1-dev-version/${VERSION}/g" *.csproj RTIConstants.cs
+    - sed -i "s/0.0.1-dev-version/${VERSION}/g" *.csproj RTIClient.cs
     - dotnet build -c Release
     - dotnet publish -c Release
   artifacts:
     paths:
-      - dotnet/src/RTIConstants.cs
+      - dotnet/src/RTIClient.cs
       - dotnet/src/generated
       - dotnet/src/bin/Release/net*/publish
       - dotnet/src/bin/Release/*.nupkg
     expire_in: 1 week
-  cache:
-    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - protobuf
 
 build c++ static client linux:
   stage: build
+  needs:
+    - generate
   image: ubuntu:24.04
   script:
     - apt-get update -qq && apt-get install -qq git gcc g++ make cmake libasio-dev libssl-dev libwebsocketpp-dev
@@ -129,19 +142,24 @@ build c++ static client linux:
   artifacts:
     paths:
       - cpp/inhumaterti.hpp
+      - cpp/generated
       - cpp/build
       - cpp/protobuf/src
-      - cpp/protobuf/cmake-build
+      - cpp/protobuf-build
     expire_in: 1 week
   cache:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
-      - cpp/protobuf
+      # protobuf 3.11.2 never changes, and it now builds outside the source tree the generate job
+      # ships, so caching it no longer fights the artifact extraction.
+      - cpp/protobuf-build
       - cpp/asio
       - cpp/websocketpp
   
 build c++ static client windows:
   stage: build
+  needs:
+    - generate
   tags:
     - win64
   before_script:
@@ -153,13 +171,14 @@ build c++ static client windows:
   artifacts:
     paths:
       - cpp/inhumaterti.hpp
+      - cpp/generated
       - cpp/build
-      - cpp/protobuf/cmake-build
+      - cpp/protobuf-build
     expire_in: 1 week
   cache:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
-      - cpp/protobuf
+      - cpp/protobuf-build
       - cpp/asio
       - cpp/websocketpp
     
@@ -188,6 +207,8 @@ build c++ static client windows:
 
 build c++ ue5 client windows:
   stage: build-2
+  needs:
+    - generate
   tags:
     - win64
     - nm8
@@ -209,7 +230,7 @@ build c++ ue5 client windows:
   cache:
     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
     paths:
-      - cpp/protobuf
+      - cpp/protobuf-ue5-build
       - cpp/asio
       - cpp/websocketpp
         
@@ -344,6 +365,7 @@ package c++ ue5 client:
 
 
 # PUBLISH
+# Using trusted publishing - https://docs.npmjs.com/trusted-publishers
 
 publish npm:
   stage: publish
@@ -354,8 +376,14 @@ publish npm:
   needs:
     - build js client
     - build vue client
+  id_tokens:
+    NPM_ID_TOKEN:
+      aud: "npm:registry.npmjs.org"
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
   script:
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >$HOME/.npmrc
+    # Trusted publishing needs npm >= 11.5.1; node:22-slim ships 10.x
+    - npm install -g npm@^11.5.1
     - cd js
     - npm publish
     - cd ../vue

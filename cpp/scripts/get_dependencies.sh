@@ -3,13 +3,18 @@ cd "$(dirname $0)/.."
 
 git config advice.detachedHead false
 
-# NOTE: tried to upgrade to protobuf 23.3, but that caused dependency hell with absl library
-# see e.g. https://github.com/protocolbuffers/protobuf/issues/12292
-# so for now we stay at an ancient protobuf version that we know works
-
-if [ ! -d protobuf/cmake ]; then
-    rm -rf protobuf
-    git clone -b v3.11.2 https://github.com/google/protobuf.git
+# The protobuf C++ source is not fetched here: `npm run generate` puts it in protobuf/ via the
+# cpp job's `protobufSource` in inhumate-contract.yml, at the same version that job's protoc is
+# pinned to. Those two have to agree - generated C++ carries a hard #error guard against a
+# mismatched runtime - so exactly one thing decides the version, and it is that manifest.
+#
+# NOTE: that version is deliberately old (3.11.2). protobuf 22 and up pull in abseil, which caused
+# dependency hell here, see https://github.com/protocolbuffers/protobuf/issues/12292
+if [ ! -f protobuf/.inhumate-contract-protobuf ]; then
+    echo "error: cpp/protobuf is missing or incomplete." >&2
+    echo "       Run 'npm run generate' from the repo root first - it fetches the protobuf" >&2
+    echo "       C++ source along with the generated code." >&2
+    exit 1
 fi
 
 if [ ! -d asio ]; then

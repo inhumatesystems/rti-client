@@ -14,22 +14,22 @@ cd "$(dirname $0)/.."
 
 scripts/get_dependencies.sh
 
-if [ ! -d protobuf/cmake-ue5-build ]; then
-    mkdir protobuf/cmake-ue5-build && cd protobuf/cmake-ue5-build
-    cmake -A x64 -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../cmake
+if [ ! -d protobuf-ue5-build ]; then
+    mkdir protobuf-ue5-build && cd protobuf-ue5-build
+    cmake -A x64 -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ../protobuf/cmake
     cmake --build . --config Release
     cd -
 fi
 
 rm -rf build-ue5
 mkdir build-ue5 && cd build-ue5
-PATH="$PWD/../protobuf/cmake-ue5-build/Release:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf/cmake-ue5-build cmake -A x64 ..
+PATH="$PWD/../protobuf-ue5-build/Release:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf-ue5-build cmake -A x64 ..
 cmake --build . --config Release
 
 mkdir -p Include Win64
-cp ../protobuf/cmake-ue5-build/Release/*.lib Win64/
-cp ../protobuf/cmake-ue5-build/Release/protoc.exe Win64/
+cp ../protobuf-ue5-build/Release/*.lib Win64/
+cp ../protobuf-ue5-build/Release/protoc.exe Win64/
 cp -rf ../protobuf/src/google Include/
 find Include/google -name '*.cc' -delete
-cp ../inhumaterti.hpp *.pb.h Include/
+cp ../inhumaterti.hpp ../generated/rticontract.hpp ../generated/*.pb.h Include/
 cp Release/*.lib Win64/

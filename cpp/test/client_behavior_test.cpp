@@ -296,14 +296,15 @@ TEST_CASE("host_is_set")
 
 TEST_CASE("large_message")
 {
-    Geometry message;
-    auto mesh = new Geometry_Mesh();
+    MessageBundle message;
+    auto channel = message.mutable_response()->add_channels();
+    channel->set_name("large");
     for (int i = 0; i < 100000; i++) {
-        mesh->add_vertices();
-        mesh->add_indices(i);
+        auto bundled = channel->add_messages();
+        bundled->set_time(i);
+        bundled->set_content("x");
     }
-    message.set_allocated_mesh(mesh);
-    rti.Publish(GEOMETRY_CHANNEL, message);
+    rti.Publish(MESSAGE_BUNDLE_CHANNEL, message);
     POLL(1000);
 }
 

@@ -8,7 +8,6 @@ setup(
     name='inhumate-rti',
     packages=[
         'inhumate_rti',
-        'inhumate_rti.proto',
         'inhumate_rti.generated'
     ],
     version='0.0.1-dev-version',

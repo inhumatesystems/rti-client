@@ -16,9 +16,9 @@ if [ ! -d build-all ]; then
 fi
 
 mkdir -p build-all/include/inhumaterti
-cp inhumaterti.hpp build-all/include/inhumaterti/
+cp inhumaterti.hpp generated/rticontract.hpp build-all/include/inhumaterti/
 sed -i "s/0.0.1-dev-version/${VERSION}/g" build-all/include/inhumaterti/inhumaterti.hpp
-cp build-static-x64-release/*.pb.h build-all/include/inhumaterti/
+cp generated/*.pb.h build-all/include/inhumaterti/
 
 cp -rf protobuf/src/google build-all/include/
 find build-all/include/google -name '*.cc' -delete

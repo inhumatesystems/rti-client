@@ -1,7 +1,7 @@
 import type { App } from "vue"
 import * as RTI from "inhumate-rti"
 export { RTI }
-import { useRtiStore } from "@/rti"
+import { useRtiStore } from "./rti"
 export { useRtiStore }
 import RuntimeState from "./components/RuntimeState.vue"
 export { RuntimeState }

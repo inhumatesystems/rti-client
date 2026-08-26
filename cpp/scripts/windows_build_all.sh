@@ -13,10 +13,10 @@ for stada in static dynamic; do
 
             mkdir -p build-all/$variant
             cp -f build-$variant/$config/*.{exe,lib} build-all/$variant/
-            cp -f protobuf/cmake-build-$variant/$config/*.{exe,lib} build-all/$variant/
+            cp -f protobuf-build-$variant/$config/*.{exe,lib} build-all/$variant/
             if [ "$stada" == "dynamic" ]; then
                 cp -f build-$variant/$config/*.dll build-all/$variant/
-                cp -f protobuf/cmake-build-$variant/$config/*.dll build-all/$variant/
+                cp -f protobuf-build-$variant/$config/*.dll build-all/$variant/
             fi
             if [ "$config" == "debug" ]; then
                 cp -f build-$variant/$config/*.pdb build-all/$variant/

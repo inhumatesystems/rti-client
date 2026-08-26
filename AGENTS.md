@@ -73,17 +73,117 @@ scripts/windows_ue5_build.sh     # requires: export UE5=/c/path/to/UE5
 scripts/macos_ue5_build.sh       # requires: export UE5=/path/to/UE5
 ```
 
-### Protobuf Code Generation
+### Code Generation — the contract
+
+Protobuf types, channel names, capabilities and the other constants are **generated for every
+client from the RTI contract** by the [Inhumate Contract tool](https://gitlab.com/inhumate/contract)
+(`../contract`), driven by the `inhumate-contract.yml` manifest at the repo root:
+
 ```sh
-scripts/get_protobuf.sh          # Download protobuf compiler v23.3
-scripts/generate_all.sh          # Regenerate protobuf code for all clients
+npm run generate         # npx inhumate-contract - idempotent, safe to run in a build
+npm run generate:force   # regenerate even when the lock says everything is up to date
 ```
-Each client also has its own `generate.sh` script. Generated code lives in `*/generated/` directories — do not edit these manually.
+
+Requires **inhumate-contract >= 0.2.0** (constant groups, flat C# constant classes). Generation is
+tracked in `inhumate-contract.lock` (gitignored, as is the generated code), so a fresh checkout
+generates once and later runs are a no-op. Output lands in `js/src/generated`,
+`python/inhumate_rti/generated`, `dotnet/src/generated` and `cpp/generated` — do not edit by hand.
+CI runs it once in the `generate` job and passes the result to every build job. That job installs
+git and rewrites `https://gitlab.com/` to a `CI_JOB_TOKEN` URL, because the contract repo is private
+and `node:22-slim` ships no git — see the comment on the job.
+
+The contract itself no longer lives here. It is its own repo,
+[inhumate/contracts/rti](https://gitlab.com/inhumate/contracts/rti) (`../contracts/rti`), and every
+manifest entry names it as `source: inhumate:rti@<version>` — the `inhumate:` shortcut expands to
+`https://gitlab.com/inhumate/contracts/`. The tool fetches it with plain git (so private repos work
+with whatever authentication git already has) and caches it under `~/.inhumate/contracts`;
+`--refresh` re-fetches. Pulling in a new contract release is a one-line version bump in
+`inhumate-contract.yml`, in all four entries.
+
+**C++ is pinned separately.** Generated C++ links only against the libprotobuf it was generated for
+(`.pb.h` carries a `#error` version guard), so the cpp entry pins `protobufVersion: 3.11.2` while
+the other three stay on the 23.3 from the manifest's `options` — their runtimes are version
+tolerant. That version is
+deliberately old: protobuf 22+ pulls in abseil, which caused dependency hell here
+([#12292](https://github.com/protocolbuffers/protobuf/issues/12292)).
+
+The same job's `protobufSource: cpp/protobuf` unpacks the matching protobuf **C++ source**, which
+`cpp/scripts/linux_static_build.sh` and friends then build the runtime library from. So one line in
+the manifest decides both the protoc and the runtime, and they cannot drift apart.
+`get_dependencies.sh` no longer fetches protobuf — it only checks the source is there and handles
+asio/websocketpp/openssl. Re-running generation is a no-op once `cpp/protobuf` holds the right
+version, so it never destroys an existing protobuf build.
+
+`targets.cpp.dllexportDecl: INHUMATE_RTI_PROTOS_EXPORT` in the contract replaces what CMake used
+to pass as `protobuf_generate_cpp(... EXPORT_MACRO …)`, so the Windows DLL build still exports the
+generated message classes. CMake now compiles `cpp/generated/*.pb.cc` instead of running protoc.
+
+**Build order for C++**: `npm run generate` (protos, constants and the protobuf source) →
+`cpp/scripts/get_dependencies.sh` → a platform build script. CMake fails with a pointed message if
+`cpp/generated` is empty.
+
+**The protobuf runtime builds outside its source tree**, into `cpp/protobuf-build` (or
+`cpp/protobuf-ue5-build`, `cpp/protobuf-build-<variant>` on Windows) rather than
+`cpp/protobuf/cmake-build`. `cpp/protobuf` is shipped fresh by the generate job every pipeline, so a
+build directory inside it could not be cached — the artifact extraction would give the source newer
+timestamps than the objects. Keeping the two apart lets CI cache `cpp/protobuf-build`, which matters
+because protobuf 3.11.2 is pinned and never changes. The build scripts skip the protobuf build
+entirely when that directory already exists.
+
+### Contract constants and where they land
+
+A nested mapping under `constants:` in the contract is a **group**; `channel` and `channelType`
+are built-in groups filled from `channels:`. Each language renders a group its own way:
+
+| Contract          | TypeScript                | Python                       | C#                              | C++                          |
+| ----------------- | ------------------------- | ---------------------------- | ------------------------------- | ---------------------------- |
+| channel           | `channel.runtimeControl`  | `channel.runtime_control`    | `RTIChannel.RuntimeControl`     | `RUNTIME_CONTROL_CHANNEL`    |
+| capability        | `capability.log`          | `capability.log`             | `RTICapability.Log`             | `LOG_CAPABILITY`             |
+| ungrouped         | `constants.internalPrefix`| `constants.internal_prefix`  | `RTIConstants.InternalPrefix`   | `INTERNAL_PREFIX`            |
+
+C# gets one **top-level** static class per group (`RTIChannel`, `RTICapability`, `RTIConstants`),
+not classes nested in one — C# resolves types and namespaces in one flat scope, so an unprefixed
+`Channel` class would be ambiguous with the `Channel` protobuf message from `Channels.proto` in
+every file importing both namespaces.
+
+### Two different versions
+
+`RTIConstants.Version` / `constants.version` / `constants.__version__` / `RTI_VERSION` are the
+**contract** version, stamped by the generator from the contract's git tag.
+
+The **client library** version is separate and hand written, because the two diverge once the
+contract moves to its own repo. It lives on the client class in each language, and it is what CI
+`sed`s the `0.0.1-dev-version` placeholder into:
+
+| Language | Library version      | Stamped in                        |
+| -------- | -------------------- | --------------------------------- |
+| JS/TS    | `RTIClient.version`  | `js/src/rticlient.ts`             |
+| Python   | `inhumate_rti.__version__` | `python/inhumate_rti/__init__.py` |
+| .NET     | `RTIClient.Version`  | `dotnet/src/RTIClient.cs`         |
+| C++      | `RTI_CLIENT_VERSION` | `cpp/inhumaterti.hpp`             |
+
+### The default broker address
+
+Where a client connects when neither its constructor/options nor `RTI_URL` says otherwise is a
+**client** concern, not part of the contract — the contract describes the wire, not where to dial.
+So `defaultUrl` / `defaultHost` / `defaultPort` are hand written next to the library version in each
+client, not generated:
+
+| Language | Constants                                                        | Declared in                     |
+| -------- | ---------------------------------------------------------------- | ------------------------------- |
+| JS/TS    | `RTIClient.defaultUrl` / `.defaultHost` / `.defaultPort`         | `js/src/rticlient.ts`           |
+| Python   | `RTIClient.default_url` / `.default_host` / `.default_port`      | `python/inhumate_rti/rticlient.py` |
+| .NET     | `RTIClient.DefaultUrl` / `.DefaultHost` / `.DefaultPort`         | `dotnet/src/RTIClient.cs`       |
+| C++      | `RTI_DEFAULT_URL` / `RTI_DEFAULT_HOST` / `RTI_DEFAULT_PORT`      | `cpp/inhumaterti.hpp`           |
+
+They used to be `constants.defaultUrl` / `RTIConstants.DefaultUrl` / the generated `DEFAULT_URL`;
+those names are gone. `RTI_DEFAULT_URL` keeps the name it has always had because downstream C++
+(`unreal/`) uses it.
 
 ## Architecture
 
 ### Protocol Layer
-All clients share the same protobuf definitions in `proto/` (33 `.proto` files). Message categories include: channels, clients, runtime state/control, entities, measurements, commands, logs, geometry, events, and injection/launch. Generated code is committed to each client's `generated/` directory.
+All clients share the same protobuf definitions, which live in the contract repo (`../contracts/rti/proto`, 19 `.proto` files) and are compiled for every language by the contract tool (see Code Generation above). Message categories include: channels, clients, runtime state/control, measurements, commands, logs, launch and fast-time. Generated code is **not** committed — it is gitignored and regenerated from the contract.
 
 ### Client Structure
 Each language client follows the same conceptual API:
@@ -107,22 +207,25 @@ This is the most important architectural difference between clients:
 
 **JavaScript** (`js/src/`):
 - `rticlient.ts` — main `RTIClient` class (extends `EventEmitter`)
-- `index.ts` — public exports (`Client`, `Options`, `proto`, `constants`, `channel`, `capability`)
-- `constants.ts` — channel names and capability constants
+- `index.ts` — public exports (`Client`, `Options`, `proto`, `constants`, `channel`, `channelType`, `capability`); everything the contract generates is re-exported from `generated/index.ts` rather than restated here
+- `generated/index.ts`, `generated/constants.ts`, `generated/proto.ts` — generated from the contract
 
 **Python** (`python/inhumate_rti/`):
 - `rticlient.py` — `RTIClient` class
 - `rtisocketclusterclient.py` — WebSocket transport layer
 - `rtiruntimecontrol.py`, `rticommand.py` — runtime control and command execution (see Runtime Control Helper section below)
-- `__init__.py` — exports `Client`, `RTIRuntimeControl`, `StepGrant`, `RTICommand`
+- `__init__.py` — library `__version__`, and re-exports of `generated/` (`proto`, `constants`, `channel`, `channel_type`, `capability`) plus `Client`, `RTIRuntimeControl`, `StepGrant`, `RTICommand`
+- `generated/` — the contract's protobuf modules and constant modules
 
 **C++** (`cpp/`):
-- `inhumaterti.hpp` + `inhumaterti.cpp` — single header/impl pair
+- `inhumaterti.hpp` + `inhumaterti.cpp` — single header/impl pair; the header `#include`s `rticontract.hpp`
+- `generated/rticontract.hpp` — contract constants (generated); shipped alongside `inhumaterti.hpp` by the packaging scripts
 - `rtiruntimecontrol.hpp` + `rtiruntimecontrol.cpp` — runtime control helper (see Runtime Control Helper section below)
 - Dependencies: websocketpp, asio (both header-only), protobuf, OpenSSL
 
 **.NET** (`dotnet/src/`):
-- `RTIClient.cs` — main class
+- `RTIClient.cs` — main class, and the library `Version`
+- `generated/RTIConstants.cs` — `RTIConstants`, `RTIChannel`, `RTIChannelType`, `RTICapability` (generated)
 - `RTIWebSocket.cs` — WebSocket transport (`System.Net.WebSockets`)
 - `RTIRuntimeControl.cs` — runtime control helper (see Runtime Control Helper section below)
 

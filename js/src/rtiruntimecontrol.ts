@@ -3,7 +3,7 @@
 // and to add fast-time worker support to a TypeScript/JavaScript RTI client.
 
 import { RTIClient, DispatchMode } from "./rticlient.js"
-import { channel as RTIchannel, capability as RTIcapability } from "./constants.js"
+import { channel as RTIchannel, capability as RTIcapability } from "./generated/constants.js"
 import { RuntimeControl, RuntimeControl_ScenarioSpecification, RuntimeControl_TimeSync, RuntimeControl_Seek } from "./generated/RuntimeControl.js"
 import { FastTimeControl, FastTimeControl_ExecutionMode } from "./generated/FastTimeControl.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
