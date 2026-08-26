@@ -15,6 +15,18 @@ namespace Inhumate.RTI {
 
     public class RTIClient {
 
+        /// <summary>
+        /// Version of this client library. Not the same thing as <see cref="RTIConstants.Version"/>,
+        /// which is the version of the RTI contract the generated types and channel names came from.
+        /// </summary>
+        public const string Version = "0.0.1-dev-version";
+
+        // Where the client connects when neither the constructor nor RTI_URL says otherwise. A
+        // client concern, not part of the contract, so these live here rather than in RTIConstants.
+        public const string DefaultHost = "127.0.0.1";
+        public const int DefaultPort = 8000;
+        public const string DefaultUrl = "ws://127.0.0.1:8000/";
+
         public string Url { get; private set; }
         public string Application { get; set; } = "C#";
         public string ApplicationVersion { get; set; } = "";
@@ -152,7 +164,7 @@ namespace Inhumate.RTI {
 
         public RTIClient(string url = null, bool connect = true, bool polling = false, string user = null, string password = null) {
             if (string.IsNullOrEmpty(url)) url = Environment.GetEnvironmentVariable("RTI_URL");
-            if (string.IsNullOrEmpty(url)) url = RTIConstants.DefaultUrl;
+            if (string.IsNullOrEmpty(url)) url = DefaultUrl;
             if (!url.StartsWith("ws://") && !url.StartsWith("wss://")) {
                 if (url.StartsWith("localhost") || url.StartsWith("127.")) url = $"ws://{url}";
                 else url = $"wss://{url}";
@@ -345,7 +357,7 @@ namespace Inhumate.RTI {
             var authToken = new Dictionary<string, object> {
                 { "application", Application },
                 { "clientId", ClientId },
-                { "clientLibraryVersion", RTIConstants.Version },
+                { "clientLibraryVersion", RTIClient.Version },
             };
             if (!string.IsNullOrWhiteSpace(Federation)) authToken["federation"] = Federation;
             string secret = System.Environment.GetEnvironmentVariable("RTI_SECRET");
@@ -640,7 +652,7 @@ namespace Inhumate.RTI {
                 Application = Application,
                 State = State,
                 ApplicationVersion = ApplicationVersion,
-                ClientLibraryVersion = RTIConstants.Version,
+                ClientLibraryVersion = RTIClient.Version,
                 EngineVersion = EngineVersion,
                 IntegrationVersion = IntegrationVersion,
                 Host = Host ?? "",

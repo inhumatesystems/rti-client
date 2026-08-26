@@ -20,7 +20,7 @@ mkdir inhumaterti protobuf
 
 cp ../../inhumaterti.hpp inhumaterti/
 sed -i "s/0.0.1-dev-version/${VERSION}/g" inhumaterti/inhumaterti.hpp
-cp ../*.pb.h inhumaterti/
+cp ../../generated/rticontract.hpp ../../generated/*.pb.h inhumaterti/
 cp ../libinhumaterti.a inhumaterti/
 if [ -d ../Release ]; then
     cp ../Release/inhumaterti.lib inhumaterti/
@@ -30,11 +30,11 @@ fi
 
 cp -rf ../../protobuf/src/google protobuf/
 find protobuf/google -name '*.cc' -delete
-cp ../../protobuf/cmake-build/*.a protobuf/
-cp ../../protobuf/cmake-build/protoc protobuf/
-if [ -d ../../protobuf/cmake-build/Release ]; then
-    cp ../../protobuf/cmake-build/Release/*.lib protobuf/
-    cp ../../protobuf/cmake-build/Release/*.exe protobuf/
+cp ../../protobuf-build/*.a protobuf/
+cp ../../protobuf-build/protoc protobuf/
+if [ -d ../../protobuf-build/Release ]; then
+    cp ../../protobuf-build/Release/*.lib protobuf/
+    cp ../../protobuf-build/Release/*.exe protobuf/
 fi
 
 zip -r ../$FILENAME *

@@ -19,15 +19,15 @@ scripts/get_dependencies.sh
 
 [ "$stada" == "static" ] && shared=OFF || shared=ON
 
-if [ ! -d protobuf/cmake-build-$variant ]; then
-    mkdir protobuf/cmake-build-$variant && cd protobuf/cmake-build-$variant
-    cmake -A $arch -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_BUILD_SHARED_LIBS=$shared ../cmake
+if [ ! -d protobuf-build-$variant ]; then
+    mkdir protobuf-build-$variant && cd protobuf-build-$variant
+    cmake -A $arch -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_BUILD_SHARED_LIBS=$shared ../protobuf/cmake
     cmake --build . --config $config
     cd -
 fi
 
 rm -rf build-$variant
 mkdir build-$variant && cd build-$variant
-PATH="$PWD/../protobuf/cmake-build-$variant/$config:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf/cmake-build-$variant \
-    cmake -A $arch -DBUILD_SHARED=$shared -DPROTOBUF_BUILD_DIR="$PWD/../protobuf/cmake-build-$variant/$config" ..
+PATH="$PWD/../protobuf-build-$variant/$config:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf-build-$variant \
+    cmake -A $arch -DBUILD_SHARED=$shared -DPROTOBUF_BUILD_DIR="$PWD/../protobuf-build-$variant/$config" ..
 cmake --build . --config $config

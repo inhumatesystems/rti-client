@@ -3,7 +3,7 @@ from emitter import Emitter
 
 from uuid import uuid4
 from threading import Thread, Lock
-from . import proto as Proto, constants as Constants, channel as Channel, __version__
+from . import proto as Proto, channel as Channel, __version__
 import os
 from google.protobuf import message as _message
 import base64
@@ -23,6 +23,12 @@ class DispatchMode:
 
 
 class RTIClient(Emitter):
+
+    # Where the client connects when neither the constructor nor RTI_URL says otherwise. A client
+    # concern, not part of the contract, so these live here rather than in generated constants.
+    default_host = "127.0.0.1"
+    default_port = 8000
+    default_url = "ws://127.0.0.1:8000/"
 
     @property
     def state(self):
@@ -92,7 +98,7 @@ class RTIClient(Emitter):
         if not url:
             url = os.environ.get('RTI_URL')
         if not url:
-            url = Constants.default_url
+            url = RTIClient.default_url
         if not url.startswith("ws://") and not url.startswith("wss://"): 
             if url.startswith("localhost") or url.startswith("127."):
                 url = f"ws://{url}"

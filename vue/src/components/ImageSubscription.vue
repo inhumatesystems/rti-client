@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { onUnmounted } from "vue"
 import { computed, onMounted, ref, watch } from "vue"
-import { useRtiStore } from "@/rti"
+import { useRtiStore } from "../rti"
 
 const rti = useRtiStore()
 

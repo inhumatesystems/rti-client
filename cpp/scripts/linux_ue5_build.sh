@@ -19,22 +19,22 @@ export CXX="$UE5/Engine/Extras/ThirdPartyNotUE/SDKs/HostLinux/Linux_x64/v23_clan
 
 scripts/get_dependencies.sh
 
-if [ ! -d protobuf/cmake-ue5-build ]; then
-    mkdir protobuf/cmake-ue5-build && cd protobuf/cmake-ue5-build
-    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC -stdlib=libc++ -std=c++11 -I$UE5/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1 -L$UE5/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu -Qunused-arguments" ../cmake
+if [ ! -d protobuf-ue5-build ]; then
+    mkdir protobuf-ue5-build && cd protobuf-ue5-build
+    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC -stdlib=libc++ -std=c++11 -I$UE5/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1 -L$UE5/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu -Qunused-arguments" ../protobuf/cmake
     make -j8
     cd -
 fi
 
 rm -rf build-ue5
 mkdir build-ue5 && cd build-ue5
-PATH="$PWD/../protobuf/cmake-ue5-build:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf/cmake-ue5-build cmake ..
+PATH="$PWD/../protobuf-ue5-build:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf-ue5-build cmake ..
 make -j8
 
 mkdir -p Include Linux
-cp ../protobuf/cmake-ue5-build/*.a Linux/
-cp ../protobuf/cmake-ue5-build/protoc Linux/
+cp ../protobuf-ue5-build/*.a Linux/
+cp ../protobuf-ue5-build/protoc Linux/
 cp -rf ../protobuf/src/google Include/
 find Include/google -name '*.cc' -delete
-cp ../inhumaterti.hpp *.pb.h Include/
+cp ../inhumaterti.hpp ../generated/rticontract.hpp ../generated/*.pb.h Include/
 cp *.a Linux/

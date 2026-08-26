@@ -2,7 +2,7 @@ import { EventEmitter } from "events"
 import { AGClientSocket } from "socketcluster-client"
 import { v4 as uuidv4 } from "uuid"
 import * as base64 from "base64-js"
-import constants, { channel as RTIchannel } from "./constants.js"
+import { channel as RTIchannel } from "./generated/constants.js"
 import { Clients, Client, ParticipantRegistration } from "./generated/Clients.js"
 import { RuntimeState } from "./generated/RuntimeState.js"
 import { Channels, Channel, ChannelUsage, ChannelUse } from "./generated/Channels.js"
@@ -83,6 +83,20 @@ export enum DispatchMode { IMMEDIATE = "immediate", BUFFERED = "buffered" }
 interface BufferedMessage { wrappedHandler: Function; channelName: string; data: any; handler: Function }
 
 export class RTIClient extends EventEmitter {
+    /**
+     * Version of this client library. Not the same thing as `constants.version`, which is the
+     * version of the RTI contract the generated types and channel names came from.
+     */
+    static readonly version = "0.0.1-dev-version"
+
+    /**
+     * Where the client connects when neither the options nor RTI_URL say otherwise. A client
+     * concern, not part of the contract, so these live here rather than in the generated constants.
+     */
+    static readonly defaultHost = "127.0.0.1"
+    static readonly defaultPort = 8000
+    static readonly defaultUrl = `ws://${RTIClient.defaultHost}:${RTIClient.defaultPort}/`
+
     readonly socket: AGClientSocket
 
     readonly application: string = "typescript"
@@ -235,14 +249,14 @@ export class RTIClient extends EventEmitter {
                 url = `wss://${location.host}`
             } else if (location.protocol == "app:" && location.hostname == ".") {
                 // i.e. in an electron app
-                url = `ws://127.0.0.1:${constants.defaultPort}`
+                url = `ws://127.0.0.1:${RTIClient.defaultPort}`
             } else if (location.hostname && location.hostname.startsWith("127.")) {
-                url = `ws://${location.hostname}:${constants.defaultPort}`
+                url = `ws://${location.hostname}:${RTIClient.defaultPort}`
             } else if (location.host && location.host != "localhost" && !location.host.startsWith("localhost:") && location.host != "127.0.0.1" && !location.host.startsWith("127.0.0.1:")) {
                 url = `ws://${location.host}`
             }
         }
-        if (!url) url = `ws://${constants.defaultHost}:${constants.defaultPort}`
+        if (!url) url = RTIClient.defaultUrl
         if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
             if (url.startsWith("localhost") || url.startsWith("127.")) url = `ws://${url}`
             else url = `wss://${url}`
@@ -308,7 +322,7 @@ export class RTIClient extends EventEmitter {
 
             authToken.application = this.application
             authToken.clientId = this.clientId
-            authToken.clientLibraryVersion = constants.version
+            authToken.clientLibraryVersion = RTIClient.version
             if (this.federation) authToken.federation = this.federation
             return authToken
         }
@@ -501,7 +515,7 @@ export class RTIClient extends EventEmitter {
             fullName: this.fullName,
             application: this.application,
             applicationVersion: this.applicationVersion,
-            clientLibraryVersion: constants.version,
+            clientLibraryVersion: RTIClient.version,
             integrationVersion: this.integrationVersion,
             engineVersion:
                 !this.engineVersion && typeof process !== "undefined" && process.version ? `Node ${process.version}` : this.engineVersion,

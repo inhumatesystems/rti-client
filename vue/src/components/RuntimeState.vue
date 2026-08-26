@@ -3,6 +3,6 @@
 </template>
 
 <script setup lang="ts">
-import { useRtiStore } from "@/rti"
+import { useRtiStore } from "../rti"
 const rti = useRtiStore()
 </script>

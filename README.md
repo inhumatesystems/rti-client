@@ -16,7 +16,7 @@ platform implementation linked below:
 * [Javascript](js/)/TypeScript (Web)
 * [Vue](vue/) (version 3)
 
-All client libraries share the same [protobuf definitions](proto/).
+All client libraries share the same [protobuf definitions](https://gitlab.com/inhumate/contracts/rti), generated from the RTI contract.
 
 ## Feedback & Contributing
 

@@ -1,5 +1,8 @@
 build-*/
 protobuf/
+# protobuf runtime build output, kept out of the source tree so CI can cache it
+protobuf-build*/
+protobuf-ue5-build/
 asio/
 websocketpp/
 openssl*/

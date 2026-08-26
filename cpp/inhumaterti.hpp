@@ -49,81 +49,25 @@ typedef std::weak_ptr<void> connection_hdl_t;
 typedef std::shared_ptr<void> message_ptr_t;
 #endif
 
-#include "Channels.pb.h"
-#include "Clients.pb.h"
-#include "Commands.pb.h"
-#include "Entity.pb.h"
-#include "EntityOperation.pb.h"
-#include "EntityPosition.pb.h"
-#include "Event.pb.h"
-#include "EntityEvent.pb.h"
-#include "Geometry.pb.h"
-#include "GeometryOperation.pb.h"
-#include "Injectable.pb.h"
-#include "InjectableOperation.pb.h"
-#include "Injection.pb.h"
-#include "InjectionOperation.pb.h"
-#include "LaunchConfigurations.pb.h"
-#include "LaunchEvent.pb.h"
-#include "Logs.pb.h"
-#include "Measurement.pb.h"
-#include "Measures.pb.h"
-#include "MeasurementBundle.pb.h"
-#include "MessageBundle.pb.h"
-#include "Parameter.pb.h"
-#include "RuntimeControl.pb.h"
-#include "RuntimeState.pb.h"
-#include "Scenarios.pb.h"
-#include "FastTimeControl.pb.h"
+// Everything generated from the contract by inhumate-contract: the protobuf message headers,
+// the channel names, the capabilities and the other constants. Run `npm run generate` from the
+// repo root if this header is missing.
+#include "rticontract.hpp"
 
 namespace inhumate
 {
 namespace rti
 {
 
+// Version of this client library. Not the same thing as RTI_VERSION from rticontract.hpp, which
+// is the version of the RTI contract the generated types and channel names came from.
 constexpr auto RTI_CLIENT_VERSION = "0.0.1-dev-version";
-constexpr auto RTI_DEFAULT_URL = "ws://127.0.0.1:8000/";
-constexpr auto RUNTIME_CONTROL_CHANNEL = "rti/control";
-constexpr auto RECORDER_CONTROL_CHANNEL = "rti/recordercontrol";
-constexpr auto LAUNCH_CONTROL_CHANNEL = "rti/launchcontrol";
-constexpr auto FAST_TIME_CONTROL_CHANNEL = "rti/fasttimecontrol";
-constexpr auto FAST_TIME_CLIENT_STATS_CHANNEL = "rti/fasttimeclientstats";
-constexpr auto CHANNELS_CHANNEL = "rti/channels";
-constexpr auto CLIENTS_CHANNEL = "rti/clients";
-constexpr auto ENTITY_OPERATION_CHANNEL = "rti/entities";
-constexpr auto ENTITY_CHANNEL = "rti/entity";
-constexpr auto POSITION_CHANNEL = "rti/position";
-constexpr auto SCENARIOS_CHANNEL = "rti/scenarios";
-constexpr auto LAUNCH_CONFIGURATIONS_CHANNEL = "rti/launchconfigurations";
-constexpr auto LAUNCH_EVENT_CHANNEL = "rti/launch";
-constexpr auto LOGS_CHANNEL = "rti/logs";
-constexpr auto BROKER_STATS_CHANNEL = "rti/brokerstats";
-constexpr auto BROKER_PINGS_CHANNEL = "rti/brokerpings";
-constexpr auto CLIENT_CONNECT_CHANNEL = "rti/clientconnect";
-constexpr auto CLIENT_DISCONNECT_CHANNEL = "rti/clientdisconnect";
-constexpr auto MESSAGE_BUNDLE_CHANNEL = "rti/messagebundle";
-constexpr auto GEOMETRY_OPERATION_CHANNEL = "rti/geometries";
-constexpr auto GEOMETRY_CHANNEL = "rti/geometry";
-constexpr auto MEASURES_CHANNEL = "rti/measures";
-constexpr auto MEASUREMENT_CHANNEL = "rti/measurement";
-constexpr auto MEASUREMENT_BUNDLE_CHANNEL = "rti/measurementbundle";
-constexpr auto TOAST_CHANNEL = "rti/toast";
-constexpr auto INJECTABLE_OPERATION_CHANNEL = "rti/injectables";
-constexpr auto INJECTABLE_CHANNEL = "rti/injectable";
-constexpr auto INJECTION_OPERATION_CHANNEL = "rti/injections";
-constexpr auto INJECTION_CHANNEL = "rti/injection";
-constexpr auto COMMANDS_CHANNEL = "rti/commands";
-constexpr auto TIMELINE_EVENT_CHANNEL = "rti/timelineevent";
-constexpr auto ENTITY_EVENT_CHANNEL = "rti/entityevent";
 
-constexpr auto RUNTIME_CONTROL_CAPABILITY = "runtime";
-constexpr auto SCENARIO_CAPABILITY = "scenario";
-constexpr auto TIME_SCALE_CAPABILITY = "timescale";
-constexpr auto LOG_CAPABILITY = "log";
-constexpr auto PLAYBACK_CAPABILITY = "playback";
-constexpr auto LAUNCH_CAPABILITY = "launch";
-constexpr auto FAST_TIME_CONTROLLER_CAPABILITY = "fasttimecontroller";
-constexpr auto FAST_TIME_WORKER_CAPABILITY = "fasttimeworker";
+// Where the client connects when neither the constructor nor RTI_URL says otherwise. A client
+// concern, not part of the contract, so these live here rather than in rticontract.hpp.
+constexpr auto RTI_DEFAULT_HOST = "127.0.0.1";
+constexpr auto RTI_DEFAULT_PORT = 8000;
+constexpr auto RTI_DEFAULT_URL = "ws://127.0.0.1:8000/";
 
 enum class DispatchMode { DEFAULT = 0, IMMEDIATE = 1, BUFFERED = 2 };
 

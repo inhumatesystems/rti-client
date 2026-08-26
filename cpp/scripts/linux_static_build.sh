@@ -10,19 +10,16 @@ done
 
 cd "$(dirname $0)/.."
 
-# scripts/get_dependencies.sh
-if [ ! -d protobuf ]; then
-    git clone -b v3.11.2 https://github.com/google/protobuf.git
-fi
+scripts/get_dependencies.sh
 
-if [ ! -d protobuf/cmake-build ]; then
-    mkdir protobuf/cmake-build && cd protobuf/cmake-build
-    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC" ../cmake
+if [ ! -d protobuf-build ]; then
+    mkdir protobuf-build && cd protobuf-build
+    cmake -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dprotobuf_WITH_ZLIB=OFF -DCMAKE_CXX_FLAGS="-fPIC" ../protobuf/cmake
     make
     cd -
 fi
 
 rm -rf build
 mkdir build && cd build
-PATH="$PWD/../protobuf/cmake-build:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf/cmake-build cmake -DBUILD_SHARED=OFF ..
+PATH="$PWD/../protobuf-build:$PATH" CMAKE_INCLUDE_PATH=../protobuf/src CMAKE_LIBRARY_PATH=../protobuf-build cmake -DBUILD_SHARED=OFF ..
 make
