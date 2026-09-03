@@ -413,13 +413,31 @@ publish nuget:
   only:
     - tags
     - /.*publish$/
+    - /.*nuget$/
   variables:
     GIT_STRATEGY: none
   needs:
     - build dotnet client
+  id_tokens:
+    NUGET_ID_TOKEN:
+      aud: "https://www.nuget.org"
+  variables:
+    NUGET_TOKEN_ENDPOINT: "https://www.nuget.org/api/v2/token"
+    NUGET_SOURCE: "https://www.nuget.org/api/v2/package"
+    NUGET_USERNAME: minhumate
   script:
+    # Exchange OIDC token for NuGet API key .
+    - |
+      apt-get update && apt-get install -y jq
+      RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$NUGET_TOKEN_ENDPOINT" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $NUGET_ID_TOKEN" \
+        -d "{\"username\": \"$NUGET_USERNAME\", \"tokenType\": \"ApiKey\"}")
+      API_KEY=$(echo "$RESPONSE" | head -n -1 | jq -r '.apiKey')
+
+    # Push package
     - cd dotnet/src
-    - dotnet nuget push bin/Release/*.nupkg -k ${NUGET_API_KEY} -s https://api.nuget.org/v3/index.json
+    - dotnet nuget push bin/Release/*.nupkg -s "$NUGET_SOURCE" -k "$API_KEY"
 
 publish generic:
   stage: publish
