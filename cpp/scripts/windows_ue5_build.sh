@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
-[ -z "$UE5" -a -d "/c/Program Files/Epic Games/UE_5.6" ] && export UE5="/c/Program Files/Epic Games/UE_5.6"
-[ -z "$UE5" -a -d "/c/UE_5.6" ] && export UE5="/c/UE_5.6"
-[ -z "$UE5" -a -d "/d/UE_5.6" ] && export UE5="/d/UE_5.6"
+[ -z "$UE5" -a -d "/c/Program Files/Epic Games/UE_5.8" ] && export UE5="/c/Program Files/Epic Games/UE_5.8"
+[ -z "$UE5" -a -d "/c/UE_5.8" ] && export UE5="/c/UE_5.8"
+[ -z "$UE5" -a -d "/d/UE_5.8" ] && export UE5="/d/UE_5.8"
 if [ -z "$UE5" ]; then
     echo "Don't know where UE5 is installed. Please set environment variable UE5."
     exit 1

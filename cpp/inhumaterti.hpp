@@ -25,9 +25,29 @@
 #define INHUMATE_RTI_EXPORT __declspec(dllimport)
 #endif
 #define INHUMATE_RTI_PROTOS_EXPORT __declspec(dllimport)
+#elif defined(__GNUC__)
+// The Unix builds compile the library with -fvisibility=hidden (see CMakeLists.txt) so that the
+// header-only asio and websocketpp code baked into it stays private to whatever binary links it -
+// on Linux, UE 5.8's own Engine/Binaries/Linux/libUnrealEditor-Asio.so would otherwise preempt it
+// and mix two incompatible asio builds. The public API has to stay visible through that, so mark
+// it explicitly.
+#define INHUMATE_RTI_EXPORT __attribute__((visibility("default")))
+#define INHUMATE_RTI_PROTOS_EXPORT
 #else
 #define INHUMATE_RTI_EXPORT
 #define INHUMATE_RTI_PROTOS_EXPORT
+#endif
+
+// Unreal compiles its modules with exceptions disabled (bEnableExceptions defaults to off), and a
+// `throw` in a header the plugin includes fails to compile there. This header is compiled by the
+// *consumer*, so the build system's INHUMATE_UE5_BUILD define says nothing - ask the compiler what
+// it actually supports instead. Define INHUMATE_RTI_HAS_EXCEPTIONS yourself to override.
+#ifndef INHUMATE_RTI_HAS_EXCEPTIONS
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#define INHUMATE_RTI_HAS_EXCEPTIONS 1
+#else
+#define INHUMATE_RTI_HAS_EXCEPTIONS 0
+#endif
 #endif
 
 #include <chrono>
@@ -185,8 +205,16 @@ class INHUMATE_RTI_EXPORT RTIClient
     template <typename Message> static Message Parse(const std::string &content)
     {
         Message message;
-        if (!message.ParseFromString(base64_decode(content)))
+        if (!message.ParseFromString(base64_decode(content))) {
+#if INHUMATE_RTI_HAS_EXCEPTIONS
             throw std::runtime_error("failed to parse RTI protobuf message");
+#else
+            // No exceptions to throw (Unreal). ParseFromString may have left the message partly
+            // populated, so hand back a clean default-constructed one - a subscriber callback then
+            // sees an empty message rather than half of a corrupt one.
+            return Message();
+#endif
+        }
         return message;
     }
 

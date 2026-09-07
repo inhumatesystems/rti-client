@@ -24,8 +24,35 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_definitions(-fPIC -std=gnu++0x)
 endif()
 
+if(DEFINED UE5 AND NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    # asio and websocketpp are header-only, so every symbol they define ends up in this library and,
+    # from there, in the Unreal module that links it. On Linux those symbols are exported from the
+    # module's .so by default and are then up for grabs by the dynamic linker: UE 5.8 ships its own
+    # asio in Engine/Binaries/Linux/libUnrealEditor-Asio.so, whose (strong, non-template) definitions
+    # preempt ours. Half the calls then run UE's asio against objects laid out by ours - use_service()
+    # hands back an epoll_reactor built by the other asio, and the first timer scheduled during
+    # connect writes through a member offset that lands in .data.rel.ro, i.e. a segfault the moment
+    # PIE starts. Keeping our copy hidden makes those symbols non-preemptible and local to the module;
+    # the public API opts back out through INHUMATE_RTI_EXPORT in inhumaterti.hpp.
+    #
+    # ASIO_DISABLE_VISIBILITY is what makes -fvisibility=hidden stick: asio wraps its headers in
+    # `#pragma GCC visibility push (default)`, which overrides the flag. 1.12.2 has no guard around
+    # that pragma, so get_dependencies.sh adds the one later asio versions ship.
+    add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
+    add_definitions(-DASIO_DISABLE_VISIBILITY)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_definitions(-fPIC -stdlib=libc++ -std=c++11)
+    add_definitions(-fPIC -std=c++11)
+    # -stdlib=libc++ picks the C++ library for two things: the header search path and the default
+    # libraries the driver links. The UE5 Unix path overrides both explicitly further down
+    # (-nostdinc++ plus UE's own LibCxx include dir, -nostdlib++ plus an explicit -lc++ -lc++abi),
+    # which leaves the flag doing nothing at all - and clang says so, once per translation unit:
+    #   warning: argument unused during compilation: '-stdlib=libc++'
+    # So only pass it where it still has an effect.
+    if(NOT (DEFINED UE5 AND NOT APPLE))
+        add_definitions(-stdlib=libc++)
+    endif()
     if(APPLE)
         # set(EXE_LIBRARIES "-ldl -lc++abi -lm -lc -lz")
     else()
@@ -104,11 +131,30 @@ if (DEFINED UE5)
         set(OPENSSL_LIBRARIES "${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Mac/libssl.a;${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Mac/libcrypto.a;${UE5}/Engine/Source/ThirdParty/zlib/1.3/lib/Mac/Release/libz.a")
         # 5.3: set(OPENSSL_LIBRARIES "${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Mac/libssl.a;${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Mac/libcrypto.a;${UE5}/Engine/Source/ThirdParty/zlib/1.2.13/lib/Mac/Release/libz.a")
     else()
-        set(OPENSSL_INCLUDE_DIR "${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.t/include/Unix/")
+        set(OPENSSL_INCLUDE_DIR "${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/include/Unix/")
         set(OPENSSL_LIBRARIES "${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Unix/x86_64-unknown-linux-gnu/libssl.a;${UE5}/Engine/Source/ThirdParty/OpenSSL/1.1.1t/lib/Unix/x86_64-unknown-linux-gnu/libcrypto.a;-lpthread")
-        link_directories("${UE5}/Engine/Source/ThirdParty/zlib/1.2.13/lib/Unix/x86_64-unknown-linux-gnu/Release/")
-        include_directories("${UE5}/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1")
-        link_directories("${UE5}/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu")
+        link_directories("${UE5}/Engine/Source/ThirdParty/zlib/1.3/lib/Unix/x86_64-unknown-linux-gnu/Release/")
+        # Use *UE's own* libc++, not whatever the host has: that is the copy every UE module is
+        # compiled against, and it is a static .a so nothing extra has to be deployed next to the
+        # plugin. Up to UE 5.6 it lived in Engine/Source/ThirdParty/Unix/LibCxx; UE 5.8 dropped that
+        # and uses the libc++ bundled with the clang toolchain instead. linux_ue5_build.sh works out
+        # which one this engine has and passes it in, so only the fallback below is version specific.
+        # -nostdinc++ is essential - without it a second set of libc++ headers stays on the include
+        # path and the two mix, which fails to compile (unresolved `using ::uint32_t` from <cstdint>,
+        # undeclared FP_NAN from <math.h>, ...).
+        if(NOT DEFINED UE_LIBCXX_INCLUDE)
+            set(UE_LIBCXX_INCLUDE "${UE5}/Engine/Source/ThirdParty/Unix/LibCxx/include/c++/v1")
+            set(UE_LIBCXX_LIB "${UE5}/Engine/Source/ThirdParty/Unix/LibCxx/lib/Unix/x86_64-unknown-linux-gnu")
+        endif()
+        add_compile_options(-nostdinc++)
+        include_directories("${UE_LIBCXX_INCLUDE}")
+        link_directories("${UE_LIBCXX_LIB}")
+        # -stdlib=libc++ above is a *compile* flag only, so the driver would still add -lstdc++ when
+        # linking and every executable would drag in the system libstdc++ alongside UE's libc++.
+        # -nostdlib++ suppresses that; the C++ runtime comes from the explicit -lc++ -lc++abi below.
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib++")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -nostdlib++")
+        set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lc++ -lc++abi")
     endif()
 else()
     
