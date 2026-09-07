@@ -13,5 +13,16 @@ cd "$(dirname $0)/../build-ue5"
 
 # Some "pre-packaging" has been done in *_ue5_build.sh
 
-zip -r $FILENAME Include Win64 # Linux # Mac 
+# Which platform directories are here depends on which build jobs fed this one their artifacts,
+# so package whichever ones are actually present rather than a fixed list.
+PLATFORMS=""
+for dir in Win64 Linux Mac; do
+    [ -d "$dir" ] && PLATFORMS="$PLATFORMS $dir"
+done
+if [ -z "$PLATFORMS" ]; then
+    echo "No platform directories (Win64, Linux, Mac) in $PWD - did the ue5 build jobs run?"
+    exit 1
+fi
+
+zip -r $FILENAME Include $PLATFORMS
 ls -lh $FILENAME
