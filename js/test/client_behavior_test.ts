@@ -1,5 +1,4 @@
 import * as RTI from "../src"
-import { TokenVerificationResult } from "../src/rticlient"
 
 const rti = new RTI.Client({
     application: "typescript test",
@@ -98,7 +97,7 @@ test("pubsub json", async () => {
 })
 
 test("multichannel subscriber", async () => {
-    let received: any = {}
+    const received: any = {}
     const handler = (channel: string, message: string) => {
         received[channel] = message
     }

@@ -17,13 +17,19 @@
     "start": "tsx test/usage_example.ts",
     "build": "tsc && webpack --mode production",
     "test": "jest --openHandlesTimeout 0",
-    "test-ci": "jest --openHandlesTimeout 0 --ci --reporters=default --reporters=jest-junit"
+    "test-ci": "jest --openHandlesTimeout 0 --ci --reporters=default --reporters=jest-junit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "files": [
     "lib"
   ],
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
     "jest": "^30.4.2",
     "jest-junit": "^17.0.0",
     "ts-jest": "^29.4.11",
@@ -31,6 +37,7 @@
     "ts-proto": "^1.176.1",
     "tsx": "^4.17.0",
     "typescript": "^5.3.3",
+    "typescript-eslint": "^8.70.0",
     "webpack": "^5.94.0",
     "webpack-cli": "^5.1.4"
   },

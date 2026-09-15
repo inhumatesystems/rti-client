@@ -15,6 +15,7 @@ The default broker URL is `ws://127.0.0.1:8000`, or from the `RTI_URL` environme
 npm install
 npm run build        # TypeScript compile + webpack
 npm test             # Jest tests (broker required)
+npm run lint         # ESLint (lint:fix to auto-fix)
 npm start            # Run usage example
 ```
 
@@ -23,9 +24,19 @@ npm start            # Run usage example
 npm install
 npm run build        # Type-check + Vite library build
 npm run test:unit    # Vitest unit tests
-npm run lint         # ESLint with auto-fix
+npm run lint         # ESLint (lint:fix to auto-fix)
 npm run format       # Prettier
 ```
+
+### Linting (`js/` + `vue/`)
+
+Both use ESLint flat config (`js/eslint.config.js`, `vue/eslint.config.ts`) with the recommended
+non-type-checked typescript-eslint rules, loosened on purpose so existing code passes: `no-explicit-any`
+and (js) `no-unsafe-function-type` are off, unused vars, `var`, `prefer-const` and useless assignments
+are warnings, and `eslint-config-prettier` turns off everything prettier owns. Only errors fail. CI runs
+`npm run lint -w js -w vue` in the `lint js and vue` job, which needs no generated code because
+`src/generated` is ignored. `js/test` is not linted either. Vue's old `eslint-plugin-oxlint` hookup was removed: it pointed at a
+`.oxlintrc.json` that never existed and oxlint was never run.
 
 ### npm dependency overrides (`js/` + `vue/`)
 

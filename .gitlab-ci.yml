@@ -45,6 +45,20 @@ generate:
 
 # BUILD
 
+# ESLint for the js client and vue integration. Needs no generated code (src/generated is ignored and
+# the rules are not type-aware), so it runs straight away.
+lint js and vue:
+  stage: build
+  needs: []
+  image: node:22-slim
+  script:
+    - npm install
+    - npm run lint -w js -w vue
+  cache:
+    key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - node_modules
+
 build js client:
   stage: build
   needs:

@@ -242,7 +242,7 @@ export class RTIClient extends EventEmitter {
 
         const env = typeof process === "undefined" ? {} : process.env || {}
 
-        var url: string | undefined = options && options.url
+        let url: string | undefined = options && options.url
         if (!url) url = env["RTI_URL"]
         if (!url && typeof location == "object" && location.host) {
             if (location.protocol == "https:") {
@@ -296,7 +296,7 @@ export class RTIClient extends EventEmitter {
         const socketOptions = {} as AGClientSocket.ClientOptions
 
         // parse url into socketcluster options
-        var u = new URL(this._url)
+        const u = new URL(this._url)
         socketOptions.port = parseInt(u.port)
         socketOptions.hostname = u.hostname
         socketOptions.secure = u.protocol == "wss:" || u.protocol == "https:"
@@ -395,7 +395,7 @@ export class RTIClient extends EventEmitter {
     private die = false
 
     async forAwait<T>(iterable: AsyncIterable<T>, handler: (data: T) => boolean | void) {
-        for await (let item of iterable) {
+        for await (const item of iterable) {
             if (this.die || handler(item) === false) break
         }
     }
@@ -805,7 +805,7 @@ export class RTIClient extends EventEmitter {
     }
 
     measure(measureOrId: Measure | string, value: number, entityId = "") {
-        let measure: Measure | undefined = undefined
+        let measure: Measure | undefined
         if (typeof measureOrId == "string") {
             measure = this._usedMeasures[measureOrId]
             if (!measure) measure = this._knownMeasures[measureOrId]
@@ -840,8 +840,8 @@ export class RTIClient extends EventEmitter {
             if (!(key in this.lastCollect)) {
                 this.lastCollect[key] = new Date().getTime()
             } else {
-                var measureId = key.includes("|") ? key.split("|")[0] : key
-                var entityId = key.includes("|") ? key.split("|")[1] : ""
+                const measureId = key.includes("|") ? key.split("|")[0] : key
+                const entityId = key.includes("|") ? key.split("|")[1] : ""
                 const measure = this._knownMeasures[measureId]
                 if (
                     measure &&

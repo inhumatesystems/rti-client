@@ -1,3 +1,4 @@
 lib/
 dist/
 inhumate-rti-*.tgz
+.eslintcache
