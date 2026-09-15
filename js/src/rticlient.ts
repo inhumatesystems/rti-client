@@ -541,7 +541,7 @@ export class RTIClient extends EventEmitter {
     }
 
     publishHeartbeat() {
-        this.publish(RTIchannel.clients, Clients, { clientHeartbeat: { clientId: this.clientId } }, false)
+        this.publish(RTIchannel.clients, Clients, { heartbeat: { clientId: this.clientId } }, false)
     }
 
     publishProgress(progress: number) {
