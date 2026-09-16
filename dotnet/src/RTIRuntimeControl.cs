@@ -113,7 +113,8 @@ namespace Inhumate.RTI {
                 msg.StepComplete.Failed = true;
                 if (!string.IsNullOrEmpty(reason)) msg.StepComplete.Reason = reason;
             }
-            rti.Publish(RTIChannel.FastTimeControl, msg);
+            // The step may finish after we disconnected - there is no controller to tell then.
+            if (rti.IsConnected) rti.Publish(RTIChannel.FastTimeControl, msg);
         }
 
         // Runtime control publish methods
@@ -190,7 +191,7 @@ namespace Inhumate.RTI {
         }
 
         private void PublishAndReceive(RuntimeControl message) {
-            rti.Publish(RTIChannel.RuntimeControl, message);
+            if (rti.IsConnected) rti.Publish(RTIChannel.RuntimeControl, message);
             if (!rti.IsConnected || !subscribed) Receive(message);
         }
 
@@ -200,7 +201,7 @@ namespace Inhumate.RTI {
                     fastTimeRunId = message.ConfigureRun.RunId;
                     fastTimeControllerClientId = message.ConfigureRun.ControllerClientId;
                     // DefaultDispatchMode stays Immediate until the first step grant arrives
-                    rti.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
+                    if (rti.IsConnected) rti.Publish(RTIChannel.FastTimeControl, new FastTimeControl {
                         AcknowledgeRun = new FastTimeControl.Types.AcknowledgeRun {
                             ClientId = rti.ClientId,
                             RunId = message.ConfigureRun.RunId,
@@ -277,13 +278,13 @@ namespace Inhumate.RTI {
                         return;
                     }
                     Scenario = message.LoadScenario;
-                    rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
+                    if (rti.IsConnected) rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
                         CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
                     });
                     rti.State = playback ? RuntimeState.Playback : RuntimeState.Ready;
                     break;
                 case RuntimeControl.ControlOneofCase.RequestCurrentScenario:
-                    if (Scenario != null) {
+                    if (Scenario != null && rti.IsConnected) {
                         rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
                             CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
                         });

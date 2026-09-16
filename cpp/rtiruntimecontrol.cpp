@@ -138,7 +138,8 @@ void RTIRuntimeControl::CompleteStep(const StepGrant &grant, bool failed, const 
         sc->set_failed(true);
         if (!reason.empty()) sc->set_reason(reason);
     }
-    rti.Publish(FAST_TIME_CONTROL_CHANNEL, msg);
+    // The step may finish after we disconnected - there is no controller to tell then.
+    if (rti.connected()) rti.Publish(FAST_TIME_CONTROL_CHANNEL, msg);
 }
 
 void RTIRuntimeControl::Subscribe()
@@ -250,7 +251,7 @@ void RTIRuntimeControl::WaitForClientState(const std::string &clientId,
 
 void RTIRuntimeControl::PublishAndReceive(const proto::RuntimeControl &message)
 {
-    rti.Publish(RUNTIME_CONTROL_CHANNEL, message);
+    if (rti.connected()) rti.Publish(RUNTIME_CONTROL_CHANNEL, message);
     if (!rti.connected() || !_subscribed) Receive(message);
 }
 
@@ -273,7 +274,7 @@ void RTIRuntimeControl::ReceiveFastTime(const proto::FastTimeControl &message)
         auto *a = ack.mutable_acknowledge_run();
         a->set_client_id(rti.client_id());
         a->set_run_id(message.configure_run().run_id());
-        rti.Publish(FAST_TIME_CONTROL_CHANNEL, ack);
+        if (rti.connected()) rti.Publish(FAST_TIME_CONTROL_CHANNEL, ack);
         rti.set_fast_time_mode(true);
         break;
     }
@@ -353,12 +354,12 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         _hasScenario = true;
         proto::RuntimeControl out;
         out.mutable_current_scenario()->set_name(_scenario.name());
-        rti.Publish(RUNTIME_CONTROL_CHANNEL, out);
+        if (rti.connected()) rti.Publish(RUNTIME_CONTROL_CHANNEL, out);
         rti.set_state(playback ? proto::RuntimeState::PLAYBACK : proto::RuntimeState::READY);
         break;
     }
     case proto::RuntimeControl::kRequestCurrentScenario: {
-        if (_hasScenario) {
+        if (_hasScenario && rti.connected()) {
             proto::RuntimeControl out;
             out.mutable_current_scenario()->set_name(_scenario.name());
             rti.Publish(RUNTIME_CONTROL_CHANNEL, out);

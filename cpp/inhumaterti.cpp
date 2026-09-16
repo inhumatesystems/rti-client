@@ -213,6 +213,10 @@ void RTIClient::Connect()
 
 void RTIClient::Disconnect()
 {
+    // Close() below polls, which can still dispatch messages - mark us disconnected first so
+    // nothing tries to answer them on the closing connection (OnMessage drops them).
+    shouldBeConnected = false;
+    connectionPhase = ConnectionPhase::DISCONNECTED;
     try {
         if (wsclient_tls) {
             wsclient_tls->close(connection_hdl, websocketpp::close::status::normal, "");
@@ -232,9 +236,7 @@ void RTIClient::Disconnect()
     lastPingTime = 0;
     lastReconnectTime = 0;
     connectCalled = false;
-    shouldBeConnected = false;
     firstConnected = false;
-    connectionPhase = ConnectionPhase::DISCONNECTED;
     for (auto callback : disconnectcallbacks)
         if (callback) (*callback)();
 }
@@ -761,6 +763,7 @@ void RTIClient::OnOpen(websocketpp::connection_hdl hdl)
 
 void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr msg)
 {
+    if (connectionPhase == ConnectionPhase::DISCONNECTED) return;
     try {
         std::string message = msg->get_payload();
         if (maxMessageSizeBytes > 0 && message.size() > maxMessageSizeBytes) {
@@ -878,7 +881,7 @@ void RTIClient::OnMessage(websocketpp::connection_hdl hdl, client::message_ptr m
 void RTIClient::OnClients(const std::string &channelName, const Clients &message)
 {
     if (message.which_case() == Clients::WhichCase::kRequestClients) {
-        if (!_incognito) PublishClient();
+        if (!_incognito && connected()) PublishClient();
     } else if (message.which_case() == Clients::WhichCase::kClient) {
         knownClients[message.client().id()] = message.client();
     } else if (message.which_case() == Clients::WhichCase::kRegisterParticipant) {
@@ -889,7 +892,7 @@ void RTIClient::OnClients(const std::string &channelName, const Clients &message
             _participant = reg.participant();
             _role = reg.role();
             _fullName = reg.full_name();
-            PublishClient();
+            if (connected()) PublishClient();
         }
     }
 }
@@ -905,7 +908,7 @@ void RTIClient::OnChannels(const std::string &channelName, const Channels &messa
             use->CopyFrom(*used);
         }
         message.set_allocated_channel_usage(usage);
-        if (!_incognito) Publish(CHANNELS_CHANNEL, message);
+        if (!_incognito && connected()) Publish(CHANNELS_CHANNEL, message);
     } else if (message.which_case() == Channels::WhichCase::kChannelUsage) {
         for (auto use : message.channel_usage().usage()) {
             DiscoverChannel(use.channel());
@@ -918,7 +921,7 @@ void RTIClient::OnChannels(const std::string &channelName, const Channels &messa
 void RTIClient::OnMeasures(const std::string &channelName, const Measures &message)
 {
     if (message.which_case() == Measures::WhichCase::kRequestMeasures) {
-        if (!_incognito) PublishMeasures();
+        if (!_incognito && connected()) PublishMeasures();
     } else if (message.which_case() == Measures::WhichCase::kMeasure) {
         knownMeasures[message.measure().id()] = message.measure();
     }
