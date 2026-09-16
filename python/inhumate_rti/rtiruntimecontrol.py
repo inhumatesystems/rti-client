@@ -107,6 +107,9 @@ class RTIRuntimeControl:
 
     def complete_step(self, grant: StepGrant, failed: bool = False, reason: str = ""):
         """Send StepComplete to the fast-time controller."""
+        # The step may finish after we disconnected - there is no controller to tell then.
+        if not self.rti.connected:
+            return
         duration = int((time.time() - grant._real_start) * 1000)
         msg = Proto.FastTimeControl()
         msg.step_complete.client_id = self.rti.client_id
@@ -212,7 +215,8 @@ class RTIRuntimeControl:
             self.subscribed = True
 
     def _publish_and_receive(self, message: Proto.RuntimeControl):
-        self.rti.publish(Channel.runtime_control, message)
+        if self.rti.connected:
+            self.rti.publish(Channel.runtime_control, message)
         if not self.rti.connected or not self.subscribed: self._receive(message)
 
     def _on_controller_disconnect(self, client_id: str):
@@ -228,7 +232,8 @@ class RTIRuntimeControl:
             ack = Proto.FastTimeControl()
             ack.acknowledge_run.client_id = self.rti.client_id
             ack.acknowledge_run.run_id = message.configure_run.run_id
-            self.rti.publish(Channel.fast_time_control, ack)
+            if self.rti.connected:
+                self.rti.publish(Channel.fast_time_control, ack)
             self.rti.fast_time_mode = True
         elif message.HasField("configuration"):
             # A configuration with real-time (or unknown) mode means this run is not
@@ -292,13 +297,15 @@ class RTIRuntimeControl:
             message = Proto.RuntimeControl()
             message.current_scenario.name = self.scenario.name
             message.current_scenario.parameter_values.update(self.scenario.parameter_values)
-            self.rti.publish(Channel.runtime_control, message)
+            if self.rti.connected:
+                self.rti.publish(Channel.runtime_control, message)
             self.rti.state = Proto.READY if not playback else Proto.PLAYBACK
         elif message.HasField("request_current_scenario") and self.scenario:
             message = Proto.RuntimeControl()
             message.current_scenario.name = self.scenario.name
             message.current_scenario.parameter_values.update(self.scenario.parameter_values)
-            self.rti.publish(Channel.runtime_control, message)
+            if self.rti.connected:
+                self.rti.publish(Channel.runtime_control, message)
         elif message.HasField("start"):
             self.on_start()
             self.rti.state = Proto.RUNNING

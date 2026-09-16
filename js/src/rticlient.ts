@@ -430,7 +430,7 @@ export class RTIClient extends EventEmitter {
 
     onClients(message: Clients) {
         if (message.requestClients) {
-            if (!this.incognito && this.clientId) this.publishClient()
+            if (!this.incognito && this.clientId && this.connected) this.publishClient()
         } else if (message.client) {
             this._knownClients[message.client.id] = message.client
             this.emit("client", message.client)
@@ -450,14 +450,15 @@ export class RTIClient extends EventEmitter {
                 this._participant = reg.participant
                 this._role = reg.role
                 this._fullName = reg.fullName
-                this.publishClient()
+                if (this.connected) this.publishClient()
                 this.emit("client", this.myClient)
             }
         }
     }
 
     onChannels(message: Channels) {
-        if (message.requestChannelUsage && !this.incognito && !this.incognitoChannels) {
+        if (message.requestChannelUsage) {
+            if (this.incognito || this.incognitoChannels || !this.connected) return
             const usage = ChannelUsage.create({ clientId: this.clientId })
             for (const use of Object.values(this._usedChannels)) {
                 usage.usage.push(use)
@@ -481,7 +482,7 @@ export class RTIClient extends EventEmitter {
 
     onMeasures(message: Measures) {
         if (message.requestMeasures) {
-            if (!this.incognito) this.publishMeasures()
+            if (!this.incognito && this.connected) this.publishMeasures()
         } else if (message.measure) {
             this._knownMeasures[message.measure.id] = message.measure
             this.emit("measure", message.measure)

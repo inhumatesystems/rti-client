@@ -164,8 +164,9 @@ class RTIClient(Emitter):
         socket = RTISocketClusterClient(url, main_loop, main_loop_idle_time, self.max_message_size_bytes)
 
         def on_clients(message: Proto.Clients):
-            if message.HasField("request_clients") and not self.incognito:
-                self._publish_client()
+            if message.HasField("request_clients"):
+                if not self.incognito and self.connected:
+                    self._publish_client()
             elif message.HasField("client"):
                 self.known_clients[message.client.id] = message.client
             elif message.HasField("register_participant"):
@@ -179,14 +180,15 @@ class RTIClient(Emitter):
                     self.participant = reg.participant
                     self.role = reg.role
                     self.full_name = reg.full_name
-                    self._publish_client()
+                    if self.connected:
+                        self._publish_client()
 
         def on_channels(message: Proto.Channels):
             if message.HasField("request_channel_usage"):
                 message = Proto.Channels()
                 message.channel_usage.client_id = self.client_id
                 message.channel_usage.usage.extend(self.used_channels.values())
-                if not self.incognito:
+                if not self.incognito and self.connected:
                     self.publish(Channel.channels, message)
             elif message.HasField("channel_usage"):
                 for use in message.channel_usage.usage:
@@ -195,8 +197,9 @@ class RTIClient(Emitter):
                 self._discover_channel(message.channel)
 
         def on_measures(message: Proto.Measures):
-            if message.HasField("request_measures") and not self.incognito:
-                self._publish_measures()
+            if message.HasField("request_measures"):
+                if not self.incognito and self.connected:
+                    self._publish_measures()
             elif message.HasField("measure"):
                 self.known_measures[message.measure.id] = message.measure
 
@@ -281,10 +284,13 @@ class RTIClient(Emitter):
             self.socket.connect()
 
     def disconnect(self):
-        self.socket.disconnect()
+        # Clear the flags before closing: the receive thread can still dispatch messages while
+        # the socket closes, and nothing should try to answer them on the closing socket.
+        was_connected = self.connected
+        self.connected = False
         self.first_connected = False
-        if self.connected:
-            self.connected = False
+        self.socket.disconnect()
+        if was_connected:
             self.emit("disconnect")
 
     def wait_until_connected(self):

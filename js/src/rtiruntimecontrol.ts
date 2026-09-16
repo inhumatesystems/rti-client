@@ -113,6 +113,8 @@ export class RTIRuntimeControl {
 
     /** Send StepComplete to the fast-time controller. */
     completeStep(grant: StepGrant, failed = false, reason = ""): void {
+        // The step may finish after we disconnected - there is no controller to tell then.
+        if (!this.rti.isConnected) return
         const duration = Date.now() - grant._realStart
         this.rti.publish(RTIchannel.fastTimeControl, FastTimeControl, {
             stepComplete: {
@@ -196,7 +198,7 @@ export class RTIRuntimeControl {
     }
 
     private _publishAndReceive(message: Partial<RuntimeControl>): void {
-        this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, message, false)
+        if (this.rti.isConnected) this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, message, false)
         if (!this.rti.isConnected || !this._subscribed) this._receive(RuntimeControl.fromPartial(message))
     }
 
@@ -212,7 +214,7 @@ export class RTIRuntimeControl {
             this._fastTimeRunId = message.configureRun.runId
             this._fastTimeControllerClientId = message.configureRun.controllerClientId
             // defaultDispatchMode stays IMMEDIATE until the first step grant arrives
-            this.rti.publish(RTIchannel.fastTimeControl, FastTimeControl, {
+            if (this.rti.isConnected) this.rti.publish(RTIchannel.fastTimeControl, FastTimeControl, {
                 acknowledgeRun: {
                     clientId: this.rti.clientId,
                     runId: message.configureRun.runId,
@@ -284,12 +286,12 @@ export class RTIRuntimeControl {
                 return
             }
             this.scenario = message.loadScenario
-            this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
+            if (this.rti.isConnected) this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
                 currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
             }, false)
             this.rti.state = playback ? RuntimeState.PLAYBACK : RuntimeState.READY
         } else if (message.requestCurrentScenario !== undefined && this.scenario) {
-            this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
+            if (this.rti.isConnected) this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
                 currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
             }, false)
         } else if (message.start !== undefined) {

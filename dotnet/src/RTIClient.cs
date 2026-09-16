@@ -579,6 +579,9 @@ namespace Inhumate.RTI {
         public void Disconnect() {
             shouldBeConnected = false;
             firstConnected = false;
+            // Clear this up front: the socket only reports the close later, and until then
+            // everything guarded by IsConnected would try to publish on a closing socket.
+            IsConnected = false;
             if (socket != null) {
                 socket.Disconnect();
                 socket.Dispose();
@@ -595,7 +598,9 @@ namespace Inhumate.RTI {
 
         public void OnClients(string channelName, Clients message) {
             if (message.WhichCase == Clients.WhichOneofCase.RequestClients) {
-                if (!Incognito) PublishClient();
+                // Messages can still be dispatched while Disconnect() is closing the socket, and
+                // publishing then throws - so don't answer once we're on our way out.
+                if (!Incognito && IsConnected) PublishClient();
             } else if (message.WhichCase == Clients.WhichOneofCase.Client) {
                 knownClients[message.Client.Id] = message.Client;
             } else if (message.WhichCase == Clients.WhichOneofCase.RegisterParticipant) {
@@ -607,7 +612,7 @@ namespace Inhumate.RTI {
                     Participant = reg.Participant;
                     Role = reg.Role;
                     FullName = reg.FullName;
-                    PublishClient();
+                    if (IsConnected) PublishClient();
                 }
             }
         }
@@ -622,7 +627,7 @@ namespace Inhumate.RTI {
                 foreach (var use in usedChannels.Values) {
                     message.ChannelUsage.Usage.Add(use);
                 }
-                if (!Incognito) Publish(RTIChannel.Channels, message);
+                if (!Incognito && IsConnected) Publish(RTIChannel.Channels, message);
             } else if (message.WhichCase == Channels.WhichOneofCase.ChannelUsage) {
                 foreach (var usage in message.ChannelUsage.Usage) {
                     DiscoverChannel(usage.Channel);
@@ -634,7 +639,7 @@ namespace Inhumate.RTI {
 
         public void OnMeasures(string channelName, Measures message) {
             if (message.WhichCase == Measures.WhichOneofCase.RequestMeasures) {
-                if (!Incognito) PublishMeasures();
+                if (!Incognito && IsConnected) PublishMeasures();
             } else if (message.WhichCase == Measures.WhichOneofCase.Measure) {
                 knownMeasures[message.Measure.Id] = message.Measure;
             }
