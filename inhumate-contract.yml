@@ -3,21 +3,21 @@
 # The contract lives in its own repo: https://gitlab.com/inhumate/contracts/rti
 
 generate:
-    - source: inhumate:rti@1.0.0
+    - source: inhumate:rti@1.0.1
       language: typescript
       output: js/src/generated
 
-    - source: inhumate:rti@1.0.0
+    - source: inhumate:rti@1.0.1
       language: python
       output: python/inhumate_rti/generated
 
-    - source: inhumate:rti@1.0.0
+    - source: inhumate:rti@1.0.1
       language: csharp
       output: dotnet/src/generated
 
     # C++ is pinned to 3.11.2, because later versions cause dependency hell, and generated C++ carries a
     # hard #error version guard and only works against the libprotobuf it was generated for. 
-    - source: inhumate:rti@1.0.0
+    - source: inhumate:rti@1.0.1
       language: cpp
       output: cpp/generated
       protobufVersion: 3.11.2
