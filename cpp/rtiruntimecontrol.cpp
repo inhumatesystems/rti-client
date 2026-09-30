@@ -352,18 +352,7 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         }
         _scenario = message.load_scenario();
         _hasScenario = true;
-        proto::RuntimeControl out;
-        out.mutable_current_scenario()->set_name(_scenario.name());
-        if (rti.connected()) rti.Publish(RUNTIME_CONTROL_CHANNEL, out);
         rti.set_state(playback ? proto::RuntimeState::PLAYBACK : proto::RuntimeState::READY);
-        break;
-    }
-    case proto::RuntimeControl::kRequestCurrentScenario: {
-        if (_hasScenario && rti.connected()) {
-            proto::RuntimeControl out;
-            out.mutable_current_scenario()->set_name(_scenario.name());
-            rti.Publish(RUNTIME_CONTROL_CHANNEL, out);
-        }
         break;
     }
     case proto::RuntimeControl::kStart:
@@ -416,11 +405,6 @@ void RTIRuntimeControl::Receive(const proto::RuntimeControl &message)
         _timeScale = message.time_sync().time_scale();
         _hasTimeScale = true;
         OnTimeSync(message.time_sync());
-        break;
-    case proto::RuntimeControl::kCurrentScenario:
-        _scenario.Clear();
-        _scenario.set_name(message.current_scenario().name());
-        _hasScenario = true;
         break;
     case proto::RuntimeControl::kSeek: {
         auto prevState = rti.state();

@@ -278,17 +278,7 @@ namespace Inhumate.RTI {
                         return;
                     }
                     Scenario = message.LoadScenario;
-                    if (rti.IsConnected) rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
-                        CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
-                    });
                     rti.State = playback ? RuntimeState.Playback : RuntimeState.Ready;
-                    break;
-                case RuntimeControl.ControlOneofCase.RequestCurrentScenario:
-                    if (Scenario != null && rti.IsConnected) {
-                        rti.Publish(RTIChannel.RuntimeControl, new RuntimeControl {
-                            CurrentScenario = new RuntimeControl.Types.ScenarioSpecification { Name = Scenario.Name }
-                        });
-                    }
                     break;
                 case RuntimeControl.ControlOneofCase.Start:
                     OnStart();
@@ -332,9 +322,6 @@ namespace Inhumate.RTI {
                 case RuntimeControl.ControlOneofCase.TimeSync:
                     TimeScale = message.TimeSync.TimeScale;
                     OnTimeSync(message.TimeSync);
-                    break;
-                case RuntimeControl.ControlOneofCase.CurrentScenario:
-                    Scenario = new RuntimeControl.Types.ScenarioSpecification { Name = message.CurrentScenario.Name };
                     break;
                 case RuntimeControl.ControlOneofCase.Seek:
                     var prevState = rti.State;

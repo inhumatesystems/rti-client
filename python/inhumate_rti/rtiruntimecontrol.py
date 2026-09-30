@@ -294,18 +294,7 @@ class RTIRuntimeControl:
                 self.rti.state = success
                 return
             self.scenario = message.load_scenario
-            message = Proto.RuntimeControl()
-            message.current_scenario.name = self.scenario.name
-            message.current_scenario.parameter_values.update(self.scenario.parameter_values)
-            if self.rti.connected:
-                self.rti.publish(Channel.runtime_control, message)
             self.rti.state = Proto.READY if not playback else Proto.PLAYBACK
-        elif message.HasField("request_current_scenario") and self.scenario:
-            message = Proto.RuntimeControl()
-            message.current_scenario.name = self.scenario.name
-            message.current_scenario.parameter_values.update(self.scenario.parameter_values)
-            if self.rti.connected:
-                self.rti.publish(Channel.runtime_control, message)
         elif message.HasField("start"):
             self.on_start()
             self.rti.state = Proto.RUNNING
@@ -340,8 +329,6 @@ class RTIRuntimeControl:
         elif message.HasField("time_sync"):
             self.time_scale = message.time_sync.time_scale
             self.on_time_sync(message.time_sync)
-        elif message.HasField("current_scenario"):
-            self.scenario = message.current_scenario
         elif message.HasField("seek"):
             prev_state = self.rti.state
             self.on_seek(message.seek)

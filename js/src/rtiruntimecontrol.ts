@@ -286,14 +286,7 @@ export class RTIRuntimeControl {
                 return
             }
             this.scenario = message.loadScenario
-            if (this.rti.isConnected) this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
-                currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
-            }, false)
             this.rti.state = playback ? RuntimeState.PLAYBACK : RuntimeState.READY
-        } else if (message.requestCurrentScenario !== undefined && this.scenario) {
-            if (this.rti.isConnected) this.rti.publish(RTIchannel.runtimeControl, RuntimeControl, {
-                currentScenario: { name: this.scenario.name, parameterValues: this.scenario.parameterValues }
-            }, false)
         } else if (message.start !== undefined) {
             this.onStart()
             this.rti.state = RuntimeState.RUNNING
@@ -334,8 +327,6 @@ export class RTIRuntimeControl {
         } else if (message.timeSync !== undefined) {
             this.timeScale = message.timeSync.timeScale
             this.onTimeSync(message.timeSync)
-        } else if (message.currentScenario !== undefined) {
-            this.scenario = message.currentScenario
         } else if (message.seek !== undefined) {
             const prevState = this.rti.state
             this.onSeek(message.seek)
