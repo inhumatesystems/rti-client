@@ -49,6 +49,16 @@ The root `package.json` is an npm-workspaces root (`js`, `vue`) and pins a few t
 | `glob: ^13.0.6` | The `glob` maintainer deprecates every version below the latest as a nag (no actual vulnerability). Forcing the latest silences the warning across jest, `test-exclude`, and vue's `js-beautify`. This is aggressive (those packages request `glob@10`/`@11`) and may need re-bumping when a newer glob ships; dropping this line is safe and only re-introduces the harmless deprecation nag. |
 | `js-yaml: ^4.2.0` | The only `js-yaml` in the installed tree is `3.14.2`, pulled by `@istanbuljs/load-nyc-config@1.1.0` (`^3.13.1`) deep inside jest's coverage transform chain (`babel-plugin-istanbul` → `@jest/transform`). It was flagged by `npm audit` (GHSA-h67p-54hq-rp68, quadratic-complexity DoS in merge-key handling, affecting `<=4.1.1`); this single dependency was the root cause of all 18 reported moderate vulnerabilities. `4.2.0` is the patched release. `npm audit fix --force` "fixes" it by downgrading `ts-jest` to `29.1.2` (which doesn't even patch js-yaml) — do not do that. The override is safe because `load-nyc-config` calls `require('js-yaml').load(...)` (not the 3.x-only `safeLoad`), which exists and is API-compatible in js-yaml 4.x. `npm ls` reports the override as `invalid` against the declared `^3.13.1` range — expected and cosmetic. |
 
+The `js-yaml` override is also what removes `sprintf-js` (GHSA-hp3w-g68c-fv3c, no patched release): js-yaml 3.x
+pulls `argparse@1` → `sprintf-js`, js-yaml 4.x uses `argparse@2` which doesn't. An incremental `npm install` /
+`npm audit fix` can leave a nested `js-yaml@3.x` in the lock despite the override — if `npm ls js-yaml` shows
+3.x, do the clean install above.
+
+`braces` (GHSA-vfj7-8cjw-p6xm, every version `<=3.0.3` affected, no patched release as of 2026-10) remains in
+`npm audit`, reached via vue's `@vue/eslint-config-typescript` → `fast-glob` → `micromatch`. It is dev-only lint
+tooling that only expands the repo's own glob patterns, so it is accepted. Do not take `npm audit fix --force`'s
+suggestion to downgrade `@vue/eslint-config-typescript` to 14.0.1.
+
 The jest toolchain in `js/` was upgraded to v30 (`jest`, `@types/jest@30`, `jest-junit@17`, `ts-jest@29.4.x` which supports jest 30) so jest's own internals no longer use `glob@7`/`inflight`.
 
 `js/jest.config.cjs` passes a ts-jest `tsconfig` override (`module: esnext`, `isolatedModules: true`). The library build uses `module: nodenext` (correct for dual CJS/ESM publishing), but that hybrid module kind triggers ts-jest warning TS151002 — ts-jest transpiles file-at-a-time and requires `isolatedModules`, which is only valid with a non-hybrid module kind. The override keeps `nodenext` for the actual build while giving ts-jest a plain ESM kind for transpilation. Do **not** set `isolatedModules` directly in `tsconfig.json`: combined with `module: nodenext` it makes ts-jest emit the wrong module format (`SyntaxError: Cannot use import statement outside a module`).

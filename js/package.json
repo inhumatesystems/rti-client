@@ -47,7 +47,7 @@
     "base64-js": "^1.5.1",
     "events": "^3.3.0",
     "google-protobuf": "^3.21.2",
-    "protobufjs": "^8.7.2",
+    "protobufjs": "^8.8.0",
     "socketcluster-client": "^20.0.1",
     "uuid": "^11.1.1"
   }
